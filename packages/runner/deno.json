@@ -1,0 +1,11 @@
+{
+  "name": "@review-base/runner",
+  "version": "0.1.0",
+  "exports": "./src/index.ts",
+  "imports": {
+    "@review-base/core": "../core/src/index.ts"
+  },
+  "tasks": {
+    "compile": "deno compile --allow-all -o bin/review-runner src/cli.ts"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "nodeModulesDir": "auto",
+  "exclude": [
+    "data",
+    ".worktrees",
+    "apps/web/dist",
+    "node_modules"
+  ],
+  "workspace": [
+    "./packages/core",
+    "./packages/runner",
+    "./apps/server",
+    "./apps/web"
+  ],
+  "tasks": {
+    "check": "deno check packages/core/src/index.ts packages/runner/src/cli.ts apps/server/src/index.ts",
+    "test": "deno test --allow-all packages/core/src/storage/local-storage_test.ts packages/runner/src/worktree_test.ts apps/server/src/api_test.ts apps/web/src/utils/query-parser_test.ts apps/web/src/utils/url-params_test.ts",
+    "build:web": "deno task --cwd apps/web build",
+    "build": "deno task build:web",
+    "start": "deno run --allow-all apps/server/src/index.ts",
+    "dev:server": "deno run --allow-all --watch apps/server/src/index.ts",
+    "dev:web": "deno task --cwd apps/web dev",
+    "runner": "deno run --allow-all packages/runner/src/cli.ts"
+  }
+}

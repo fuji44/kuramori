@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Environment & credentials
+.env
+.env.*
+*.local
+!.env.example
+
+# Runtime data & database
+data/
+
+# Worktrees & temporary files
+.worktrees/
+tmp/
+temp/
+*.log
+*.tmp
+
+# Runner binaries & build outputs
+**/bin/
+dist/
+build/
+.vite/
+*.tsbuildinfo
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
