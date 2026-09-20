@@ -1,4 +1,4 @@
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 
 export interface WorktreeSession {
   worktreePath: string;
@@ -10,8 +10,8 @@ export class WorktreeManager {
   private readonly baseWorktreeDir: string;
 
   constructor(baseCacheDir: string, baseWorktreeDir: string) {
-    this.baseCacheDir = baseCacheDir;
-    this.baseWorktreeDir = baseWorktreeDir;
+    this.baseCacheDir = resolve(baseCacheDir);
+    this.baseWorktreeDir = resolve(baseWorktreeDir);
   }
 
   private async runGit(args: string[], cwd?: string): Promise<string> {
