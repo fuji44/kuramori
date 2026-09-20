@@ -1,184 +1,163 @@
 # アーキテクチャ設計書
 
-## 1. システム全体構成
+本ドキュメントでは、`review-base` の不変的な設計思想、モジュール境界、およびシステムを構成する中核の概念を定義する。特定のライブラリや一時的な実装詳細に依存せず、開発の進展に伴う変化に耐えうる基本構造を記述する。
+
+---
+
+## 1. アーキテクチャ原則
+
+1. **依存の一方向性 (Unidirectional Dependency)**
+   高水準のビジネスルール（ドメイン概念）は、低水準の詳細（永続化技術、フレームワーク、UI）に依存しない。依存は常に外側の具象から内側の抽象に向かって流れる。
+2. **抽象による外部境界の遮蔽 (Interface Segregation)**
+   VCS（バージョン管理システム）、レビュー実行機構（AI エンジン）、ストレージ（レポート保管）などの外部環境と接する境界はすべて抽象インターフェースで定義し、実行環境に応じた差し替えを可能にする。
+3. **配布形態の柔軟性 (Execution Portability)**
+   常駐型の Web サービスとしての実行と、CI や開発環境における単発の CLI ツールとしての実行の両方を、同一のコアロジックを共有したまま実現できるように設計する。
+
+---
+
+## 2. ワークスペース構造概念 (Workspace Boundaries)
+
+本プロジェクトはモノレポ（Workspace）として構成されており、コードを **「apps」** と **「packages」** の2つの明確な概念境界に分類する。
 
 ```mermaid
 flowchart TD
-    subgraph Browser["ブラウザ (Local UI)"]
-        UI["React 18 + Vite + Tailwind CSS\n(PR一覧 / ステータス / レポート表示)"]
+    subgraph AppsArea["apps (デプロイ・実行体)"]
+        ServerApp["サービス基盤<br>(オーケストレーション / API / 永続化)"]
+        WebApp["フロントエンド<br>(ユーザーインターフェース)"]
     end
 
-    subgraph ServerRuntime["Deno ランタイム (apps/server)"]
-        Server["Hono Web Server\n(静的 SPA 配信 + API エンドポイント)"]
-        Poller["GitHub Poller\n(定期ポーリング / 手動トリガー)"]
-        Queue["Review Queue & Worker\n(並列数制限: 1)"]
-        DB[(SQLite / Drizzle ORM)]
+    subgraph PackagesArea["packages (再利用可能モジュール)"]
+        RunnerPkg["実行ユニット<br>(分離実行 / エンジン制御)"]
+        CorePkg["ドメインコア<br>(エンティティ / 境界インターフェース)"]
     end
 
-    subgraph CorePackages["packages/core & packages/runner"]
-        Core["VCSProvider / ReviewEngine / ReportStorage IF"]
-        Runner["Review Runner CLI\n(単一バイナリ化可能)"]
-        Worktree["一時 Git Worktree Manager"]
-        Engine["Review Engines\n(AntigravityEngine / ClaudeCodeEngine / MockReviewEngine)"]
-    end
-
-    GitHub["GitHub (gh CLI / REST API)"] -->|検出| Poller
-    Poller -->|PR 永続化| DB
-    Poller -->|自動エンキュー| Queue
-    Queue -->|ジョブ実行| Runner
-    Runner -->|分離チェックアウト| Worktree
-    Runner -->|レビュー実行| Engine
-    Engine -->|成果物生成| Runner
-    Runner -->|レポート保存・状態更新| DB
-    Server -->|データ取得| DB
-    UI <-->|HTTP / JSON| Server
+    ServerApp --> RunnerPkg
+    ServerApp --> CorePkg
+    WebApp -.->|型共有| CorePkg
+    RunnerPkg --> CorePkg
 ```
 
-## 2. モノレポ構造 (Deno 2 Workspace)
+### 2.1 `apps` (Applications / Execution Targets)
+- **概念定義**: 単独で起動、デプロイ、またはホスティングされる「実行の終端（Entrypoint）」。
+- **責務**:
+  - ランタイム環境の初期化、設定の読み込み、依存オブジェクトの解決と組み立て（Composition Root）。
+  - 外部ネットワークからのリクエスト受付（HTTP、WebSocket、UI インタラクション）。
+  - 他のモジュールからライブラリとしてインポートされることはない。
 
-```text
-review-base/
-├── deno.json                  # ルートワークスペース定義・共通タスク
-├── packages/
-│   ├── core/                  # ドメイン型・抽象インターフェース
-│   │   ├── src/
-│   │   │   ├── types/         # ReviewRequest, ReviewJob, ReviewReport
-│   │   │   ├── interfaces/    # VCSProvider, ReviewEngine, ReportStorage
-│   │   │   ├── storage/       # LocalFileReportStorage
-│   │   │   └── vcs/           # GitHubProvider
-│   │   └── deno.json
-│   └── runner/                # レビュー実行 CLI (Deno/TS, 単一バイナリ化可能)
-│       ├── src/
-│       │   ├── worktree.ts    # WorktreeManager
-│       │   ├── engines/       # ClaudeCodeEngine
-│       │   └── cli.ts         # CLI エントリーポイント
-│       └── deno.json
-├── apps/
-│   ├── server/                # Hono Web サーバー & ジョブキュー
-│   │   ├── src/
-│   │   │   ├── db/            # Drizzle スキーマ・SQLite 初期化
-│   │   │   ├── poller.ts      # GitHubPoller
-│   │   │   ├── queue.ts       # ReviewQueue
-│   │   │   ├── api.ts         # Hono API ルート
-│   │   │   └── index.ts       # サーバーブートストラップ・SPA 配信
-│   │   └── deno.json
-│   └── web/                   # Vite + React ダッシュボード
-│       ├── src/
-│       │   ├── App.tsx        # メインダッシュボード UI
-│       │   └── main.tsx
-│       ├── package.json
-│       ├── vite.config.ts
-│       └── deno.json
-├── data/                      # 永続化データ (SQLite DB, レポート HTML)
-└── docs/                      # 設計・コンセプトドキュメント
+### 2.2 `packages` (Shared Modules / Reusable Units)
+- **概念定義**: 特定の実行基盤やフレームワークから独立した「再利用可能な共有ロジック・契約」。
+- **責務**:
+  - ドメインモデル、ビジネスエンティティ、抽象インターフェースの定義。
+  - 特定の実行形態（CLI 実行、ライブラリ呼び出し）に依存しない純粋な実行機能の提供。
+  - `apps` や他の `packages` から呼び出されるライブラリとして振る舞い、自律した常駐プロセスを持たない。
+
+### 2.3 依存規則
+- **`apps` ➔ `packages`**: 許可。アプリケーションは必要なパッケージを組み合わせてシステムを構築する。
+- **`packages` ➔ `apps`**: **厳禁**。共有パッケージが特定のアプリケーション層に依存してはならない。
+- **`packages` ➔ `packages`**: 一方向のみ許可。より高水準・具象的なパッケージが、基底となるドメインパッケージに依存する。
+
+---
+
+## 3. レイヤー構成と責務
+
+システムは以下の 4 つの論理層によって構成される。
+
+```mermaid
+flowchart TB
+    UI["1. プレゼンテーション層 (UI)"]
+    Orchestration["2. オーケストレーション・配信層 (Service / Queue)"]
+    Execution["3. レビュー実行層 (Runner)"]
+    Domain["4. ドメイン層 (Core Domain & Contracts)"]
+
+    UI <-->|API| Orchestration
+    Orchestration --> Execution
+    Orchestration --> Domain
+    Execution --> Domain
 ```
 
-## 3. データモデル (SQLite / Drizzle ORM)
+### 1. プレゼンテーション層 (UI)
+- 変更要求（Pull Request）のステータス、レビュー進捗、および評価結果をユーザーに可視化する。
+- 直感的なクエリ操作やフィルタリングを提供し、多数のレビュー対象を効率的にトリアージする。
 
-### 3.1 `review_requests`
-| カラム名 | 型 | 制約 | 説明 |
-| :--- | :--- | :--- | :--- |
-| `id` | TEXT | PRIMARY KEY | 一意の識別子 (`${provider}:${repo}#${number}`) |
-| `user_id` | TEXT | NOT NULL, DEFAULT 'default' | 所有ユーザーID (将来のサーバー化対応) |
-| `provider` | TEXT | NOT NULL, DEFAULT 'github' | VCS プロバイダ名 |
-| `repository` | TEXT | NOT NULL | リポジトリ名 (`owner/repo`) |
-| `number` | INTEGER | NOT NULL | PR 番号 |
-| `title` | TEXT | NOT NULL | PR タイトル |
-| `author` | TEXT | NOT NULL | 作成者アカウント |
-| `url` | TEXT | NOT NULL | PR Web URL |
-| `source_branch`| TEXT | NOT NULL, DEFAULT '' | 送信元ブランチ名 (headRef) |
-| `target_branch`| TEXT | NOT NULL, DEFAULT '' | マージ先ブランチ名 (baseRef) |
-| `head_sha` | TEXT | NOT NULL, DEFAULT '' | 先頭コミットハッシュ |
-| `is_draft` | INTEGER | NOT NULL, DEFAULT 0 | ドラフトフラグ |
-| `state` | TEXT | NOT NULL, DEFAULT 'open' | ステータス (`open`, `closed`, `merged`) |
-| `created_at` | TEXT | NOT NULL | 作成日時 (ISO 8601) |
-| `updated_at` | TEXT | NOT NULL | 更新日時 (ISO 8601) |
+### 2. オーケストレーション・配信層 (Service / Queue)
+- VCS からの変更検知（ポーリングやイベント受信）を行い、レビュー実行のタスクをキューイングする。
+- 実行リソースの制約に応じた並列制御、状態管理、エラー時のリカバリを司る。
+- 蓄積されたレビューデータおよび成果物をプレゼンテーション層に配信する。
 
-### 3.2 `review_jobs`
-| カラム名 | 型 | 制約 | 説明 |
-| :--- | :--- | :--- | :--- |
-| `id` | TEXT | PRIMARY KEY | ジョブ UUID |
-| `request_id` | TEXT | NOT NULL, REFERENCES review_requests(id) | 対象 PR の ID |
-| `user_id` | TEXT | NOT NULL, DEFAULT 'default' | 所有ユーザーID |
-| `status` | TEXT | NOT NULL, DEFAULT 'pending' | 状態 (`pending`, `running`, `completed`, `failed`) |
-| `engine` | TEXT | NOT NULL, DEFAULT 'claude-code' | 実行エンジン名 |
-| `started_at` | TEXT | NULLABLE | 実行開始日時 |
-| `completed_at`| TEXT | NULLABLE | 実行完了日時 |
-| `error` | TEXT | NULLABLE | 失敗時のエラーメッセージ |
-| `report_id` | TEXT | NULLABLE | 紐づくレポート ID |
+### 3. レビュー実行層 (Runner)
+- 隔離された作業環境（一時ツリー）を構築し、対象の変更差分を安全に展開する。
+- 設定された AI レビューエンジンへコンテキストを渡し、レビューの実行・結果のパース・成果物の構築を行う。
+- 実行環境の汚れを後に残さないクリーンアップの責務を持つ。
 
-### 3.3 `review_reports`
-| カラム名 | 型 | 制約 | 説明 |
-| :--- | :--- | :--- | :--- |
-| `id` | TEXT | PRIMARY KEY | レポート ID (`${safeRepo}_${prNumber}_${timestamp}`) |
-| `job_id` | TEXT | NOT NULL, REFERENCES review_jobs(id) | 契機となったジョブ ID |
-| `request_id` | TEXT | NOT NULL, REFERENCES review_requests(id) | 対象 PR の ID |
-| `user_id` | TEXT | NOT NULL, DEFAULT 'default' | 所有ユーザーID |
-| `summary` | TEXT | NULLABLE | レビュー要約 |
-| `verdict` | TEXT | NULLABLE | 総合判定 (`APPROVE`, `COMMENT`, `REQUEST_CHANGES`) |
-| `created_at` | TEXT | NOT NULL | レポート作成日時 |
+### 4. ドメイン層 (Core Domain & Contracts)
+- システム全体で共有される不変の概念（変更要求、レビュー実行、レポート）の定義。
+- 外部システム（VCS、エンジン、永続化ストレージ）との通信規約（契約）の定義。
 
-### 3.4 `app_settings`
-| カラム名 | 型 | 制約 | 説明 |
-| :--- | :--- | :--- | :--- |
-| `key` | TEXT | PRIMARY KEY | 設定キー (例: `auto_queue`) |
-| `value` | TEXT | NOT NULL | 設定値 (`true` / `false`) |
-| `updated_at` | TEXT | NOT NULL | 更新日時 (ISO 8601) |
+---
 
-## 4. コアインターフェース契約
+## 4. コアエンティティとライフサイクル
 
-### 4.1 `VCSProvider`
-```typescript
-export interface VCSProvider {
-  readonly name: string;
-  listReviewRequests(options?: ListReviewRequestsOptions): Promise<ReviewRequest[]>;
-  getReviewRequest(repository: string, number: number): Promise<ReviewRequest | null>;
-  getDiff(repository: string, number: number): Promise<string>;
-  getCloneUrl(repository: string): Promise<string>;
-}
+システム内を流通する主要なエンティティとその状態関係。
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> ReviewRequest: VCSから検出
+    ReviewRequest --> ReviewJob: キューイング
+    state ReviewJob {
+        [*] --> Pending
+        Pending --> Running: 実行開始
+        Running --> Completed: 成功
+        Running --> Failed: エラー
+    }
+    ReviewJob --> ReviewReport: 成果物生成
 ```
 
-### 4.2 `ReviewEngine`
-```typescript
-export interface ReviewExecutionContext {
-  requestId: string;
-  repository: string;
-  number: number;
-  headSha: string;
-  worktreePath: string;
-  outputDir: string;
-}
+- **ReviewRequest (変更要求)**:
+  - VCS 上の Pull Request / Merge Request を表現するエンティティ。
+  - レビュー対象のメタデータ（リポジトリ、ブランチ、コミット、差分状態）を保持する。
+- **ReviewJob (レビュー実行単位)**:
+  - 特定の ReviewRequest に対して実施される個別のレビュー試行。
+  - 状態（待機中、実行中、完了、失敗）、使用された実行エンジン、開始・終了時刻、エラー情報を記録する。
+- **ReviewReport (評価レポート)**:
+  - 正常終了した ReviewJob の成果物。
+  - 総合判定（承認、要変更、コメント等）、要約、および詳細なレポートコンテンツを保持する。
 
-export interface ReviewExecutionResult {
-  success: boolean;
-  summary?: string;
-  verdict?: ReviewVerdict;
-  reportHtmlPath?: string;
-  rawFindingsPath?: string;
-  error?: string;
-}
+---
 
-export interface ReviewEngine {
-  readonly name: string;
-  execute(context: ReviewExecutionContext): Promise<ReviewExecutionResult>;
-}
-```
+## 5. 境界インターフェース契約 (Boundary Contracts)
 
-### 4.3 `ReportStorage`
-```typescript
-export interface ReportStorage {
-  saveReport(reportId: string, htmlContent: string): Promise<string>;
-  getReportHtml(reportId: string): Promise<string | null>;
-  exists(reportId: string): Promise<boolean>;
-}
-```
+外部システムとの結合部はすべて抽象化され、コアロジックを修正することなく差し替え可能とする。
 
-## 5. 将来のサーバーデプロイ移行設計
+### 5.1 VCS 境界 (VCS Provider)
+- **役割**: 対象コードベースの取得およびメタデータ操作の抽象化。
+- **責務**:
+  - 変更要求の一覧および詳細情報の取得。
+  - 変更差分（diff）およびコード取得用エンドポイントの提供。
+  - 具体的な VCS（GitHub、GitLab、ローカルリポジトリ等）の実装差異を隠蔽する。
 
-将来的にローカル環境からチーム共有サーバー（VPS / クラウド）へ移行する際、コードベースの変更を最小限に抑えるため以下の境界を設けている。
+### 5.2 エンジン境界 (Review Engine)
+- **役割**: AI エージェントや解析ツールを用いたレビュー実施機構の抽象化。
+- **責務**:
+  - 隔離環境内のコードと差分を受け取り、所定のプロンプトや解析ルールに基づいて診断を実施。
+  - 診断結果をパースし、統一されたフォーマット（判定、要約、成果物ファイル）として返却する。
+  - エンジンの種類（各種 AI CLI、API 直接呼び出し、ルールベース静的解析）の実装差異を隠蔽する。
 
-1. **マルチテナント対応**: 全エンティティに `userId` を初期配置（ローカル時は `'default'`）。サーバー化時は GitHub OAuth 認証を導入し、セッション由来の `userId` を注入する。
-2. **ストレージの透過切り替え**: `ReportStorage` の具象クラスを `LocalFileReportStorage` から `S3ReportStorage` 等へ差し替えるだけで、HTML レポートの保管先をオブジェクトストレージに変更可能。
-3. **DB 方言の切り替え**: Drizzle ORM を採用しているため、SQLite から PostgreSQL への移行はスキーマの方言定義修正と接続クライアントの変更のみで完結。
-4. **イベント駆動への移行**: ジョブ投入口を `ReviewQueue.enqueue` に一元化しているため、ポーリングによる自動投入だけでなく、GitHub Webhook エンドポイントからの受信トリガーへ即座に統合可能。
-5. **実行エンジンの API 直叩き化**: `ReviewEngine` を抽象化しているため、サーバーコンテナ環境では `ClaudeCodeEngine`（CLI 呼出）から `DirectApiReviewEngine`（Anthropic API / Vertex AI 直接呼出）へ差し替え可能。
+### 5.3 ストレージ境界 (Report Storage)
+- **役割**: レビュー成果物の永続化および取得の抽象化。
+- **責務**:
+  - レポート成果物の保存、存在確認、および読み出し。
+  - 保存先（ローカルファイルシステム、オブジェクトストレージ、インメモリストア）の差異を隠蔽する。
+
+---
+
+## 6. 将来の適応性と進化可能性 (Evolutionary Architecture)
+
+システムは初期の単一開発者向け環境から、チーム共有・常駐サービスへと滑らかにスケールできるよう以下の進化余地を設計に織り込んでいる。
+
+1. **実行形態の分離**:
+   コア実行ロジックは独立したパッケージとして存在するため、中央サーバーからの非同期実行だけでなく、ローカル CLI や CI パイプラインへの組み込みが可能。
+2. **永続化技術の非拘束**:
+   ドメインモデルは特定のデータベース仕様と疎結合に保たれており、組み込みデータベースから外部マネージドデータベースへの移行が容易。
+3. **外部トリガーの抽象化**:
+   タスクの登録口は一元化されており、定期ポーリング方式から Webhook によるプッシュ駆動への移行、あるいはユーザーによる手動トリガーの混在を透過的に扱える。
