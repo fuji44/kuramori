@@ -31,12 +31,12 @@ export class GitHubProvider implements VCSProvider {
     this.defaultUserId = defaultUserId;
   }
 
-  async listReviewRequests(options?: ListReviewRequestsOptions): Promise<ReviewRequest[]> {
+  private async executeGhSearch(queryArgs: string[]): Promise<GhSearchPrItem[]> {
     const cmd = new Deno.Command('gh', {
       args: [
         'search',
         'prs',
-        '--review-requested=@me',
+        ...queryArgs,
         '--state=open',
         '--json',
         'number,title,author,url,repository,isDraft,createdAt,updatedAt',
@@ -53,10 +53,25 @@ export class GitHubProvider implements VCSProvider {
       throw new Error(`Failed to list review requests: ${errorText}`);
     }
 
-    const items: GhSearchPrItem[] = JSON.parse(new TextDecoder().decode(output.stdout));
-    const requests: ReviewRequest[] = [];
+    return JSON.parse(new TextDecoder().decode(output.stdout));
+  }
 
-    for (const item of items) {
+  async listReviewRequests(options?: ListReviewRequestsOptions): Promise<ReviewRequest[]> {
+    const [reviewRequestedItems, authoredItems] = await Promise.all([
+      this.executeGhSearch(['--review-requested=@me']),
+      this.executeGhSearch(['--author=@me']),
+    ]);
+
+    const itemMap = new Map<string, GhSearchPrItem>();
+    for (const item of reviewRequestedItems) {
+      itemMap.set(`${item.repository.nameWithOwner}#${item.number}`, item);
+    }
+    for (const item of authoredItems) {
+      itemMap.set(`${item.repository.nameWithOwner}#${item.number}`, item);
+    }
+
+    const requests: ReviewRequest[] = [];
+    for (const item of itemMap.values()) {
       if (options?.includeDrafts === false && item.isDraft) {
         continue;
       }
