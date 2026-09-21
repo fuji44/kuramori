@@ -1,10 +1,16 @@
 import { join } from 'node:path';
-import type { ReviewEngine, ReviewExecutionContext, ReviewExecutionResult } from '@review-base/core';
+import type {
+  ReviewEngine,
+  ReviewExecutionContext,
+  ReviewExecutionResult,
+  ReviewReportData,
+} from '@review-base/core';
 
 export class MockReviewEngine implements ReviewEngine {
   readonly name = 'mock';
 
   async execute(context: ReviewExecutionContext): Promise<ReviewExecutionResult> {
+    const jsonReportPath = join(context.outputDir, 'review.json');
     const htmlReportPath = join(context.outputDir, 'report.html');
     const log = async (msg: string) => {
       const line = `[${new Date().toISOString()}] ${msg}\n`;
@@ -15,49 +21,73 @@ export class MockReviewEngine implements ReviewEngine {
     await log(`[MockEngine] Scanning diff for head SHA: ${context.headSha}...`);
 
     // Simulated short processing delay
-    await new Promise((resolve) => setTimeout(resolve, 1200));
+    await new Promise((resolve) => setTimeout(resolve, 800));
 
-    const htmlContent = `<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <title>AI Review: ${context.repository}#${context.number}</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #c9d1d9; padding: 2rem; line-height: 1.6; }
-    h1 { color: #58a6ff; border-bottom: 1px solid #30363d; padding-bottom: 0.5rem; }
-    .badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-weight: bold; font-size: 0.875rem; background: #238636; color: white; }
-    .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 1rem 1.5rem; margin-top: 1rem; }
-    .finding { border-left: 4px solid #58a6ff; padding-left: 1rem; margin: 1rem 0; }
-  </style>
-</head>
-<body>
-  <h1>🔍 AI レビューレポート: ${context.repository}#${context.number}</h1>
-  <p><span class="badge">APPROVE</span> 規範チェック・変更差分検証 完了</p>
-  <div class="card">
-    <h3>概要</h3>
-    <p>対象ブランチの変更点を確認しました。重大な設計上の問題、セキュリティ脆弱性、および規約違反は検出されませんでした。</p>
-  </div>
-  <div class="card">
-    <h3>主な検証観点</h3>
-    <div class="finding">
-      <strong>✅ 規範チェック (C-2):</strong> コメント4類型（作業経緯・使われ方・将来計画・issue番号）の違反なし。
-    </div>
-    <div class="finding">
-      <strong>✅ 型安全性:</strong> 不要な <code>as</code> アサーションはなく、<code>T | undefined</code> の明示的ガードを確認。
-    </div>
-  </div>
-</body>
-</html>`;
+    const reportData: ReviewReportData = {
+      verdict: 'APPROVE',
+      summary: {
+        brief: '対象ブランチの変更点を確認しました。重大な問題は検出されませんでした。',
+        changedCode: 'インターフェースおよびストレージ実装の拡張',
+        reachPaths: ['packages/core/src/'],
+      },
+      comments: [
+        {
+          id: 'C1',
+          path: 'packages/core/src/index.ts',
+          line: 5,
+          side: 'RIGHT',
+          severity: 'P3',
+          category: 'convention',
+          title: 'エクスポート構成の整理',
+          body: '型定義とインターフェースのエクスポートが整然と維持されていることを確認しました。',
+        },
+      ],
+      diagram: {
+        nodes: [
+          { id: 'storage', label: 'ReportStorage', type: 'modified' },
+          { id: 'engine', label: 'ReviewEngine', type: 'affected' },
+        ],
+        edges: [
+          { from: 'engine', to: 'storage', label: 'saves to' },
+        ],
+      },
+      callFlow: {
+        steps: [
+          { step: 1, title: 'Pre-flight context collected', status: 'unchanged' },
+          { step: 2, title: 'Deep review performed', status: 'modified', commentId: 'C1' },
+          { step: 3, title: 'Gatekeeper audit passed', status: 'added' },
+        ],
+      },
+      metrics: {
+        filesAnalyzed: 2,
+        findingsCount: 1,
+        p1Count: 0,
+        p2Count: 0,
+        p3Count: 1,
+      },
+    };
 
     await Deno.mkdir(context.outputDir, { recursive: true });
+    await Deno.writeTextFile(jsonReportPath, JSON.stringify(reportData, null, 2));
+
+    // 後方互換性のための簡易 HTML も生成
+    const htmlContent = `<!DOCTYPE html><html><body><h1>Review: ${context.repository}#${context.number}</h1><p>Verdict: APPROVE</p></body></html>`;
     await Deno.writeTextFile(htmlReportPath, htmlContent);
 
-    await log('[MockEngine] Generated report.html successfully.');
+    await log('[MockEngine] Generated review.json and report.html successfully.');
+
+    const briefText = typeof reportData.summary.brief === 'string'
+      ? reportData.summary.brief
+      : (reportData.summary.brief.problem ?? reportData.summary.brief.approach ?? '');
+
     return {
       success: true,
-      summary: 'AI レビュー完了（問題は検出されませんでした）',
-      verdict: 'APPROVE',
+      summary: briefText,
+      verdict: reportData.verdict,
+      reportJsonPath: jsonReportPath,
+      reportData,
       reportHtmlPath: htmlReportPath,
     };
   }
 }
+

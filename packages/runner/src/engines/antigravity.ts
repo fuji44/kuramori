@@ -1,5 +1,5 @@
-import { join } from 'node:path';
 import type { ReviewEngine, ReviewExecutionContext, ReviewExecutionResult } from '@review-base/core';
+import { executePreFlight, buildReviewPrompt, executePostFlight } from '../pipeline/runner-pipeline.ts';
 
 export interface AntigravityEngineOptions {
   agyBinaryPath?: string;
@@ -17,12 +17,7 @@ export class AntigravityEngine implements ReviewEngine {
   }
 
   async execute(context: ReviewExecutionContext): Promise<ReviewExecutionResult> {
-    const rawOutputDir = join(context.outputDir, 'raw');
-    const findingsPath = join(context.outputDir, 'findings.json');
-    const resultPath = join(context.outputDir, 'result.json');
-    const htmlReportPath = join(context.outputDir, 'report.html');
-
-    await Deno.mkdir(rawOutputDir, { recursive: true });
+    await Deno.mkdir(context.outputDir, { recursive: true });
 
     const log = async (message: string) => {
       const timestamp = new Date().toISOString();
@@ -34,54 +29,46 @@ export class AntigravityEngine implements ReviewEngine {
     await log(`Using agy binary: ${this.agyBinaryPath}`);
     await log(`Target worktree: ${context.worktreePath}`);
 
-    const prompt = `
-You are running automated PR review autopilot.
-Follow the instructions in the fuji44-pr-review-autopilot skill and fuji44-pr-review-synthesis skill.
-
-Inputs:
-- Repository: ${context.repository}
-- PR Number: ${context.number}
-- Head SHA: ${context.headSha}
-- Mode: autopilot
-- Findings Output Path: ${findingsPath}
-- Raw Output Directory: ${rawOutputDir}
-- Result Output Path: ${resultPath}
-- Final HTML Report Path: ${htmlReportPath}
-
-Execute the autopilot review without modifying git or posting to GitHub.
-Synthesize findings and output the final review HTML report to ${htmlReportPath}.
-`;
-
     try {
+      // 1. Pre-flight コンテキスト収集・配置
+      await executePreFlight(context, log);
+
+      // 2. プロンプト生成 (専用スキル + Zod 4 スキーマ)
+      const prompt = await buildReviewPrompt(context);
+
+      // 3. Antigravity CLI 実行 (cmd.output で確実に終了検知)
+      await log(`[Engine] Running agy command...`);
       const cmd = new Deno.Command(this.agyBinaryPath, {
         args: [
+          '--new-project',
           '-p',
           prompt,
           '--dangerously-skip-permissions',
         ],
         cwd: context.worktreePath,
+        stdin: 'null',
         stdout: 'piped',
         stderr: 'piped',
+        env: Deno.env.toObject(),
       });
 
-      const process = cmd.spawn();
+      // タイムアウト付きで output を実行
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error(`Review execution timed out after ${this.timeoutMs / 1000}s`));
+        }, this.timeoutMs);
+      });
 
-      let isTimedOut = false;
-      const timeoutId = setTimeout(() => {
-        isTimedOut = true;
-        try {
-          process.kill('SIGTERM');
-        } catch {
-          // ignore kill error
-        }
-      }, this.timeoutMs);
-
-      const output = await process.output();
-      clearTimeout(timeoutId);
+      const output = await Promise.race([cmd.output(), timeoutPromise]);
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId);
+      }
 
       const stdout = new TextDecoder().decode(output.stdout);
       const stderr = new TextDecoder().decode(output.stderr);
 
+      await log(`[Engine] agy finished with code ${output.code}`);
       if (stdout) {
         await log(`[STDOUT]\n${stdout}`);
       }
@@ -89,50 +76,14 @@ Synthesize findings and output the final review HTML report to ${htmlReportPath}
         await log(`[STDERR]\n${stderr}`);
       }
 
-      if (isTimedOut) {
-        const errorMsg = `Review execution timed out after ${this.timeoutMs / 1000}s`;
-        await log(`[ERROR] ${errorMsg}`);
-        return {
-          success: false,
-          error: errorMsg,
-        };
-      }
-
-      let htmlExists = false;
-      try {
-        const stat = await Deno.stat(htmlReportPath);
-        htmlExists = stat.isFile;
-      } catch {
-        htmlExists = false;
-      }
-
-      if (!htmlExists) {
-        const errorMsg = `Review report was not generated. Exit code: ${output.code}`;
-        await log(`[ERROR] ${errorMsg}`);
-        return {
-          success: false,
-          error: errorMsg,
-        };
-      }
-
-      await log('Review completed successfully. HTML report generated.');
-      return {
-        success: true,
-        reportHtmlPath: htmlReportPath,
-        rawFindingsPath: findingsPath,
-      };
+      // 4. Post-flight: Gatekeeper による review.json 検収
+      return await executePostFlight(context, log, stdout);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      let userFriendlyError = errorMessage;
-
-      if (errorMessage.includes('entity not found') || errorMessage.includes('No such file or directory')) {
-        userFriendlyError = `Antigravity binary '${this.agyBinaryPath}' was not found in PATH. Please ensure 'agy' CLI is installed or set AGY_BIN path in Settings.`;
-      }
-
-      await log(`[FATAL] ${userFriendlyError}`);
+      const errorMsg = `Review execution encountered an error: ${err}`;
+      await log(`[FATAL] ${errorMsg}`);
       return {
         success: false,
-        error: userFriendlyError,
+        error: errorMsg,
       };
     }
   }

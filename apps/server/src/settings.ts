@@ -4,6 +4,7 @@ import { appSettingsTable } from './db/schema.ts';
 
 export interface AppSettings {
   autoQueue: boolean;
+  autoQueueIncludeOwn: boolean;
   reviewEngine: 'antigravity' | 'claude-code' | 'mock';
   agyBin: string;
   claudeBin: string;
@@ -12,17 +13,25 @@ export interface AppSettings {
 export class SettingsService {
   private readonly db: AppDatabase;
   private readonly defaultAutoQueue: boolean;
+  private readonly defaultAutoQueueIncludeOwn: boolean;
   private readonly defaultReviewEngine: 'antigravity' | 'claude-code' | 'mock';
   private readonly defaultAgyBin: string;
   private readonly defaultClaudeBin: string;
 
-  constructor(db: AppDatabase, defaultAutoQueue?: boolean) {
+  constructor(db: AppDatabase, defaultAutoQueue?: boolean, defaultAutoQueueIncludeOwn?: boolean) {
     this.db = db;
     if (defaultAutoQueue !== undefined) {
       this.defaultAutoQueue = defaultAutoQueue;
     } else {
       const envVal = Deno.env.get('AUTO_QUEUE');
       this.defaultAutoQueue = envVal === 'true' || envVal === '1';
+    }
+
+    if (defaultAutoQueueIncludeOwn !== undefined) {
+      this.defaultAutoQueueIncludeOwn = defaultAutoQueueIncludeOwn;
+    } else {
+      const envVal = Deno.env.get('AUTO_QUEUE_INCLUDE_OWN');
+      this.defaultAutoQueueIncludeOwn = envVal === 'true' || envVal === '1';
     }
 
     const envEngine = Deno.env.get('REVIEW_ENGINE');
@@ -48,6 +57,11 @@ export class SettingsService {
       ? autoQueueVal === 'true' || autoQueueVal === '1'
       : this.defaultAutoQueue;
 
+    const autoQueueIncludeOwnVal = map.get('auto_queue_include_own');
+    const autoQueueIncludeOwn = autoQueueIncludeOwnVal !== undefined
+      ? autoQueueIncludeOwnVal === 'true' || autoQueueIncludeOwnVal === '1'
+      : this.defaultAutoQueueIncludeOwn;
+
     const engineVal = map.get('review_engine');
     const reviewEngine = (engineVal === 'claude-code' || engineVal === 'mock' || engineVal === 'antigravity')
       ? engineVal
@@ -58,6 +72,7 @@ export class SettingsService {
 
     return {
       autoQueue,
+      autoQueueIncludeOwn,
       reviewEngine,
       agyBin,
       claudeBin,
@@ -86,6 +101,9 @@ export class SettingsService {
     if (updates.autoQueue !== undefined) {
       await upsert('auto_queue', updates.autoQueue ? 'true' : 'false');
     }
+    if (updates.autoQueueIncludeOwn !== undefined) {
+      await upsert('auto_queue_include_own', updates.autoQueueIncludeOwn ? 'true' : 'false');
+    }
     if (updates.reviewEngine !== undefined) {
       await upsert('review_engine', updates.reviewEngine);
     }
@@ -102,6 +120,11 @@ export class SettingsService {
   async isAutoQueueEnabled(): Promise<boolean> {
     const settings = await this.getAllSettings();
     return settings.autoQueue;
+  }
+
+  async isAutoQueueIncludeOwnEnabled(): Promise<boolean> {
+    const settings = await this.getAllSettings();
+    return settings.autoQueueIncludeOwn;
   }
 
   async setAutoQueueEnabled(enabled: boolean): Promise<boolean> {

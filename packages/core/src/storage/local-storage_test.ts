@@ -21,6 +21,27 @@ Deno.test('LocalFileReportStorage - save, retrieve and check existence', async (
     // Verify exists and content matches
     assertEquals(await storage.exists(reportId), true);
     assertEquals(await storage.getReportHtml(reportId), html);
+
+    // Save and retrieve JSON report data
+    const jsonReportId = 'test-report-json';
+    const reportData = {
+      verdict: 'APPROVE' as const,
+      summary: {
+        brief: 'テスト要約',
+        changedCode: 'テストコード',
+        reachPaths: [],
+      },
+      comments: [],
+    };
+
+    assertEquals(await storage.getReportData(jsonReportId), null);
+    const savedJsonPath = await storage.saveReportData(jsonReportId, reportData);
+    assertEquals(savedJsonPath, join(tempDir, `${jsonReportId}.json`));
+    assertEquals(await storage.exists(jsonReportId), true);
+
+    const retrievedData = await storage.getReportData(jsonReportId);
+    assertEquals(retrievedData?.verdict, 'APPROVE');
+    assertEquals(retrievedData?.summary.brief, 'テスト要約');
   } finally {
     await Deno.remove(tempDir, { recursive: true });
   }

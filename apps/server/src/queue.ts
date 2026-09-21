@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, or } from 'drizzle-orm';
 import { join } from 'node:path';
 import type { AppDatabase } from './db/index.ts';
 import { reviewJobsTable, reviewReportsTable, reviewRequestsTable } from './db/schema.ts';
@@ -14,6 +14,7 @@ export class ReviewQueue {
   private readonly worktreeManager: WorktreeManager;
   private readonly vcsProvider?: VCSProvider;
   private readonly queue: string[] = []; // reviewRequest IDs
+  private currentRequestId?: string;
   private isProcessing = false;
   private readonly reportsDir: string;
 
@@ -64,13 +65,13 @@ export class ReviewQueue {
   }
 
   async recoverStaleJobs(): Promise<void> {
-    const runningJobs = await this.db
+    const staleJobs = await this.db
       .select()
       .from(reviewJobsTable)
-      .where(eq(reviewJobsTable.status, 'running'));
+      .where(or(eq(reviewJobsTable.status, 'running'), eq(reviewJobsTable.status, 'pending')));
 
     const now = new Date().toISOString();
-    for (const job of runningJobs) {
+    for (const job of staleJobs) {
       await this.db
         .update(reviewJobsTable)
         .set({
@@ -83,16 +84,18 @@ export class ReviewQueue {
   }
 
   async enqueue(requestId: string): Promise<string> {
-    const existing = await this.db
-      .select()
-      .from(reviewJobsTable)
-      .where(eq(reviewJobsTable.requestId, requestId));
+    if (this.currentRequestId === requestId || this.queue.includes(requestId)) {
+      const existing = await this.db
+        .select()
+        .from(reviewJobsTable)
+        .where(eq(reviewJobsTable.requestId, requestId));
 
-    const runningOrPending = existing.find(
-      (j) => j.status === 'pending' || j.status === 'running'
-    );
-    if (runningOrPending) {
-      return runningOrPending.id;
+      const active = existing.find(
+        (j) => j.status === 'pending' || j.status === 'running'
+      );
+      if (active) {
+        return active.id;
+      }
     }
 
     const engine = await this.resolveEngine();
@@ -126,14 +129,17 @@ export class ReviewQueue {
     const requestId = this.queue.shift();
     if (requestId === undefined) {
       this.isProcessing = false;
+      this.currentRequestId = undefined;
       return;
     }
+    this.currentRequestId = requestId;
 
     try {
       await this.runReview(requestId);
     } catch (err) {
       console.error('Failed to run review for request', { requestId, err });
     } finally {
+      this.currentRequestId = undefined;
       this.isProcessing = false;
       if (this.queue.length > 0) {
         this.processNext().catch((err) => {
@@ -219,10 +225,28 @@ export class ReviewQueue {
       });
 
       const completedAt = new Date().toISOString();
-      if (result.success && result.reportHtmlPath) {
+      if (result.success && (result.reportJsonPath || result.reportHtmlPath)) {
         const reportId = `${pr.repository.replace('/', '__')}_${pr.number}_${Date.now()}`;
-        const htmlContent = await Deno.readTextFile(result.reportHtmlPath);
-        await this.storage.saveReport(reportId, htmlContent);
+        
+        if (result.reportData) {
+          await this.storage.saveReportData(reportId, result.reportData);
+        } else if (result.reportJsonPath) {
+          try {
+            const jsonText = await Deno.readTextFile(result.reportJsonPath);
+            await this.storage.saveReportData(reportId, JSON.parse(jsonText));
+          } catch {
+            // ignore
+          }
+        }
+
+        if (result.reportHtmlPath) {
+          try {
+            const htmlContent = await Deno.readTextFile(result.reportHtmlPath);
+            await this.storage.saveReport(reportId, htmlContent);
+          } catch {
+            // ignore
+          }
+        }
 
         await this.db.insert(reviewReportsTable).values({
           id: reportId,

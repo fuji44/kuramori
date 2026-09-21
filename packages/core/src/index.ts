@@ -4,3 +4,5 @@ export * from './interfaces/review-engine.ts';
 export * from './interfaces/report-storage.ts';
 export * from './storage/local-storage.ts';
 export * from './vcs/github.ts';
+export * from './schema/review-report.ts';
+export * from './report/html-generator.ts';

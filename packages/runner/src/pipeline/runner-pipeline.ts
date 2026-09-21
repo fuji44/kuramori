@@ -1,0 +1,247 @@
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import {
+  type ReviewExecutionContext,
+  type ReviewExecutionResult,
+  type ReviewReportData,
+  getReviewReportJsonSchema,
+} from '@review-base/core';
+import { collectPreFlightContext } from '../context/collector.ts';
+import {
+  validateReviewReportData,
+  auditFileAnchors,
+  formatViolationsForPrompt,
+} from '../gatekeeper/validator.ts';
+import { compileD2ToSvg, generateD2FromDiagram } from '../diagram/d2-compiler.ts';
+import { generateStandaloneReviewHtml } from '../report/html-generator.ts';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const SKILL_MD_PATH = join(__dirname, '../../skills/pr-review/SKILL.md');
+
+/**
+ * Pre-flight: コンテキスト収集と作業ディレクトリへの配置
+ */
+export async function executePreFlight(
+  context: ReviewExecutionContext,
+  log: (msg: string) => Promise<void>
+): Promise<void> {
+  await log(`[Pre-flight] Collecting context for ${context.repository}#${context.number}...`);
+  const preFlightData = await collectPreFlightContext(context.repository, context.number);
+
+  const contextJsonStr = JSON.stringify(preFlightData, null, 2);
+  const worktreeContextPath = join(context.worktreePath, 'context.json');
+  const outputContextPath = join(context.outputDir, 'context.json');
+
+  await Deno.writeTextFile(worktreeContextPath, contextJsonStr);
+  await Deno.writeTextFile(outputContextPath, contextJsonStr);
+
+  // 古い review.json が残っていれば削除（クリーンな状態から開始）
+  try {
+    await Deno.remove(join(context.outputDir, 'review.json'));
+  } catch {
+    // ignore
+  }
+
+  await log(`[Pre-flight] context.json written to worktree and output dir.`);
+}
+
+/**
+ * AI エージェントに渡すレビュー指示プロンプトを構築する
+ */
+export async function buildReviewPrompt(
+  context: ReviewExecutionContext
+): Promise<string> {
+  let skillInstructions = '';
+  try {
+    skillInstructions = await Deno.readTextFile(SKILL_MD_PATH);
+  } catch {
+    skillInstructions = 'Perform deep PR review based on context.json and output review.json';
+  }
+
+  const jsonSchema = JSON.stringify(getReviewReportJsonSchema(), null, 2);
+  const targetReviewJsonPath = join(context.outputDir, 'review.json');
+
+  return `
+You are an autonomous senior code reviewer performing a deep review of Pull Request ${context.repository}#${context.number}.
+
+=== INSTRUCTIONS & SKILL GUIDELINES ===
+${skillInstructions}
+
+=== JSON SCHEMA REQUIREMENT (ZOD 4 SCHEMA) ===
+Your final output MUST strictly adhere to this JSON Schema:
+${jsonSchema}
+
+=== EXECUTION TARGETS & CONSTRAINTS ===
+- Pre-flight context is available at: context.json (in current working directory)
+- Review Output File: You MUST write the final JSON report to "${targetReviewJsonPath}" AND/OR "review.json" in current directory.
+- Mode: Output ONLY valid JSON for review.json. Do NOT generate HTML. Do NOT push to git or GitHub.
+- CRITICAL: Do NOT spawn background tasks or exit with messages like "Waiting...". You must inspect files, perform your review synchronously, and WRITE review.json to disk BEFORE finishing your response.
+
+Begin by reading context.json now.
+`;
+}
+
+/**
+ * Post-flight: Gatekeeper による review.json の検収
+ */
+export async function executePostFlight(
+  context: ReviewExecutionContext,
+  log: (msg: string) => Promise<void>,
+  stdout?: string
+): Promise<ReviewExecutionResult> {
+  await log(`[Post-flight] Gatekeeper auditing review.json...`);
+
+  const primaryJsonPath = join(context.outputDir, 'review.json');
+  const fallbackJsonPath = join(context.worktreePath, 'review.json');
+
+  let rawJsonText: string | null = null;
+  let finalJsonPath = primaryJsonPath;
+
+  try {
+    rawJsonText = await Deno.readTextFile(primaryJsonPath);
+  } catch {
+    try {
+      rawJsonText = await Deno.readTextFile(fallbackJsonPath);
+      await Deno.writeTextFile(primaryJsonPath, rawJsonText);
+      finalJsonPath = primaryJsonPath;
+    } catch {
+      // ワークツリー配下に書き出されていないか探索
+      try {
+        for await (const entry of Deno.readDir(context.worktreePath)) {
+          if (entry.name === 'review.json') {
+            const foundPath = join(context.worktreePath, entry.name);
+            rawJsonText = await Deno.readTextFile(foundPath);
+            await Deno.writeTextFile(primaryJsonPath, rawJsonText);
+            finalJsonPath = primaryJsonPath;
+            break;
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  // ファイルが見つからない場合、標準出力からの JSON 抽出を試みる
+  if (!rawJsonText && stdout) {
+    const jsonMatch = stdout.match(/```json\s*([\s\S]*?)\s*```/) || stdout.match(/(\{[\s\S]*"verdict"[\s\S]*\})/);
+    if (jsonMatch) {
+      rawJsonText = jsonMatch[1].trim();
+      await Deno.writeTextFile(primaryJsonPath, rawJsonText);
+      finalJsonPath = primaryJsonPath;
+      await log(`[Post-flight] Recovered review.json from AI stdout.`);
+    }
+  }
+
+  if (!rawJsonText) {
+    const errorMsg = 'Gatekeeper audit failed: review.json was not generated by AI engine.';
+    await log(`[Post-flight ERROR] ${errorMsg}`);
+    return {
+      success: false,
+      error: errorMsg,
+    };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawJsonText);
+  } catch (err) {
+    const errorMsg = `Gatekeeper audit failed: review.json contains invalid JSON: ${err}`;
+    await log(`[Post-flight ERROR] ${errorMsg}`);
+    return {
+      success: false,
+      error: errorMsg,
+    };
+  }
+
+  const validationResult = validateReviewReportData(parsed);
+  if (!validationResult.success || !validationResult.data) {
+    const promptFeedback = formatViolationsForPrompt(validationResult.violations || []);
+    const errorMsg = `Gatekeeper validation failed:\n${promptFeedback}`;
+    await log(`[Post-flight ERROR] ${errorMsg}`);
+    return {
+      success: false,
+      error: errorMsg,
+    };
+  }
+
+  const reportData = validationResult.data;
+
+  // 差分ファイルのアンカー検証
+  try {
+    const contextJsonPath = join(context.outputDir, 'context.json');
+    const contextContent = await Deno.readTextFile(contextJsonPath);
+    const preFlight = JSON.parse(contextContent);
+    const diffText = preFlight.diff as string;
+
+    const changedFiles = extractChangedFilesFromDiff(diffText);
+    const anchorViolations = auditFileAnchors(reportData.comments, changedFiles);
+
+    if (anchorViolations.length > 0) {
+      const warnMsg = `Gatekeeper Anchor Warning: Some comments refer to files outside diff:\n${formatViolationsForPrompt(anchorViolations)}`;
+      await log(`[Post-flight WARN] ${warnMsg}`);
+      // ここでは警告ログに留め、レポート自体は承認（または必要に応じてフィルタ）
+    }
+  } catch {
+    // 差分取得不可時はスキップ
+  }
+
+  // D2 ダイアグラムの SVG コンパイル
+  if (reportData.diagram) {
+    try {
+      const d2Source = reportData.diagram.d2Source || generateD2FromDiagram(reportData.diagram);
+      reportData.diagram.d2Source = d2Source;
+      const svg = await compileD2ToSvg(d2Source);
+      reportData.diagram.svg = svg;
+      await log(`[Post-flight] D2 diagram successfully compiled to SVG.`);
+    } catch (d2Err) {
+      await log(`[Post-flight WARN] Failed to compile D2 diagram to SVG: ${d2Err}`);
+    }
+  }
+
+  // 更新された reportData を保存
+  await Deno.writeTextFile(finalJsonPath, JSON.stringify(reportData, null, 2));
+
+  // スタンドアロン HTML レポートの自動生成・保存
+  const htmlReportPath = join(context.outputDir, 'report.html');
+  const standaloneHtml = generateStandaloneReviewHtml(reportData, {
+    repo: context.repository,
+    prNumber: context.number,
+  });
+  await Deno.writeTextFile(htmlReportPath, standaloneHtml);
+  await log(`[Post-flight] Standalone HTML report generated at ${htmlReportPath}`);
+
+  await log(`[Post-flight SUCCESS] Gatekeeper validation passed! Verdict: ${reportData.verdict}, Findings: ${reportData.comments.length}`);
+
+  const briefText = typeof reportData.summary.brief === 'string'
+    ? reportData.summary.brief
+    : (reportData.summary.brief.problem ?? reportData.summary.brief.approach ?? '');
+
+  return {
+    success: true,
+    verdict: reportData.verdict,
+    summary: briefText,
+    reportJsonPath: finalJsonPath,
+    reportHtmlPath: htmlReportPath,
+    reportData,
+  };
+}
+
+/**
+ * Unified diff 文字列から変更ファイルパス一覧を抽出する
+ */
+export function extractChangedFilesFromDiff(diffText: string): Set<string> {
+  const files = new Set<string>();
+  const lines = diffText.split('\n');
+  for (const line of lines) {
+    if (line.startsWith('diff --git a/')) {
+      const parts = line.split(' ');
+      if (parts.length >= 4) {
+        const bPath = parts[3].replace(/^b\//, '');
+        files.add(bPath);
+      }
+    }
+  }
+  return files;
+}
