@@ -3,6 +3,7 @@ export interface FilterUrlParams {
   status?: 'all' | 'unreviewed' | 'completed';
   repo?: string;
   report?: string;
+  includeOwn?: boolean;
 }
 
 export function parseUrlParams(search: string): FilterUrlParams {
@@ -22,7 +23,10 @@ export function parseUrlParams(search: string): FilterUrlParams {
   const reportVal = params.get('report');
   const report = reportVal !== null && reportVal.trim() !== '' ? reportVal : undefined;
 
-  return { q, status, repo, report };
+  const ownParam = params.get('own') ?? params.get('includeOwn');
+  const includeOwn = ownParam === 'true' || ownParam === '1' ? true : undefined;
+
+  return { q, status, repo, report, includeOwn };
 }
 
 export function buildUrlSearch(params: FilterUrlParams): string {
@@ -42,6 +46,10 @@ export function buildUrlSearch(params: FilterUrlParams): string {
 
   if (params.report !== undefined && params.report.trim() !== '') {
     sp.set('report', params.report);
+  }
+
+  if (params.includeOwn === true) {
+    sp.set('own', 'true');
   }
 
   const queryStr = sp.toString();

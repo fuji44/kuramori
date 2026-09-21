@@ -2,17 +2,19 @@ import { assertEquals } from 'jsr:@std/assert@^1.0.11';
 import { buildUrlSearch, parseUrlParams } from './url-params.ts';
 
 Deno.test('url-params - parseUrlParams parses query string accurately', () => {
-  const parsed = parseUrlParams('?q=is:open+author:alice&status=unreviewed&repo=luupsc/luup-server&report=rep-123');
+  const parsed = parseUrlParams('?q=is:open+author:alice&status=unreviewed&repo=luupsc/luup-server&report=rep-123&own=true');
   assertEquals(parsed.q, 'is:open author:alice');
   assertEquals(parsed.status, 'unreviewed');
   assertEquals(parsed.repo, 'luupsc/luup-server');
   assertEquals(parsed.report, 'rep-123');
+  assertEquals(parsed.includeOwn, true);
 
   const empty = parseUrlParams('');
   assertEquals(empty.q, undefined);
   assertEquals(empty.status, undefined);
   assertEquals(empty.repo, undefined);
   assertEquals(empty.report, undefined);
+  assertEquals(empty.includeOwn, undefined);
 
   // Invalid status fallback
   const invalidStatus = parseUrlParams('?status=invalid');
@@ -25,8 +27,9 @@ Deno.test('url-params - buildUrlSearch serializes parameters', () => {
     status: 'unreviewed',
     repo: 'luupsc/luup-server',
     report: 'rep-123',
+    includeOwn: true,
   });
-  assertEquals(search1, '?q=is%3Aopen+author%3Aalice&status=unreviewed&repo=luupsc%2Fluup-server&report=rep-123');
+  assertEquals(search1, '?q=is%3Aopen+author%3Aalice&status=unreviewed&repo=luupsc%2Fluup-server&report=rep-123&own=true');
 
   // Skips default/empty values
   const search2 = buildUrlSearch({
@@ -34,6 +37,7 @@ Deno.test('url-params - buildUrlSearch serializes parameters', () => {
     status: 'all',
     repo: 'all',
     report: '',
+    includeOwn: false,
   });
   assertEquals(search2, '');
 });
@@ -44,6 +48,7 @@ Deno.test('url-params - round trip consistency', () => {
     status: 'completed' as const,
     repo: 'owner/repo',
     report: 'rep-456',
+    includeOwn: true,
   };
 
   const serialized = buildUrlSearch(original);
@@ -53,4 +58,5 @@ Deno.test('url-params - round trip consistency', () => {
   assertEquals(roundTrip.status, original.status);
   assertEquals(roundTrip.repo, original.repo);
   assertEquals(roundTrip.report, original.report);
+  assertEquals(roundTrip.includeOwn, original.includeOwn);
 });
