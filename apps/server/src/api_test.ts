@@ -77,31 +77,165 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
     const htmlBody = await resReport.text();
     assertEquals(htmlBody, testHtml);
 
+    // 4b. Test report JSON data serving
+    const testData = {
+      verdict: 'APPROVE' as const,
+      summary: { brief: 'APIテスト要約', changedCode: 'コード', reachPaths: [] },
+      comments: [],
+    };
+    await storage.saveReportData('test-report-json', testData);
+
+    const resReportJson = await api.request('/api/reports/test-report-json/data');
+    assertEquals(resReportJson.status, 200);
+    const retrievedJson = await resReportJson.json();
+    assertEquals(retrievedJson.verdict, 'APPROVE');
+    assertEquals(retrievedJson.summary.brief, 'APIテスト要約');
+
     // 5. Test 404 for non-existent report
     const res404 = await api.request('/api/reports/non-existent/html');
     assertEquals(res404.status, 404);
+    const res404Json = await api.request('/api/reports/non-existent/data');
+    assertEquals(res404Json.status, 404);
 
     // 6. Test Settings API
     const resSettingsGet = await api.request('/api/settings');
     assertEquals(resSettingsGet.status, 200);
     const dataSettings1 = await resSettingsGet.json();
     assertEquals(dataSettings1.autoQueue, false);
+    assertEquals(dataSettings1.autoQueueIncludeOwn, false);
     assertEquals(dataSettings1.reviewEngine, 'antigravity');
 
     const resSettingsPost = await api.request('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ autoQueue: true, reviewEngine: 'mock' }),
+      body: JSON.stringify({ autoQueue: true, autoQueueIncludeOwn: true, reviewEngine: 'mock' }),
     });
     assertEquals(resSettingsPost.status, 200);
     const dataSettings2 = await resSettingsPost.json();
     assertEquals(dataSettings2.autoQueue, true);
+    assertEquals(dataSettings2.autoQueueIncludeOwn, true);
     assertEquals(dataSettings2.reviewEngine, 'mock');
 
     const resSettingsGet2 = await api.request('/api/settings');
     const dataSettings3 = await resSettingsGet2.json();
     assertEquals(dataSettings3.autoQueue, true);
+    assertEquals(dataSettings3.autoQueueIncludeOwn, true);
     assertEquals(dataSettings3.reviewEngine, 'mock');
+
+    // 7. Test poller with isOwn filtering:
+    // With autoQueue: true and autoQueueIncludeOwn: false, own PR should NOT be queued,
+    // while review requested PR SHOULD be queued.
+    await settingsService.updateSettings({ autoQueue: true, autoQueueIncludeOwn: false });
+
+    const ownPr: ReviewRequest = {
+      id: 'github:test/repo#2',
+      userId: 'default',
+      provider: 'github',
+      repository: 'test/repo',
+      number: 2,
+      title: 'feat: my own pull request',
+      author: 'me',
+      url: 'https://github.com/test/repo/pull/2',
+      sourceBranch: 'feat/own',
+      targetBranch: 'main',
+      headSha: 'def5678',
+      isDraft: false,
+      isOwn: true,
+      state: 'open',
+      createdAt: '2026-09-18T02:00:00Z',
+      updatedAt: '2026-09-18T02:00:00Z',
+    };
+
+    const reviewRequestedPr: ReviewRequest = {
+      id: 'github:test/repo#3',
+      userId: 'default',
+      provider: 'github',
+      repository: 'test/repo',
+      number: 3,
+      title: 'feat: someone else review request',
+      author: 'someone',
+      url: 'https://github.com/test/repo/pull/3',
+      sourceBranch: 'feat/other',
+      targetBranch: 'main',
+      headSha: '7890abc',
+      isDraft: false,
+      isOwn: false,
+      state: 'open',
+      createdAt: '2026-09-18T03:00:00Z',
+      updatedAt: '2026-09-18T03:00:00Z',
+    };
+
+    let queuedIds: string[] = [];
+    const testQueue = {
+      enqueue: (requestId: string) => {
+        queuedIds.push(requestId);
+        return Promise.resolve(`job-${requestId}`);
+      },
+    } as unknown as ReviewQueue;
+
+    const testVcs: VCSProvider = {
+      name: 'mock',
+      listReviewRequests: () => Promise.resolve([ownPr, reviewRequestedPr]),
+      getReviewRequest: (r, n) => Promise.resolve(n === 2 ? ownPr : reviewRequestedPr),
+      getDiff: () => Promise.resolve('diff'),
+      getCloneUrl: () => Promise.resolve(''),
+    };
+
+    const testPoller = new GitHubPoller(testVcs, db, testQueue, settingsService);
+    await testPoller.poll();
+
+    // Only reviewRequestedPr (#3) should be auto-queued, ownPr (#2) should not
+    assertEquals(queuedIds.includes('github:test/repo#3'), true);
+    assertEquals(queuedIds.includes('github:test/repo#2'), false);
+
+    // Now enable autoQueueIncludeOwn: true and poll with a new own PR (#4)
+    await settingsService.updateSettings({ autoQueueIncludeOwn: true });
+    queuedIds = [];
+
+    const ownPr4: ReviewRequest = {
+      id: 'github:test/repo#4',
+      userId: 'default',
+      provider: 'github',
+      repository: 'test/repo',
+      number: 4,
+      title: 'feat: another own pull request',
+      author: 'me',
+      url: 'https://github.com/test/repo/pull/4',
+      sourceBranch: 'feat/own-4',
+      targetBranch: 'main',
+      headSha: '4444abc',
+      isDraft: false,
+      isOwn: true,
+      state: 'open',
+      createdAt: '2026-09-18T04:00:00Z',
+      updatedAt: '2026-09-18T04:00:00Z',
+    };
+
+    const testVcs2: VCSProvider = {
+      name: 'mock',
+      listReviewRequests: () => Promise.resolve([ownPr4]),
+      getReviewRequest: () => Promise.resolve(ownPr4),
+      getDiff: () => Promise.resolve('diff'),
+      getCloneUrl: () => Promise.resolve(''),
+    };
+
+    const testPoller2 = new GitHubPoller(testVcs2, db, testQueue, settingsService);
+    await testPoller2.poll();
+
+    // Now ownPr4 should be auto-queued because autoQueueIncludeOwn is true
+    assertEquals(queuedIds.includes('github:test/repo#4'), true);
+
+    // 9. Test diagram compilation endpoint
+    const resCompile = await api.request('/api/diagram/compile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ d2Source: 'a -> b', layout: 'dagre' }),
+    });
+    assertEquals(resCompile.status, 200);
+    const compileJson = await resCompile.json();
+    assertEquals(typeof compileJson.svg, 'string');
+    assertEquals(compileJson.svg.includes('<svg'), true);
+    assertEquals(compileJson.layout, 'dagre');
 
     client.close();
   } finally {

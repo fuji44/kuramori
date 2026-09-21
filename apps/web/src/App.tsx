@@ -2,6 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   RefreshCw, 
   GitPullRequest, 
+  GitPullRequestDraft,
+  GitMerge,
+  GitPullRequestClosed,
   ExternalLink, 
   CheckCircle2, 
   Clock, 
@@ -13,14 +16,20 @@ import {
   Maximize2,
   Minimize2,
   Filter,
-  Zap,
   Settings,
   Cpu,
   Save,
-  Link2
+  Link2,
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  Milestone,
+  Tag,
+  User,
 } from 'lucide-react';
 
 import { SearchQueryBar } from './components/SearchQueryBar.tsx';
+import { ReviewReportView } from './components/review/ReviewReportView.tsx';
 import { filterByGitHubQuery } from './utils/query-parser.ts';
 import { parseUrlParams, buildUrlSearch } from './utils/url-params.ts';
 
@@ -36,9 +45,13 @@ interface ReviewItem {
   targetBranch: string;
   headSha: string;
   isDraft: boolean;
+  isOwn?: boolean;
   state: string;
   createdAt: string;
   updatedAt: string;
+  labels?: Array<{ name: string; color?: string; description?: string }>;
+  milestone?: string | null;
+  assignees?: Array<{ login: string; avatarUrl?: string }>;
   latestJob: {
     id: string;
     status: 'pending' | 'queued' | 'running' | 'completed' | 'failed';
@@ -57,6 +70,7 @@ interface ReviewItem {
 
 interface AppSettings {
   autoQueue: boolean;
+  autoQueueIncludeOwn: boolean;
   reviewEngine: 'antigravity' | 'claude-code' | 'mock';
   agyBin: string;
   claudeBin: string;
@@ -78,10 +92,12 @@ export default function App() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'unreviewed' | 'completed'>(initialParams.status ?? 'all');
   const [repoFilter, setRepoFilter] = useState<string>(initialParams.repo ?? 'all');
   const [searchQuery, setSearchQuery] = useState<string>(initialParams.q ?? '');
+  const [includeOwn, setIncludeOwn] = useState<boolean>(initialParams.includeOwn ?? false);
 
   // Settings state
   const [settings, setSettings] = useState<AppSettings>({
     autoQueue: false,
+    autoQueueIncludeOwn: false,
     reviewEngine: 'antigravity',
     agyBin: 'agy',
     claudeBin: 'claude',
@@ -155,6 +171,7 @@ export default function App() {
       status: statusFilter,
       repo: repoFilter,
       report: selectedReportId ?? undefined,
+      includeOwn: includeOwn ? true : undefined,
     });
 
     const newUrl = `${window.location.pathname}${currentSearch}${window.location.hash}`;
@@ -163,7 +180,7 @@ export default function App() {
     if (newUrl !== currentUrl) {
       window.history.replaceState(null, '', newUrl);
     }
-  }, [searchQuery, statusFilter, repoFilter, selectedReportId]);
+  }, [searchQuery, statusFilter, repoFilter, selectedReportId, includeOwn]);
 
   // Handle browser back/forward navigation (popstate)
   useEffect(() => {
@@ -173,6 +190,7 @@ export default function App() {
       setStatusFilter(params.status ?? 'all');
       setRepoFilter(params.repo ?? 'all');
       setSelectedReportId(params.report ?? null);
+      setIncludeOwn(params.includeOwn ?? false);
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -188,6 +206,30 @@ export default function App() {
       }
     }
   }, [items, selectedReportId]);
+
+  // List of items that have a report, for prev/next navigation
+  const reportItems = useMemo(() => {
+    return items.filter((item) => Boolean(item.report?.id));
+  }, [items]);
+
+  const currentReportIndex = useMemo(() => {
+    if (!selectedReportId) return -1;
+    return reportItems.findIndex((item) => item.report?.id === selectedReportId);
+  }, [reportItems, selectedReportId]);
+
+  const prevReport = currentReportIndex > 0 ? reportItems[currentReportIndex - 1] : null;
+  const nextReport = currentReportIndex >= 0 && currentReportIndex < reportItems.length - 1 ? reportItems[currentReportIndex + 1] : null;
+
+  // Esc key to return to PR list
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedReportId && !logModalJobId && !isSettingsOpen) {
+        setSelectedReportId(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedReportId, logModalJobId, isSettingsOpen]);
 
   // Copy current filter URL to clipboard
   const handleCopyFilterUrl = async () => {
@@ -230,25 +272,6 @@ export default function App() {
     } catch (err) {
       console.error('Failed to trigger review', err);
       setErrorMessage('AIレビューの実行要求に失敗しました。');
-    }
-  };
-
-  const handleToggleAutoQueue = async () => {
-    const nextVal = !settings.autoQueue;
-    try {
-      const res = await fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ autoQueue: nextVal }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setSettings(data);
-        setFormSettings(data);
-      }
-    } catch (err) {
-      console.error('Failed to update autoQueue setting', err);
-      setErrorMessage('自動キューイング設定の更新に失敗しました。');
     }
   };
 
@@ -329,12 +352,24 @@ export default function App() {
     return Array.from(set).sort();
   }, [items]);
 
+  const ownPrCount = useMemo(() => {
+    return items.filter((item) => Boolean(item.isOwn)).length;
+  }, [items]);
+
+  const baseItems = useMemo(() => {
+    if (includeOwn) return items;
+    return items.filter((item) => !item.isOwn);
+  }, [items, includeOwn]);
+
   const filteredItems = useMemo(() => {
     // 1. First filter by GitHub query syntax
     const queryMatched = filterByGitHubQuery(items, searchQuery);
 
-    // 2. Then apply UI tab/dropdown filters
+    // 2. Then apply UI tab/dropdown filters and own PR filter
     return queryMatched.filter((item) => {
+      if (!includeOwn && item.isOwn) {
+        return false;
+      }
       if (statusFilter === 'unreviewed' && item.latestJob?.status === 'completed') {
         return false;
       }
@@ -346,10 +381,10 @@ export default function App() {
       }
       return true;
     });
-  }, [items, searchQuery, statusFilter, repoFilter]);
+  }, [items, searchQuery, statusFilter, repoFilter, includeOwn]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0d1117] text-[#c9d1d9]">
+    <div className="h-screen overflow-hidden flex flex-col bg-[#0d1117] text-[#c9d1d9]">
       {/* Top Header */}
       <header className="h-16 border-b border-[#30363d] bg-[#161b22] px-6 flex items-center justify-between sticky top-0 z-20">
         <div className="flex items-center gap-3">
@@ -372,20 +407,6 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Auto Queue Toggle */}
-          <button
-            onClick={handleToggleAutoQueue}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md border text-xs font-medium transition-all ${
-              settings.autoQueue
-                ? 'bg-sky-950 border-sky-700 text-sky-400 hover:bg-sky-900'
-                : 'bg-[#21262d] border-[#30363d] text-[#8b949e] hover:text-[#c9d1d9]'
-            }`}
-            title="新着PRを検知した際に自動でレビューキューに投入するかどうか"
-          >
-            <Zap className={`w-3.5 h-3.5 ${settings.autoQueue ? 'fill-sky-400 text-sky-400' : 'text-[#8b949e]'}`} />
-            <span>自動キューイング: {settings.autoQueue ? 'ON' : 'OFF'}</span>
-          </button>
-
           {/* GitHub Refresh Button */}
           <button
             onClick={handleRefresh}
@@ -437,9 +458,9 @@ export default function App() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Left List Pane */}
-        {(!selectedReportId || !isMaximized) && (
-          <main className={`flex-1 flex flex-col overflow-y-auto p-6 ${selectedReportId ? 'max-w-xl lg:max-w-2xl border-r border-[#30363d]' : 'max-w-6xl mx-auto w-full'}`}>
+        {/* Left List Pane (Only visible when no report is selected) */}
+        {!selectedReportId && (
+          <main className="flex-1 flex flex-col overflow-y-auto p-6 max-w-6xl mx-auto w-full">
             {/* Search Query Bar with Autocomplete Suggestions & Copy URL */}
             <div className="mb-4 flex items-center gap-2">
               <SearchQueryBar
@@ -468,19 +489,19 @@ export default function App() {
                     onClick={() => setStatusFilter('all')}
                     className={`px-3 py-1 rounded-md transition-colors ${statusFilter === 'all' ? 'bg-[#21262d] text-white font-medium' : 'text-[#8b949e] hover:text-[#c9d1d9]'}`}
                   >
-                    すべて ({items.length})
+                    すべて ({baseItems.length})
                   </button>
                   <button
                     onClick={() => setStatusFilter('unreviewed')}
                     className={`px-3 py-1 rounded-md transition-colors ${statusFilter === 'unreviewed' ? 'bg-[#21262d] text-white font-medium' : 'text-[#8b949e] hover:text-[#c9d1d9]'}`}
                   >
-                    未完了 ({items.filter((i) => i.latestJob?.status !== 'completed').length})
+                    未完了 ({baseItems.filter((i) => i.latestJob?.status !== 'completed').length})
                   </button>
                   <button
                     onClick={() => setStatusFilter('completed')}
                     className={`px-3 py-1 rounded-md transition-colors ${statusFilter === 'completed' ? 'bg-[#21262d] text-white font-medium' : 'text-[#8b949e] hover:text-[#c9d1d9]'}`}
                   >
-                    レポートあり ({items.filter((i) => i.latestJob?.status === 'completed').length})
+                    レポートあり ({baseItems.filter((i) => i.latestJob?.status === 'completed').length})
                   </button>
                 </div>
 
@@ -502,6 +523,22 @@ export default function App() {
                     </select>
                   </div>
                 )}
+
+                {/* 自分のPRを含むトグル */}
+                <label className="flex items-center gap-1.5 bg-[#161b22] border border-[#30363d] hover:border-[#8b949e] rounded-lg px-2.5 py-1 text-xs text-[#8b949e] hover:text-[#c9d1d9] cursor-pointer select-none transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={includeOwn}
+                    onChange={(e) => setIncludeOwn(e.target.checked)}
+                    className="rounded border-[#30363d] bg-[#0d1117] text-[#00AFA8] focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5 cursor-pointer accent-[#00AFA8]"
+                  />
+                  <span className={includeOwn ? 'text-white font-medium' : ''}>自作PRを含む</span>
+                  {ownPrCount > 0 && (
+                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-purple-950/60 text-purple-300 border border-purple-800/60">
+                      {ownPrCount}
+                    </span>
+                  )}
+                </label>
               </div>
 
               <span className="text-xs text-[#8b949e]">
@@ -526,67 +563,70 @@ export default function App() {
                 {filteredItems.map((item) => {
                   const isSelected = selectedReportId !== null && item.report?.id === selectedReportId;
                   const jobStatus = item.latestJob?.status;
+                  const orgName = item.repository.split('/')[0];
 
                   return (
                     <div
                       key={item.id}
-                      onClick={() => {
-                        if (item.report?.id) {
-                          setSelectedReportId(item.report.id);
-                          setSelectedPrTitle(`${item.repository}#${item.number}: ${item.title}`);
-                        }
-                      }}
-                      className={`p-4 rounded-xl border transition-all cursor-pointer ${
+                      className={`p-4 rounded-xl border transition-all ${
                         isSelected
                           ? 'border-sky-500 bg-[#161b22] ring-1 ring-sky-500'
-                          : 'border-[#30363d] bg-[#161b22] hover:border-[#8b949e]'
+                          : 'border-[#30363d] bg-[#161b22] hover:border-[#484f58]'
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-mono text-sky-400 bg-sky-950/80 px-2 py-0.5 rounded border border-sky-800">
-                              {item.repository}#{item.number}
+                      {/* Header: Project Icon & Repo / PR number / Badges (Left) & Status / GitHub Link (Right) */}
+                      <div className="flex items-center justify-between gap-3 pb-2.5 border-b border-[#21262d] mb-3">
+                        <div className="flex items-center gap-2 flex-wrap min-w-0">
+                          {/* Project / Organization Icon */}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <img
+                              src={`https://github.com/${orgName}.png?size=32`}
+                              alt={orgName}
+                              className="w-4 h-4 rounded-sm shrink-0 bg-neutral-800"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLElement).style.display = 'none';
+                              }}
+                            />
+                            <span className="text-xs text-[#8b949e] font-mono hover:text-white transition-colors">
+                              {item.repository}
                             </span>
-                            {item.isDraft && (
-                              <span className="text-xs px-2 py-0.5 rounded bg-neutral-800 text-neutral-400 border border-neutral-700">
-                                Draft
-                              </span>
-                            )}
-                            <span className="text-xs text-[#8b949e]">by @{item.author}</span>
+                            <span className="text-xs text-neutral-400 font-mono font-medium">
+                              #{item.number}
+                            </span>
                           </div>
 
-                          <h2 className="text-sm md:text-base font-semibold text-white truncate mb-2">
-                            {item.title}
-                          </h2>
+                          {item.isDraft && (
+                            <span className="text-[11px] px-1.5 py-0.2 rounded bg-neutral-800 text-neutral-400 border border-neutral-700">
+                              Draft
+                            </span>
+                          )}
 
-                          <div className="flex items-center gap-4 text-xs text-[#8b949e]">
-                            {item.sourceBranch && (
-                              <span className="flex items-center gap-1 font-mono truncate">
-                                <GitBranch className="w-3.5 h-3.5 shrink-0" />
-                                {item.sourceBranch}
-                              </span>
-                            )}
-                            <span className="shrink-0">更新: {new Date(item.updatedAt).toLocaleString('ja-JP')}</span>
-                          </div>
+                          {item.milestone && (
+                            <span
+                              className="text-[11px] px-2 py-0.5 rounded bg-[#21262d] text-teal-300 border border-[#30363d] font-mono flex items-center gap-1 shrink-0"
+                              title={`マイルストーン: ${item.milestone}`}
+                            >
+                              <Milestone className="w-3 h-3 text-[#00AFA8]" />
+                              <span>{item.milestone}</span>
+                            </span>
+                          )}
                         </div>
 
-                        {/* Status Badges & Actions */}
-                        <div className="flex flex-col items-end gap-2 shrink-0">
-                          {/* Status badge */}
+                        {/* Status Badge & GitHub External Link */}
+                        <div className="flex items-center gap-2 shrink-0">
                           {jobStatus === 'running' ? (
-                            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-sky-950 text-sky-400 border border-sky-800">
-                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-950 text-sky-400 border border-sky-800">
+                              <RefreshCw className="w-3 h-3 animate-spin" />
                               レビュー実行中
                             </span>
                           ) : jobStatus === 'pending' || jobStatus === 'queued' ? (
-                            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-950 text-amber-400 border border-amber-800">
-                              <Clock className="w-3.5 h-3.5" />
+                            <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-950 text-amber-400 border border-amber-800">
+                              <Clock className="w-3 h-3" />
                               キュー待機中
                             </span>
                           ) : jobStatus === 'completed' ? (
-                            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-950 text-emerald-400 border border-emerald-800">
-                              <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-950 text-emerald-400 border border-emerald-800">
+                              <CheckCircle2 className="w-3 h-3" />
                               レビュー完了
                               {item.report?.verdict && (
                                 <span className="ml-1 px-1.5 py-0.2 rounded bg-emerald-900/60 text-[10px]">
@@ -595,71 +635,180 @@ export default function App() {
                               )}
                             </span>
                           ) : jobStatus === 'failed' ? (
-                            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-rose-950 text-rose-400 border border-rose-800">
-                              <AlertCircle className="w-3.5 h-3.5" />
+                            <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-950 text-rose-400 border border-rose-800">
+                              <AlertCircle className="w-3 h-3" />
                               失敗
                             </span>
                           ) : (
-                            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-[#21262d] text-[#8b949e] border border-[#30363d]">
+                            <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#21262d] text-[#8b949e] border border-[#30363d]">
                               未レビュー
                             </span>
                           )}
 
-                          {/* Action buttons */}
-                          <div className="flex items-center gap-2">
-                            {item.latestJob?.error && (
-                              <span 
-                                title={item.latestJob.error}
-                                className="text-[11px] text-rose-400 truncate max-w-xs cursor-help"
-                              >
-                                {item.latestJob.error}
-                              </span>
-                            )}
+                          <a
+                            href={item.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1 rounded text-[#8b949e] hover:text-white hover:bg-[#21262d] transition-colors"
+                            title="GitHubで開く"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                        </div>
+                      </div>
 
-                            {item.latestJob?.id && (
-                              <button
-                                onClick={(e) => openJobLog(e, item.latestJob!.id)}
-                                className="px-2 py-1 rounded text-xs bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-white border border-[#30363d] transition-colors"
-                                title="実行ログを表示"
-                              >
-                                ログ
-                              </button>
-                            )}
+                      {/* Body: PR Status Icon + Title (Left) & Labels (Right) */}
+                      <div className="flex items-center justify-between gap-3 mb-2.5">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          {item.isDraft ? (
+                            <GitPullRequestDraft
+                              className="w-4 h-4 text-neutral-400 shrink-0"
+                              title="Draft Pull Request"
+                            />
+                          ) : item.state === 'merged' ? (
+                            <GitMerge
+                              className="w-4 h-4 text-purple-400 shrink-0"
+                              title="Merged Pull Request"
+                            />
+                          ) : item.state === 'closed' ? (
+                            <GitPullRequestClosed
+                              className="w-4 h-4 text-rose-400 shrink-0"
+                              title="Closed Pull Request"
+                            />
+                          ) : (
+                            <GitPullRequest
+                              className="w-4 h-4 text-emerald-400 shrink-0"
+                              title="Open Pull Request"
+                            />
+                          )}
 
-                            <a
-                              href={item.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="p-1.5 rounded hover:bg-[#21262d] text-[#8b949e] hover:text-white transition-colors"
-                              title="GitHubで開く"
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                            </a>
+                          <h2
+                            className="text-sm md:text-base font-semibold text-white truncate leading-snug"
+                            title={item.title}
+                          >
+                            {item.title}
+                          </h2>
+                        </div>
 
-                            <button
-                              onClick={(e) => handleRunReview(e, item.id)}
-                              disabled={jobStatus === 'running' || jobStatus === 'pending'}
-                              className="flex items-center gap-1 px-2.5 py-1 rounded text-xs bg-[#21262d] hover:bg-[#30363d] text-[#c9d1d9] border border-[#30363d] transition-colors disabled:opacity-50"
-                              title="AIレビューを実行"
-                            >
-                              <Play className="w-3 h-3 text-sky-400 fill-sky-400" />
-                              <span>{jobStatus === 'completed' ? '再実行' : 'レビュー開始'}</span>
-                            </button>
-
-                            {item.report?.id && (
-                              <button
-                                onClick={() => {
-                                  setSelectedReportId(item.report!.id);
-                                  setSelectedPrTitle(`${item.repository}#${item.number}: ${item.title}`);
+                        {/* タグ (ラベル) 一覧: 右寄せ */}
+                        {item.labels && item.labels.length > 0 && (
+                          <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                            {item.labels.map((lbl) => (
+                              <span
+                                key={lbl.name}
+                                className="inline-flex items-center text-[10.5px] px-2 py-0.5 rounded-md font-medium border transition-colors"
+                                style={{
+                                  backgroundColor: lbl.color ? `#${lbl.color}18` : '#21262d',
+                                  borderColor: lbl.color ? `#${lbl.color}45` : '#30363d',
+                                  color: lbl.color ? `#${lbl.color}` : '#c9d1d9',
                                 }}
-                                className="flex items-center gap-1 px-2.5 py-1 rounded text-xs bg-sky-950 hover:bg-sky-900 text-sky-400 border border-sky-800 transition-colors"
+                                title={lbl.description || lbl.name}
                               >
-                                <FileText className="w-3 h-3" />
-                                <span>レポート表示</span>
-                              </button>
-                            )}
+                                {lbl.name}
+                              </span>
+                            ))}
                           </div>
+                        )}
+                      </div>
+
+                      {/* Footer: Metadata & Action Buttons */}
+                      <div className="flex items-center justify-between gap-4 pt-2.5 border-t border-[#21262d]/80 text-xs text-[#8b949e] flex-wrap md:flex-nowrap">
+                        {/* Left metadata */}
+                        <div className="flex items-center gap-3.5 flex-wrap min-w-0">
+                          {/* Author */}
+                          <span className="flex items-center gap-1 shrink-0">
+                            <span className="text-[#8b949e]">by</span>
+                            <span className="text-neutral-300 font-medium">@{item.author}</span>
+                          </span>
+
+                          {/* Assignees */}
+                          {item.assignees && item.assignees.length > 0 && (
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="text-neutral-500">担当:</span>
+                              <div className="flex items-center gap-2">
+                                {item.assignees.map((assignee) => (
+                                  <span
+                                    key={assignee.login}
+                                    className="inline-flex items-center gap-1 text-neutral-300 font-medium"
+                                    title={`担当: @${assignee.login}`}
+                                  >
+                                    {assignee.avatarUrl ? (
+                                      <img
+                                        src={assignee.avatarUrl}
+                                        alt={assignee.login}
+                                        className="w-4 h-4 rounded-full border border-[#30363d]"
+                                      />
+                                    ) : (
+                                      <User className="w-3.5 h-3.5 text-neutral-400" />
+                                    )}
+                                    <span>@{assignee.login}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Branch */}
+                          {item.sourceBranch && (
+                            <span
+                              className="flex items-center gap-1 font-mono truncate max-w-[220px]"
+                              title={`ブランチ: ${item.sourceBranch}`}
+                            >
+                              <GitBranch className="w-3.5 h-3.5 shrink-0 text-neutral-500" />
+                              <span className="truncate">{item.sourceBranch}</span>
+                            </span>
+                          )}
+
+                          {/* Updated At */}
+                          <span className="shrink-0 text-neutral-500">
+                            更新: {new Date(item.updatedAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+
+                        {/* Right action buttons */}
+                        <div className="flex items-center gap-2 shrink-0 ml-auto">
+                          {item.latestJob?.error && (
+                            <span
+                              title={item.latestJob.error}
+                              className="text-[11px] text-rose-400 truncate max-w-xs cursor-help"
+                            >
+                              {item.latestJob.error}
+                            </span>
+                          )}
+
+                          {item.latestJob?.id && (
+                            <button
+                              onClick={(e) => openJobLog(e, item.latestJob!.id)}
+                              className="px-2 py-1 rounded text-xs bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-white border border-[#30363d] transition-colors"
+                              title="実行ログを表示"
+                            >
+                              ログ
+                            </button>
+                          )}
+
+                          <button
+                            onClick={(e) => handleRunReview(e, item.id)}
+                            disabled={jobStatus === 'running' || jobStatus === 'pending'}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded text-xs bg-[#21262d] hover:bg-[#30363d] text-[#c9d1d9] border border-[#30363d] transition-colors disabled:opacity-50"
+                            title="AIレビューを実行"
+                          >
+                            <Play className="w-3 h-3 text-sky-400 fill-sky-400" />
+                            <span>{jobStatus === 'completed' ? '再実行' : 'レビュー開始'}</span>
+                          </button>
+
+                          {item.report?.id && (
+                            <button
+                              onClick={() => {
+                                setSelectedReportId(item.report!.id);
+                                setSelectedPrTitle(`${item.repository}#${item.number}: ${item.title}`);
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-1 rounded text-xs bg-sky-600 hover:bg-sky-500 text-white font-medium shadow-sm transition-colors"
+                              title="レビューレポートを表示"
+                            >
+                              <FileText className="w-3.5 h-3.5" />
+                              <span>レポート表示</span>
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -670,57 +819,90 @@ export default function App() {
           </main>
         )}
 
-        {/* Right Preview Pane (Report iframe) */}
+        {/* Fullscreen Review Workspace (When report is selected) */}
         {selectedReportId && (
-          <aside className={`flex-1 flex flex-col bg-[#161b22] border-l border-[#30363d] overflow-hidden ${isMaximized ? 'w-full' : ''}`}>
-            <div className="h-14 border-b border-[#30363d] px-6 flex items-center justify-between bg-[#21262d]">
-              <div className="flex items-center gap-2 min-w-0">
-                <FileText className="w-4 h-4 text-sky-400 shrink-0" />
-                <h3 className="text-sm font-semibold text-white truncate">
-                  {selectedPrTitle ?? 'AI レビューレポート'}
-                </h3>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
+          <div className="flex-1 flex flex-col w-full h-full bg-[#0d1117] overflow-hidden">
+            {/* Review Workspace Top Navigation Bar */}
+            <div className="h-12 border-b border-[#30363d] px-4 sm:px-6 flex items-center justify-between bg-[#161b22] shrink-0 select-none">
+              <div className="flex items-center gap-3 min-w-0">
                 <button
-                  onClick={() => setIsMaximized(!isMaximized)}
-                  className="p-1.5 rounded hover:bg-[#30363d] text-[#8b949e] hover:text-white transition-colors"
-                  title={isMaximized ? '通常サイズに戻す' : '最大化'}
+                  type="button"
+                  onClick={() => setSelectedReportId(null)}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#21262d] hover:bg-[#30363d] text-gray-200 text-xs font-medium border border-[#30363d] transition-colors"
+                  title="PR一覧に戻る (Esc)"
                 >
-                  {isMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                  <ArrowLeft className="w-3.5 h-3.5 text-[#00AFA8]" />
+                  <span>PR一覧</span>
+                  <kbd className="hidden sm:inline px-1.5 py-0.5 text-[10px] font-mono bg-[#0d1117] text-gray-400 rounded border border-[#30363d]">Esc</kbd>
                 </button>
 
-                <a
-                  href={`/api/reports/${selectedReportId}/html`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-3 py-1 rounded text-xs bg-[#161b22] hover:bg-[#30363d] text-[#c9d1d9] border border-[#30363d] transition-colors"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span>別タブで開く</span>
-                </a>
+                <div className="h-4 w-px bg-[#30363d] hidden sm:block" />
+
+                <div className="flex items-center gap-2 min-w-0 text-xs font-mono text-gray-400">
+                  {reportItems[currentReportIndex] && (
+                    <>
+                      <span className="truncate hidden md:inline text-gray-400">{reportItems[currentReportIndex].repository}</span>
+                      <span className="hidden md:inline">·</span>
+                      <span className="font-bold text-gray-200">PR #{reportItems[currentReportIndex].number}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 shrink-0">
+                {/* Prev / Next PR buttons */}
+                {reportItems.length > 1 && (
+                  <div className="flex items-center rounded-lg bg-[#21262d] border border-[#30363d] p-0.5 text-xs">
+                    <button
+                      type="button"
+                      disabled={!prevReport}
+                      onClick={() => {
+                        if (prevReport) {
+                          setSelectedReportId(prevReport.report!.id);
+                          setSelectedPrTitle(prevReport.title);
+                        }
+                      }}
+                      className="p-1 rounded text-gray-400 hover:text-white disabled:opacity-30 disabled:hover:text-gray-400 transition-colors"
+                      title={prevReport ? `前のPR: #${prevReport.number} ${prevReport.title}` : '前のPRはありません'}
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <span className="px-2 text-[11px] font-mono text-gray-300">
+                      {currentReportIndex >= 0 ? `${currentReportIndex + 1} / ${reportItems.length}` : ''}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={!nextReport}
+                      onClick={() => {
+                        if (nextReport) {
+                          setSelectedReportId(nextReport.report!.id);
+                          setSelectedPrTitle(nextReport.title);
+                        }
+                      }}
+                      className="p-1 rounded text-gray-400 hover:text-white disabled:opacity-30 disabled:hover:text-gray-400 transition-colors"
+                      title={nextReport ? `次のPR: #${nextReport.number} ${nextReport.title}` : '次のPRはありません'}
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
 
                 <button
-                  onClick={() => {
-                    setSelectedReportId(null);
-                    setIsMaximized(false);
-                  }}
-                  className="p-1.5 rounded hover:bg-[#30363d] text-[#8b949e] hover:text-white transition-colors"
-                  title="閉じる"
+                  type="button"
+                  onClick={() => setSelectedReportId(null)}
+                  className="p-1.5 rounded-lg hover:bg-[#21262d] text-gray-400 hover:text-white transition-colors"
+                  title="閉じて一覧に戻る (Esc)"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            <div className="flex-1 bg-white">
-              <iframe
-                src={`/api/reports/${selectedReportId}/html`}
-                title="AI Review Report"
-                sandbox="allow-scripts allow-popups"
-                className="w-full h-full border-none"
-              />
+            {/* Review Content */}
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <ReviewReportView reportId={selectedReportId} />
             </div>
-          </aside>
+          </div>
         )}
       </div>
 
@@ -876,25 +1058,51 @@ export default function App() {
                 </div>
               )}
 
-              {/* Auto Queue Option */}
-              <div className="flex items-center justify-between pt-2 border-t border-[#30363d]">
-                <div>
-                  <div className="text-xs font-semibold text-white">自動キューイング</div>
-                  <p className="text-[11px] text-[#8b949e]">
-                    レビュー依頼の届いた新着PRを検知次第、自動でキューに積む
-                  </p>
+              {/* Auto Queue Options */}
+              <div className="space-y-4 pt-2 border-t border-[#30363d]">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-xs font-semibold text-white">自動キューイング</div>
+                    <p className="text-[11px] text-[#8b949e]">
+                      新着PRを検知次第、自動でレビューキューに投入する
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setFormSettings({ ...formSettings, autoQueue: !formSettings.autoQueue })}
+                    className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                      formSettings.autoQueue
+                        ? 'bg-sky-950 border-sky-700 text-sky-400'
+                        : 'bg-[#21262d] border-[#30363d] text-[#8b949e]'
+                    }`}
+                  >
+                    {formSettings.autoQueue ? '有効 (ON)' : '無効 (OFF)'}
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setFormSettings({ ...formSettings, autoQueue: !formSettings.autoQueue })}
-                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-                    formSettings.autoQueue
-                      ? 'bg-sky-950 border-sky-700 text-sky-400'
-                      : 'bg-[#21262d] border-[#30363d] text-[#8b949e]'
-                  }`}
-                >
-                  {formSettings.autoQueue ? '有効 (ON)' : '無効 (OFF)'}
-                </button>
+
+                {/* Include Own PRs in Auto Queue */}
+                <div className={`flex items-center justify-between pl-3 border-l-2 transition-opacity ${
+                  formSettings.autoQueue ? 'border-sky-500/50' : 'border-[#30363d] opacity-40'
+                }`}>
+                  <div>
+                    <div className="text-xs font-semibold text-white">自身のPRも含める</div>
+                    <p className="text-[11px] text-[#8b949e]">
+                      OFFの場合、自身が作成したPRは自動レビューせず手動実行待ちにします
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!formSettings.autoQueue}
+                    onClick={() => setFormSettings({ ...formSettings, autoQueueIncludeOwn: !formSettings.autoQueueIncludeOwn })}
+                    className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors disabled:cursor-not-allowed ${
+                      formSettings.autoQueueIncludeOwn
+                        ? 'bg-purple-950 border-purple-700 text-purple-300'
+                        : 'bg-[#21262d] border-[#30363d] text-[#8b949e]'
+                    }`}
+                  >
+                    {formSettings.autoQueueIncludeOwn ? '含む' : '含めない'}
+                  </button>
+                </div>
               </div>
 
               {/* Modal Actions */}

@@ -1,5 +1,16 @@
 export type ReviewRequestState = 'open' | 'closed' | 'merged';
 
+export interface ReviewLabel {
+  name: string;
+  color?: string;
+  description?: string;
+}
+
+export interface ReviewAssignee {
+  login: string;
+  avatarUrl?: string;
+}
+
 export interface ReviewRequest {
   id: string;
   userId: string;
@@ -13,9 +24,13 @@ export interface ReviewRequest {
   targetBranch: string;
   headSha: string;
   isDraft: boolean;
+  isOwn?: boolean;
   state: ReviewRequestState;
   createdAt: string;
   updatedAt: string;
+  labels?: ReviewLabel[];
+  milestone?: string | null;
+  assignees?: ReviewAssignee[];
 }
 
 export type ReviewJobStatus = 'pending' | 'queued' | 'running' | 'completed' | 'failed';

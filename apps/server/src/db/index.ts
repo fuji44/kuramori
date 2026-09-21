@@ -36,11 +36,39 @@ export async function initDatabase(client: ReturnType<typeof createClient>) {
       target_branch TEXT NOT NULL DEFAULT '',
       head_sha TEXT NOT NULL DEFAULT '',
       is_draft INTEGER NOT NULL DEFAULT 0,
+      is_own INTEGER NOT NULL DEFAULT 0,
+      labels TEXT,
+      milestone TEXT,
+      assignees TEXT,
       state TEXT NOT NULL DEFAULT 'open',
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
   `);
+
+  try {
+    await client.execute('ALTER TABLE review_requests ADD COLUMN is_own INTEGER NOT NULL DEFAULT 0;');
+  } catch {
+    // Column might already exist
+  }
+
+  try {
+    await client.execute('ALTER TABLE review_requests ADD COLUMN labels TEXT;');
+  } catch {
+    // Column might already exist
+  }
+
+  try {
+    await client.execute('ALTER TABLE review_requests ADD COLUMN milestone TEXT;');
+  } catch {
+    // Column might already exist
+  }
+
+  try {
+    await client.execute('ALTER TABLE review_requests ADD COLUMN assignees TEXT;');
+  } catch {
+    // Column might already exist
+  }
 
   await client.execute(`
     CREATE TABLE IF NOT EXISTS review_jobs (

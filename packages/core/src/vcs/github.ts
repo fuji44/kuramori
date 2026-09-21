@@ -1,8 +1,8 @@
 import type { ListReviewRequestsOptions, VCSProvider } from '../interfaces/vcs-provider.ts';
-import type { ReviewRequest } from '../types/review.ts';
+import type { ReviewRequest, ReviewLabel } from '../types/review.ts';
 
 interface GhSearchPrItem {
-  id: string;
+  id?: string;
   number: number;
   title: string;
   isDraft: boolean;
@@ -15,12 +15,13 @@ interface GhSearchPrItem {
   repository: {
     nameWithOwner: string;
   };
-}
-
-interface GhPrViewDetails {
-  headRefName: string;
-  baseRefName: string;
-  headRefOid: string;
+  labels?: Array<{ name: string; color?: string; description?: string }>;
+  milestone?: { title: string } | null;
+  assignees?: Array<{ login: string; avatarUrl?: string }>;
+  headRefName?: string;
+  baseRefName?: string;
+  headRefOid?: string;
+  state?: string;
 }
 
 export class GitHubProvider implements VCSProvider {
@@ -31,6 +32,78 @@ export class GitHubProvider implements VCSProvider {
     this.defaultUserId = defaultUserId;
   }
 
+  private async executeGraphQLSearch(query: string): Promise<GhSearchPrItem[]> {
+    const gql = `
+      query($searchQuery: String!) {
+        search(query: $searchQuery, type: ISSUE, first: 50) {
+          nodes {
+            ... on PullRequest {
+              number
+              title
+              url
+              isDraft
+              state
+              createdAt
+              updatedAt
+              author { login }
+              repository { nameWithOwner }
+              milestone { title }
+              labels(first: 20) {
+                nodes { name color description }
+              }
+              assignees(first: 5) {
+                nodes { login avatarUrl }
+              }
+              headRefName
+              baseRefName
+              headRefOid
+            }
+          }
+        }
+      }
+    `;
+
+    const cmd = new Deno.Command('gh', {
+      args: ['api', 'graphql', '-f', `query=${gql}`, '-F', `searchQuery=${query}`],
+      stdout: 'piped',
+      stderr: 'piped',
+    });
+
+    const output = await cmd.output();
+    if (!output.success) {
+      const errorText = new TextDecoder().decode(output.stderr);
+      throw new Error(`GraphQL search failed: ${errorText}`);
+    }
+
+    const json = JSON.parse(new TextDecoder().decode(output.stdout));
+    const nodes = json?.data?.search?.nodes || [];
+
+    return nodes.map((node: any) => ({
+      number: node.number,
+      title: node.title,
+      url: node.url,
+      isDraft: Boolean(node.isDraft),
+      state: (node.state || 'OPEN').toLowerCase(),
+      createdAt: node.createdAt,
+      updatedAt: node.updatedAt,
+      author: { login: node.author?.login || 'unknown' },
+      repository: { nameWithOwner: node.repository?.nameWithOwner || '' },
+      milestone: node.milestone ? { title: node.milestone.title } : null,
+      labels: (node.labels?.nodes || []).map((l: any) => ({
+        name: l.name,
+        color: l.color,
+        description: l.description,
+      })),
+      assignees: (node.assignees?.nodes || []).map((a: any) => ({
+        login: a.login,
+        avatarUrl: a.avatarUrl,
+      })),
+      headRefName: node.headRefName || '',
+      baseRefName: node.baseRefName || '',
+      headRefOid: node.headRefOid || '',
+    }));
+  }
+
   private async executeGhSearch(queryArgs: string[]): Promise<GhSearchPrItem[]> {
     const cmd = new Deno.Command('gh', {
       args: [
@@ -39,7 +112,7 @@ export class GitHubProvider implements VCSProvider {
         ...queryArgs,
         '--state=open',
         '--json',
-        'number,title,author,url,repository,isDraft,createdAt,updatedAt',
+        'number,title,author,url,repository,isDraft,createdAt,updatedAt,labels',
         '--limit',
         '50',
       ],
@@ -56,18 +129,64 @@ export class GitHubProvider implements VCSProvider {
     return JSON.parse(new TextDecoder().decode(output.stdout));
   }
 
+  private cachedCurrentUser: string | null = null;
+
+  async getCurrentUser(): Promise<string | null> {
+    if (this.cachedCurrentUser !== null) {
+      return this.cachedCurrentUser;
+    }
+    try {
+      const cmd = new Deno.Command('gh', {
+        args: ['api', 'user', '--jq', '.login'],
+        stdout: 'piped',
+        stderr: 'piped',
+      });
+      const output = await cmd.output();
+      if (output.success) {
+        this.cachedCurrentUser = new TextDecoder().decode(output.stdout).trim();
+        return this.cachedCurrentUser;
+      }
+    } catch {
+      // Ignore failure to fetch current user
+    }
+    return null;
+  }
+
   async listReviewRequests(options?: ListReviewRequestsOptions): Promise<ReviewRequest[]> {
-    const [reviewRequestedItems, authoredItems] = await Promise.all([
-      this.executeGhSearch(['--review-requested=@me']),
-      this.executeGhSearch(['--author=@me']),
-    ]);
+    let reviewRequestedItems: GhSearchPrItem[] = [];
+    let authoredItems: GhSearchPrItem[] = [];
+
+    // GraphQL による一括取得（タグ・マイルストーン・ブランチ名を含む）
+    try {
+      [reviewRequestedItems, authoredItems] = await Promise.all([
+        this.executeGraphQLSearch('type:pr state:open review-requested:@me'),
+        this.executeGraphQLSearch('type:pr state:open author:@me'),
+      ]);
+    } catch {
+      // フォールバック: gh search prs
+      [reviewRequestedItems, authoredItems] = await Promise.all([
+        this.executeGhSearch(['--review-requested=@me']),
+        this.executeGhSearch(['--author=@me']),
+      ]);
+    }
+
+    const authoredKeySet = new Set<string>();
+    for (const item of authoredItems) {
+      if (item.repository?.nameWithOwner) {
+        authoredKeySet.add(`${item.repository.nameWithOwner}#${item.number}`);
+      }
+    }
 
     const itemMap = new Map<string, GhSearchPrItem>();
     for (const item of reviewRequestedItems) {
-      itemMap.set(`${item.repository.nameWithOwner}#${item.number}`, item);
+      if (item.repository?.nameWithOwner) {
+        itemMap.set(`${item.repository.nameWithOwner}#${item.number}`, item);
+      }
     }
     for (const item of authoredItems) {
-      itemMap.set(`${item.repository.nameWithOwner}#${item.number}`, item);
+      if (item.repository?.nameWithOwner) {
+        itemMap.set(`${item.repository.nameWithOwner}#${item.number}`, item);
+      }
     }
 
     const requests: ReviewRequest[] = [];
@@ -75,6 +194,15 @@ export class GitHubProvider implements VCSProvider {
       if (options?.includeDrafts === false && item.isDraft) {
         continue;
       }
+
+      const key = `${item.repository.nameWithOwner}#${item.number}`;
+      const isOwn = authoredKeySet.has(key);
+
+      const labels: ReviewLabel[] = (item.labels || []).map((l) => ({
+        name: l.name,
+        color: l.color,
+        description: l.description,
+      }));
 
       requests.push({
         id: `github:${item.repository.nameWithOwner}#${item.number}`,
@@ -85,13 +213,17 @@ export class GitHubProvider implements VCSProvider {
         title: item.title,
         author: item.author.login,
         url: item.url,
-        sourceBranch: '',
-        targetBranch: '',
-        headSha: '',
+        sourceBranch: item.headRefName || '',
+        targetBranch: item.baseRefName || '',
+        headSha: item.headRefOid || '',
         isDraft: item.isDraft,
-        state: 'open',
+        isOwn,
+        state: (item.state || 'open').toLowerCase() as ReviewRequest['state'],
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
+        labels: labels.length > 0 ? labels : undefined,
+        milestone: item.milestone?.title || null,
+        assignees: item.assignees && item.assignees.length > 0 ? item.assignees : undefined,
       });
     }
 
@@ -107,7 +239,7 @@ export class GitHubProvider implements VCSProvider {
         '--repo',
         repository,
         '--json',
-        'number,title,author,url,isDraft,createdAt,updatedAt,headRefName,baseRefName,headRefOid',
+        'number,title,author,url,isDraft,state,createdAt,updatedAt,headRefName,baseRefName,headRefOid,labels,milestone,assignees',
       ],
       stdout: 'piped',
       stderr: 'piped',
@@ -119,6 +251,20 @@ export class GitHubProvider implements VCSProvider {
     }
 
     const data = JSON.parse(new TextDecoder().decode(output.stdout));
+    const currentUser = await this.getCurrentUser();
+    const isOwn = currentUser !== null ? currentUser === data.author.login : false;
+
+    const labels: ReviewLabel[] = (data.labels || []).map((l: any) => ({
+      name: l.name,
+      color: l.color,
+      description: l.description,
+    }));
+
+    const assignees = (data.assignees || []).map((a: any) => ({
+      login: a.login,
+      avatarUrl: a.avatarUrl,
+    }));
+
     return {
       id: `github:${repository}#${number}`,
       userId: this.defaultUserId,
@@ -128,13 +274,17 @@ export class GitHubProvider implements VCSProvider {
       title: data.title,
       author: data.author.login,
       url: data.url,
-      sourceBranch: data.headRefName,
-      targetBranch: data.baseRefName,
-      headSha: data.headRefOid,
+      sourceBranch: data.headRefName || '',
+      targetBranch: data.baseRefName || '',
+      headSha: data.headRefOid || '',
       isDraft: data.isDraft,
-      state: 'open',
+      isOwn,
+      state: (data.state || 'OPEN').toLowerCase() as ReviewRequest['state'],
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
+      labels: labels.length > 0 ? labels : undefined,
+      milestone: data.milestone?.title || null,
+      assignees: assignees.length > 0 ? assignees : undefined,
     };
   }
 
@@ -148,7 +298,7 @@ export class GitHubProvider implements VCSProvider {
     const output = await cmd.output();
     if (!output.success) {
       const errorText = new TextDecoder().decode(output.stderr);
-      throw new Error(`Failed to get diff for ${repository}#${number}: ${errorText}`);
+      throw new Error(`Failed to fetch diff: ${errorText}`);
     }
 
     return new TextDecoder().decode(output.stdout);

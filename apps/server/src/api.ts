@@ -7,6 +7,7 @@ import type { ReportStorage } from '@review-base/core';
 import type { GitHubPoller } from './poller.ts';
 import type { ReviewQueue } from './queue.ts';
 import type { SettingsService } from './settings.ts';
+import { compileD2ToSvg } from '@review-base/runner';
 
 export interface ApiDependencies {
   db: AppDatabase;
@@ -23,11 +24,11 @@ export function createApi(deps: ApiDependencies) {
 
   // List all review requests with their latest review status and report info
   app.get('/api/reviews', async (c) => {
-    const requests = await deps.db
-      .select()
-      .from(reviewRequestsTable)
-      .where(eq(reviewRequestsTable.state, 'open'))
-      .orderBy(desc(reviewRequestsTable.updatedAt));
+    const stateParam = c.req.query('state');
+    const baseQuery = deps.db.select().from(reviewRequestsTable);
+    const requests = stateParam
+      ? await baseQuery.where(eq(reviewRequestsTable.state, stateParam)).orderBy(desc(reviewRequestsTable.updatedAt))
+      : await baseQuery.orderBy(desc(reviewRequestsTable.updatedAt));
 
     const jobs = await deps.db.select().from(reviewJobsTable);
     const reports = await deps.db.select().from(reviewReportsTable);
@@ -40,8 +41,25 @@ export function createApi(deps: ApiDependencies) {
         ? reports.find((r) => r.id === latestJob.reportId)
         : undefined;
 
+      let parsedLabels: Array<{ name: string; color?: string; description?: string }> = [];
+      if (req.labels) {
+        try {
+          parsedLabels = JSON.parse(req.labels);
+        } catch {}
+      }
+
+      let parsedAssignees: Array<{ login: string; avatarUrl?: string }> = [];
+      if (req.assignees) {
+        try {
+          parsedAssignees = JSON.parse(req.assignees);
+        } catch {}
+      }
+
       return {
         ...req,
+        labels: parsedLabels,
+        milestone: req.milestone || null,
+        assignees: parsedAssignees,
         latestJob: latestJob
           ? {
               id: latestJob.id,
@@ -100,6 +118,21 @@ export function createApi(deps: ApiDependencies) {
     return c.html(html);
   });
 
+  // Serve generated review JSON report data
+  app.get('/api/reports/:id/data', async (c) => {
+    const id = c.req.param('id');
+    if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
+      return c.json({ error: 'Invalid report ID format' }, 400);
+    }
+
+    const data = await deps.storage.getReportData(id);
+    if (data === null) {
+      return c.json({ error: 'Report data not found' }, 404);
+    }
+
+    return c.json(data);
+  });
+
   // Serve job execution log
   app.get('/api/jobs/:id/log', async (c) => {
     const id = c.req.param('id');
@@ -129,6 +162,23 @@ export function createApi(deps: ApiDependencies) {
       return c.json(updated);
     } catch {
       return c.json({ error: 'Invalid JSON payload' }, 400);
+    }
+  });
+
+  // Compile D2 diagram source with specified layout engine
+  app.post('/api/diagram/compile', async (c) => {
+    try {
+      const body = await c.req.json();
+      const d2Source = typeof body.d2Source === 'string' ? body.d2Source : '';
+      if (!d2Source.trim()) {
+        return c.json({ error: 'd2Source is required' }, 400);
+      }
+
+      const layout = ['tala', 'elk', 'dagre'].includes(body.layout) ? body.layout : 'tala';
+      const svg = await compileD2ToSvg(d2Source, { layout });
+      return c.json({ svg, layout });
+    } catch (err: any) {
+      return c.json({ error: `Compilation failed: ${err.message || err}` }, 500);
     }
   });
 

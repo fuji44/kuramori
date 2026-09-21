@@ -57,11 +57,16 @@ export class GitHubPoller {
 
     try {
       const prs = await this.vcsProvider.listReviewRequests();
-      const autoQueue = this.settingsService
-        ? await this.settingsService.isAutoQueueEnabled()
-        : true;
+      const settings = this.settingsService
+        ? await this.settingsService.getAllSettings()
+        : null;
+      const autoQueue = settings?.autoQueue ?? true;
+      const autoQueueIncludeOwn = settings?.autoQueueIncludeOwn ?? false;
 
       for (const pr of prs) {
+        const isOwn = pr.isOwn ?? false;
+        const isEligibleForAutoReview = autoQueue && !pr.isDraft && (!isOwn || autoQueueIncludeOwn);
+
         const existing = await this.db
           .select()
           .from(reviewRequestsTable)
@@ -82,12 +87,16 @@ export class GitHubPoller {
             targetBranch: pr.targetBranch,
             headSha: pr.headSha,
             isDraft: pr.isDraft,
+            isOwn,
             state: pr.state,
             createdAt: pr.createdAt,
             updatedAt: pr.updatedAt,
+            labels: pr.labels ? JSON.stringify(pr.labels) : null,
+            milestone: pr.milestone ?? null,
+            assignees: pr.assignees ? JSON.stringify(pr.assignees) : null,
           });
 
-          if (autoQueue && !pr.isDraft) {
+          if (isEligibleForAutoReview) {
             await this.queue.enqueue(pr.id);
           }
         } else {
@@ -96,9 +105,16 @@ export class GitHubPoller {
             .update(reviewRequestsTable)
             .set({
               title: pr.title,
+              sourceBranch: pr.sourceBranch || undefined,
+              targetBranch: pr.targetBranch || undefined,
+              headSha: pr.headSha || undefined,
               isDraft: pr.isDraft,
+              isOwn,
               state: pr.state,
               updatedAt: pr.updatedAt,
+              labels: pr.labels ? JSON.stringify(pr.labels) : null,
+              milestone: pr.milestone ?? null,
+              assignees: pr.assignees ? JSON.stringify(pr.assignees) : null,
             })
             .where(eq(reviewRequestsTable.id, pr.id));
 
@@ -111,8 +127,34 @@ export class GitHubPoller {
           const hasJob = jobs.some(
             (j) => j.status === 'completed' || j.status === 'running' || j.status === 'pending'
           );
-          if (!hasJob && !pr.isDraft && autoQueue) {
+          if (!hasJob && isEligibleForAutoReview) {
             await this.queue.enqueue(pr.id);
+          }
+        }
+      }
+
+      // Check for PRs in DB that are marked open but no longer returned in active open PRs
+      const activePrIds = new Set(prs.map((p) => p.id));
+      const dbOpenPrs = await this.db
+        .select()
+        .from(reviewRequestsTable)
+        .where(eq(reviewRequestsTable.state, 'open'));
+
+      for (const openPr of dbOpenPrs) {
+        if (!activePrIds.has(openPr.id)) {
+          try {
+            const latest = await this.vcsProvider.getReviewRequest(openPr.repository, openPr.number);
+            if (latest && latest.state !== 'open') {
+              await this.db
+                .update(reviewRequestsTable)
+                .set({
+                  state: latest.state,
+                  updatedAt: latest.updatedAt,
+                })
+                .where(eq(reviewRequestsTable.id, openPr.id));
+            }
+          } catch {
+            // Ignore error checking individual PR
           }
         }
       }

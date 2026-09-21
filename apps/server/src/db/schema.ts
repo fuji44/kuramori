@@ -13,9 +13,13 @@ export const reviewRequestsTable = sqliteTable('review_requests', {
   targetBranch: text('target_branch').notNull().default(''),
   headSha: text('head_sha').notNull().default(''),
   isDraft: integer('is_draft', { mode: 'boolean' }).notNull().default(false),
+  isOwn: integer('is_own', { mode: 'boolean' }).notNull().default(false),
   state: text('state').notNull().default('open'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
+  labels: text('labels'), // JSON string: [{ name: string, color?: string }]
+  milestone: text('milestone'),
+  assignees: text('assignees'), // JSON string: [{ login: string, avatarUrl?: string }]
 });
 
 export const reviewJobsTable = sqliteTable('review_jobs', {
