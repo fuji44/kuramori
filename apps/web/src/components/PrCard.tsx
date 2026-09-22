@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+
 import {
   GitPullRequest,
   GitPullRequestDraft,
@@ -14,16 +15,20 @@ import {
   Milestone,
   User,
   RefreshCw,
+  ChevronDown,
+  Check,
 } from 'lucide-react';
-import { ReviewItem } from '../types.ts';
+import { ReviewItem, ReviewRule } from '../types.ts';
 import { getPrAnchorId } from '../utils/anchor.ts';
 
 interface PrCardProps {
   item: ReviewItem;
+  rules?: ReviewRule[];
+  defaultRuleIds?: string[];
   isSelected?: boolean;
   isHighlighted?: boolean;
   onOpenLog: (e: React.MouseEvent, jobId: string, error?: string | null) => void;
-  onRunReview: (e: React.MouseEvent, id: string) => void;
+  onRunReview: (e: React.MouseEvent, id: string, ruleIds?: string[]) => void;
   onSelectReport: (reportId: string, prTitle: string) => void;
   onSelectCard?: (anchorId: string) => void;
   onCopyAnchor?: (anchorId: string) => void;
@@ -31,6 +36,8 @@ interface PrCardProps {
 
 export function PrCard({
   item,
+  rules = [],
+  defaultRuleIds,
   isSelected = false,
   isHighlighted = false,
   onOpenLog,
@@ -39,12 +46,37 @@ export function PrCard({
   onSelectCard,
   onCopyAnchor,
 }: PrCardProps) {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [selectedRuleIds, setSelectedRuleIds] = useState<Set<string>>(new Set());
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (rules.length > 0) {
+      setSelectedRuleIds(new Set(rules.filter((r) => r.enabled).map((r) => r.id)));
+    }
+  }, [rules]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isDropdownOpen]);
+
   const jobStatus = item.latestJob?.status;
   const orgName = item.repository.split('/')[0];
   const isPrUpdatedAfterReport = Boolean(
     item.report?.createdAt && new Date(item.updatedAt).getTime() > new Date(item.report.createdAt).getTime()
   );
   const anchorId = getPrAnchorId(item.repository, item.number);
+
 
   return (
     <div
@@ -298,42 +330,177 @@ export function PrCard({
           </span>
         </div>
 
-        {/* Bottom-Right: Single Action Button */}
-        <div className="flex items-center gap-2 shrink-0 ml-auto">
-          <button
-            type="button"
-            onClick={(e) => onRunReview(e, item.id)}
-            disabled={jobStatus === 'running' || jobStatus === 'pending' || jobStatus === 'queued'}
-            className="flex items-center gap-1.5 px-3 py-1 rounded text-xs bg-[#21262d] hover:bg-[#30363d] text-[#c9d1d9] hover:text-white border border-[#30363d] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title={jobStatus === 'completed' ? 'AIレビューを再実行' : jobStatus === 'failed' ? 'AIレビューを再試行' : 'AIレビューを開始'}
-          >
-            {jobStatus === 'running' ? (
-              <>
-                <RefreshCw className="w-3 h-3 animate-spin text-sky-400" />
-                <span>実行中...</span>
-              </>
-            ) : jobStatus === 'pending' || jobStatus === 'queued' ? (
-              <>
-                <Clock className="w-3 h-3 text-amber-400" />
-                <span>待機中...</span>
-              </>
-            ) : jobStatus === 'completed' ? (
-              <>
-                <RefreshCw className="w-3 h-3 text-sky-400" />
-                <span>再実行</span>
-              </>
-            ) : jobStatus === 'failed' ? (
-              <>
-                <RefreshCw className="w-3 h-3 text-rose-400" />
-                <span>再試行</span>
-              </>
-            ) : (
-              <>
-                <Play className="w-3 h-3 text-sky-400 fill-sky-400" />
-                <span>レビュー開始</span>
-              </>
-            )}
-          </button>
+        {/* Bottom-Right: Split Button for Review Execution */}
+        <div className="relative flex items-center shrink-0 ml-auto" ref={dropdownRef}>
+          <div className="inline-flex rounded-lg shadow-sm border border-[#30363d] overflow-hidden">
+            {/* メインボタン (通常実行) */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRunReview(e, item.id, defaultRuleIds && defaultRuleIds.length > 0 ? defaultRuleIds : undefined);
+              }}
+              disabled={jobStatus === 'running' || jobStatus === 'pending' || jobStatus === 'queued'}
+              className="flex items-center gap-1.5 px-3 py-1 text-xs bg-[#21262d] hover:bg-[#30363d] text-[#c9d1d9] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed border-r border-[#30363d]"
+              title={
+                defaultRuleIds && defaultRuleIds.length > 0
+                  ? `既定ルール (${defaultRuleIds.length}件) を実行`
+                  : jobStatus === 'completed'
+                  ? 'AIレビューを再実行'
+                  : jobStatus === 'failed'
+                  ? 'AIレビューを再試行'
+                  : 'AIレビューを開始'
+              }
+            >
+              {jobStatus === 'running' ? (
+                <>
+                  <RefreshCw className="w-3 h-3 animate-spin text-sky-400" />
+                  <span>実行中...</span>
+                </>
+              ) : jobStatus === 'pending' || jobStatus === 'queued' ? (
+                <>
+                  <Clock className="w-3 h-3 text-amber-400" />
+                  <span>待機中...</span>
+                </>
+              ) : jobStatus === 'completed' ? (
+                <>
+                  <RefreshCw className="w-3 h-3 text-sky-400" />
+                  <span>再実行</span>
+                </>
+              ) : jobStatus === 'failed' ? (
+                <>
+                  <RefreshCw className="w-3 h-3 text-rose-400" />
+                  <span>再試行</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-3 h-3 text-sky-400 fill-sky-400" />
+                  <span>レビュー開始</span>
+                </>
+              )}
+            </button>
+
+            {/* ドロップダウントグルボタン */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsDropdownOpen((prev) => !prev);
+              }}
+              disabled={jobStatus === 'running' || jobStatus === 'pending' || jobStatus === 'queued'}
+              className="px-2 py-1 bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="ルールを選択して実行"
+            >
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+          </div>
+
+          {/* ドロップダウンメニュー */}
+          {isDropdownOpen && (
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="absolute right-0 bottom-full mb-2 w-80 bg-[#1c2128] border border-[#30363d] rounded-xl shadow-2xl z-50 p-3 text-xs flex flex-col gap-2.5 animate-in fade-in zoom-in-95 duration-100"
+            >
+              <div className="flex items-center justify-between pb-2 border-b border-[#30363d]">
+                <span className="font-semibold text-white">レビュールール選択実行</span>
+                <div className="flex items-center gap-2 text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRuleIds(new Set(rules.map((r) => r.id)))}
+                    className="text-sky-400 hover:underline"
+                  >
+                    全選択
+                  </button>
+                  <span className="text-[#30363d]">|</span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRuleIds(new Set())}
+                    className="text-[#8b949e] hover:underline"
+                  >
+                    全解除
+                  </button>
+                </div>
+              </div>
+
+              {rules.length === 0 ? (
+                <div className="py-4 text-center text-[#8b949e]">
+                  登録されているルールがありません
+                </div>
+              ) : (
+                <div className="max-h-60 overflow-y-auto space-y-1.5 pr-1">
+                  {rules.map((rule) => {
+                    const isChecked = selectedRuleIds.has(rule.id);
+                    return (
+                      <div
+                        key={rule.id}
+                        className="flex items-center justify-between p-2 rounded-lg hover:bg-[#21262d] transition-colors border border-transparent hover:border-[#30363d]/50"
+                      >
+                        <label className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              const next = new Set(selectedRuleIds);
+                              if (e.target.checked) {
+                                next.add(rule.id);
+                              } else {
+                                next.delete(rule.id);
+                              }
+                              setSelectedRuleIds(next);
+                            }}
+                            className="rounded border-[#30363d] bg-[#0d1117] text-sky-500 focus:ring-sky-500 focus:ring-offset-0 shrink-0"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-medium text-white truncate">{rule.name}</span>
+                              <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#0d1117] text-sky-400 border border-sky-800/40">
+                                {rule.category}
+                              </span>
+                            </div>
+                            {rule.description && (
+                              <p className="text-[10.5px] text-[#8b949e] truncate">{rule.description}</p>
+                            )}
+                          </div>
+                        </label>
+
+                        {/* 個別即時実行ボタン */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsDropdownOpen(false);
+                            onRunReview(e, item.id, [rule.id]);
+                          }}
+                          className="ml-2 p-1 rounded hover:bg-[#30363d] text-sky-400 hover:text-sky-300 transition-colors shrink-0"
+                          title={`「${rule.name}」のみを実行`}
+                        >
+                          <Play className="w-3.5 h-3.5 fill-sky-400" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="pt-2 border-t border-[#30363d] flex items-center justify-between">
+                <span className="text-[11px] text-[#8b949e]">
+                  {selectedRuleIds.size} 件選択中
+                </span>
+                <button
+                  type="button"
+                  disabled={selectedRuleIds.size === 0}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsDropdownOpen(false);
+                    onRunReview(e, item.id, Array.from(selectedRuleIds));
+                  }}
+                  className="px-3 py-1 rounded bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium transition-colors"
+                >
+                  選択したルールを実行
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

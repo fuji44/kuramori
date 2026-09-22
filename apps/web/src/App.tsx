@@ -9,20 +9,21 @@ import {
   FileText,
 } from 'lucide-react';
 
-import { ReviewItem, AppSettings } from './types.ts';
+import { ReviewItem, AppSettings, ReviewRule } from './types.ts';
 import { useAppRoute, AppRoute, navigateTo } from './utils/route.ts';
 import { DashboardView } from './views/DashboardView.tsx';
 import { PrListView } from './views/PrListView.tsx';
 import { ReportDetailView } from './views/ReportDetailView.tsx';
 import { ReportListView } from './views/ReportListView.tsx';
+import { SettingsView } from './views/SettingsView.tsx';
 import { JobLogModal } from './components/JobLogModal.tsx';
-import { SettingsModal } from './components/SettingsModal.tsx';
 import { ToastContainer, ToastItem, ToastType } from './components/Toast.tsx';
 
 export default function App() {
   const [route, navigate] = useAppRoute();
 
   const [items, setItems] = useState<ReviewItem[]>([]);
+  const [rules, setRules] = useState<ReviewRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -51,8 +52,35 @@ export default function App() {
     reviewEngine: 'antigravity',
     agyBin: 'agy',
     claudeBin: 'claude',
+    defaultRuleIds: ['preset-correctness'],
+    defaultRuleId: 'preset-correctness',
+    defaultBackendId: 'antigravity',
+    globalMaxConcurrency: 2,
+    backendMaxConcurrency: { antigravity: 2, claudeCode: 1, mock: 5 },
+    engineSettings: {
+      antigravity: {
+        binPath: 'agy',
+        model: 'gemini-2.5-pro',
+        effort: 'high',
+        timeoutSeconds: 900,
+        sandbox: false,
+        disableSlashCommands: false,
+        customArgs: '',
+      },
+      claudeCode: {
+        binPath: 'claude',
+        model: 'sonnet',
+        effort: 'high',
+        timeoutSeconds: 900,
+        allowedTools: '',
+        bare: false,
+        customArgs: '',
+      },
+      mock: {
+        delayMs: 500,
+      },
+    },
   });
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Job log modal state
   const [logModalJobId, setLogModalJobId] = useState<string | null>(null);
@@ -88,13 +116,27 @@ export default function App() {
     }
   };
 
+  const fetchRules = async () => {
+    try {
+      const res = await fetch('/api/rules');
+      if (res.ok) {
+        const data = await res.json();
+        setRules(data.rules ?? []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch rules', err);
+    }
+  };
+
   useEffect(() => {
     fetchReviews();
     fetchSettings();
+    fetchRules();
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         fetchReviews();
+        fetchRules();
       }
     };
 
@@ -121,10 +163,6 @@ export default function App() {
           setJobLogContent(null);
           return;
         }
-        if (isSettingsOpen) {
-          setIsSettingsOpen(false);
-          return;
-        }
         if (route.view === 'report') {
           navigate({ view: 'reviews', params: {} });
         }
@@ -132,7 +170,7 @@ export default function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [route.view, logModalJobId, isSettingsOpen, navigate]);
+  }, [route.view, logModalJobId, navigate]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -151,14 +189,22 @@ export default function App() {
     }
   };
 
-  const handleRunReview = async (e: React.MouseEvent, id: string) => {
+  const handleRunReview = async (e: React.MouseEvent, id: string, ruleIds?: string[]) => {
     e.stopPropagation();
     try {
-      const res = await fetch(`/api/reviews/${encodeURIComponent(id)}/run`, { method: 'POST' });
+      const res = await fetch(`/api/reviews/${encodeURIComponent(id)}/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(ruleIds && ruleIds.length > 0 ? { ruleIds } : {}),
+      });
       if (!res.ok) {
         throw new Error(`Run review failed: HTTP ${res.status}`);
       }
-      showSuccess('AIレビューをキューに投入しました');
+      showSuccess(
+        ruleIds && ruleIds.length > 0
+          ? `${ruleIds.length} 件のレビュールールをキューに投入しました`
+          : 'AIレビューをキューに投入しました'
+      );
       await fetchReviews();
     } catch (err) {
       console.error('Failed to trigger review', err);
@@ -176,16 +222,65 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         setSettings(data);
-        showSuccess('設定を保存しました。');
       } else {
         throw new Error('Failed to save settings');
       }
     } catch (err) {
       console.error('Failed to save settings', err);
-      showError('設定の保存に失敗しました。');
       throw err;
     }
   };
+
+  const handleCreateRule = async (newRule: Partial<ReviewRule>) => {
+    try {
+      const res = await fetch('/api/rules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newRule),
+      });
+      if (res.ok) {
+        await fetchRules();
+      } else {
+        throw new Error('Failed to create rule');
+      }
+    } catch (err) {
+      console.error('Failed to create rule', err);
+      throw err;
+    }
+  };
+
+  const handleUpdateRule = async (id: string, updates: Partial<ReviewRule>) => {
+    try {
+      const res = await fetch(`/api/rules/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      if (res.ok) {
+        await fetchRules();
+      } else {
+        throw new Error('Failed to update rule');
+      }
+    } catch (err) {
+      console.error('Failed to update rule', err);
+      throw err;
+    }
+  };
+
+  const handleDeleteRule = async (id: string) => {
+    try {
+      const res = await fetch(`/api/rules/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        await fetchRules();
+      } else {
+        throw new Error('Failed to delete rule');
+      }
+    } catch (err) {
+      console.error('Failed to delete rule', err);
+      throw err;
+    }
+  };
+
 
   const openJobLog = async (e: React.MouseEvent, jobId: string, error?: string | null) => {
     e.stopPropagation();
@@ -292,11 +387,15 @@ export default function App() {
           {/* Settings Button */}
           <button
             type="button"
-            onClick={() => setIsSettingsOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] text-xs text-[#c9d1d9] transition-colors"
+            onClick={() => navigate({ view: 'settings', subview: 'general' })}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs transition-colors ${
+              route.view === 'settings'
+                ? 'bg-sky-950 text-sky-400 border-sky-800 font-medium shadow-sm'
+                : 'bg-[#21262d] hover:bg-[#30363d] border-[#30363d] text-[#c9d1d9]'
+            }`}
             title="設定を開く"
           >
-            <Settings className="w-3.5 h-3.5 text-[#8b949e]" />
+            <Settings className={`w-3.5 h-3.5 ${route.view === 'settings' ? 'text-sky-400' : 'text-[#8b949e]'}`} />
             <span className="hidden sm:inline">設定</span>
           </button>
         </div>
@@ -323,6 +422,8 @@ export default function App() {
         {route.view === 'reviews' && (
           <PrListView
             items={items}
+            rules={rules}
+            defaultRuleIds={settings.defaultRuleIds}
             loading={loading}
             refreshing={refreshing}
             params={route.params}
@@ -365,6 +466,21 @@ export default function App() {
             onSelectReport={(reportId) => navigate({ view: 'report', reportId })}
           />
         )}
+
+        {route.view === 'settings' && (
+          <SettingsView
+            subview={route.subview}
+            onNavigateSubview={(subview) => navigate({ view: 'settings', subview })}
+            settings={settings}
+            rules={rules}
+            onSaveSettings={handleSaveSettings}
+            onCreateRule={handleCreateRule}
+            onUpdateRule={handleUpdateRule}
+            onDeleteRule={handleDeleteRule}
+            onShowSuccess={showSuccess}
+            onShowError={showError}
+          />
+        )}
       </div>
 
       {/* Execution Log Modal */}
@@ -378,14 +494,6 @@ export default function App() {
           setLogModalError(null);
           setJobLogContent(null);
         }}
-      />
-
-      {/* Settings Modal */}
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        settings={settings}
-        onSave={handleSaveSettings}
-        onClose={() => setIsSettingsOpen(false)}
       />
 
       {/* Floating Toast Notifications */}

@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { RefreshCw, CheckCircle2, Filter, Link2 } from 'lucide-react';
-import { ReviewItem } from '../types.ts';
+import { ReviewItem, ReviewRule } from '../types.ts';
 import { SearchQueryBar } from '../components/SearchQueryBar.tsx';
 import { PrCard } from '../components/PrCard.tsx';
 import { filterByGitHubQuery } from '../utils/query-parser.ts';
@@ -9,12 +9,14 @@ import { findMatchingPrElement, getPrAnchorId } from '../utils/anchor.ts';
 
 interface PrListViewProps {
   items: ReviewItem[];
+  rules?: ReviewRule[];
+  defaultRuleIds?: string[];
   loading: boolean;
   refreshing?: boolean;
   params: FilterUrlParams;
   onParamsChange: (newParams: FilterUrlParams) => void;
   onOpenLog: (e: React.MouseEvent, jobId: string, error?: string | null) => void;
-  onRunReview: (e: React.MouseEvent, id: string) => void;
+  onRunReview: (e: React.MouseEvent, id: string, ruleIds?: string[]) => void;
   onSelectReport: (reportId: string, prTitle: string) => void;
   onRefresh?: () => void;
   onShowSuccess: (msg: string) => void;
@@ -23,6 +25,8 @@ interface PrListViewProps {
 
 export function PrListView({
   items,
+  rules = [],
+  defaultRuleIds,
   loading,
   refreshing,
   params,
@@ -289,6 +293,8 @@ export function PrListView({
               <PrCard
                 key={item.id}
                 item={item}
+                rules={rules}
+                defaultRuleIds={defaultRuleIds}
                 isHighlighted={highlightedAnchor === anchorId}
                 onOpenLog={onOpenLog}
                 onRunReview={onRunReview}

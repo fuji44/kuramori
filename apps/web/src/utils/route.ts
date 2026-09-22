@@ -8,11 +8,24 @@ export type AppRoute =
   | { view: 'dashboard' }
   | { view: 'reviews'; params: FilterUrlParams }
   | { view: 'reports' }
-  | { view: 'report'; reportId: string };
+  | { view: 'report'; reportId: string }
+  | { view: 'settings'; subview: 'general' | 'engines' | 'rules' };
 
 export function parseRoute(pathname: string, search: string): AppRoute {
   // Normalize pathname
   const cleanPath = pathname.replace(/\/+$/, '') || '/';
+
+  if (cleanPath === '/settings' || cleanPath === '/settings/general') {
+    return { view: 'settings', subview: 'general' };
+  }
+
+  if (cleanPath === '/settings/engines') {
+    return { view: 'settings', subview: 'engines' };
+  }
+
+  if (cleanPath === '/settings/rules') {
+    return { view: 'settings', subview: 'rules' };
+  }
 
   if (cleanPath === '/reports') {
     return { view: 'reports' };
@@ -56,6 +69,8 @@ export function buildRouteUrl(route: AppRoute): string {
       return '/reports';
     case 'report':
       return `/reports/${encodeURIComponent(route.reportId)}`;
+    case 'settings':
+      return `/settings/${route.subview}`;
   }
 }
 

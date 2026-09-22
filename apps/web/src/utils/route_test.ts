@@ -53,6 +53,32 @@ Deno.test('route - parseRoute identifies reports list path', () => {
   assertEquals(trailingSlashRoute.view, 'reports');
 });
 
+Deno.test('route - parseRoute identifies settings paths', () => {
+  const settingsRoute = parseRoute('/settings', '');
+  assertEquals(settingsRoute.view, 'settings');
+  if (settingsRoute.view === 'settings') {
+    assertEquals(settingsRoute.subview, 'general');
+  }
+
+  const generalRoute = parseRoute('/settings/general', '');
+  assertEquals(generalRoute.view, 'settings');
+  if (generalRoute.view === 'settings') {
+    assertEquals(generalRoute.subview, 'general');
+  }
+
+  const enginesRoute = parseRoute('/settings/engines', '');
+  assertEquals(enginesRoute.view, 'settings');
+  if (enginesRoute.view === 'settings') {
+    assertEquals(enginesRoute.subview, 'engines');
+  }
+
+  const rulesRoute = parseRoute('/settings/rules', '');
+  assertEquals(rulesRoute.view, 'settings');
+  if (rulesRoute.view === 'settings') {
+    assertEquals(rulesRoute.subview, 'rules');
+  }
+});
+
 Deno.test('route - buildRouteUrl formats paths accurately', () => {
   assertEquals(buildRouteUrl({ view: 'dashboard' }), '/');
   assertEquals(
@@ -63,5 +89,17 @@ Deno.test('route - buildRouteUrl formats paths accurately', () => {
   assertEquals(
     buildRouteUrl({ view: 'report', reportId: 'rep-abc' }),
     '/reports/rep-abc'
+  );
+  assertEquals(
+    buildRouteUrl({ view: 'settings', subview: 'general' }),
+    '/settings/general'
+  );
+  assertEquals(
+    buildRouteUrl({ view: 'settings', subview: 'engines' }),
+    '/settings/engines'
+  );
+  assertEquals(
+    buildRouteUrl({ view: 'settings', subview: 'rules' }),
+    '/settings/rules'
   );
 });

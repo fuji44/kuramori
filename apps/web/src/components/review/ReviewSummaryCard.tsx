@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+
 import {
   CheckCircle2,
   AlertTriangle,
@@ -68,6 +69,19 @@ export const ReviewSummaryCard: React.FC<ReviewSummaryCardProps> = ({
 
   const blastRadius = summary.blastRadius || briefObj?.blastRadius;
 
+  const ruleVerdicts = useMemo(() => {
+    const text = typeof summary.brief === 'string'
+      ? summary.brief
+      : (summary.brief?.problem ?? '');
+    const regex = /【(.*?)】(PASS|WARN|FAIL):/g;
+    const matches: Array<{ name: string; verdict: 'PASS' | 'WARN' | 'FAIL' }> = [];
+    let m: RegExpExecArray | null;
+    while ((m = regex.exec(text)) !== null) {
+      matches.push({ name: m[1], verdict: m[2] as 'PASS' | 'WARN' | 'FAIL' });
+    }
+    return matches;
+  }, [summary.brief]);
+
   return (
     <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-5 shadow-sm space-y-4">
       {/* ヘッダー ＆ メタグリッド */}
@@ -92,6 +106,30 @@ export const ReviewSummaryCard: React.FC<ReviewSummaryCardProps> = ({
                   <BookOpen className="w-3 h-3" /> Story 課題
                 </a>
               )}
+            </div>
+          )}
+
+          {/* ルール別健全性バッジ列 */}
+          {ruleVerdicts.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap pt-2">
+              <span className="text-[11px] text-gray-400 font-medium">ルール別健全性:</span>
+              {ruleVerdicts.map((rv, idx) => {
+                let badgeColor = 'bg-emerald-950/80 text-emerald-300 border-emerald-800';
+                if (rv.verdict === 'FAIL') {
+                  badgeColor = 'bg-rose-950/80 text-rose-300 border-rose-800';
+                } else if (rv.verdict === 'WARN') {
+                  badgeColor = 'bg-amber-950/80 text-amber-300 border-amber-800';
+                }
+                return (
+                  <span
+                    key={idx}
+                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono border shadow-sm ${badgeColor}`}
+                  >
+                    <span>{rv.name}:</span>
+                    <span className="font-bold">{rv.verdict}</span>
+                  </span>
+                );
+              })}
             </div>
           )}
         </div>
