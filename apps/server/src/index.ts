@@ -37,8 +37,6 @@ async function bootstrap() {
   try {
     const distStat = await Deno.stat(webDistPath);
     if (distStat.isDirectory) {
-      const indexHtml = await Deno.readTextFile(`${webDistPath}/index.html`);
-
       // Serve static files in dist/assets
       app.get('/assets/*', async (c) => {
         const filePath = `${webDistPath}${c.req.path}`;
@@ -53,11 +51,16 @@ async function bootstrap() {
       });
 
       // Fallback for SPA routing
-      app.get('*', (c) => {
+      app.get('*', async (c) => {
         if (c.req.path.startsWith('/api/')) {
           return c.text('API not found', 404);
         }
-        return c.html(indexHtml);
+        try {
+          const html = await Deno.readTextFile(`${webDistPath}/index.html`);
+          return c.html(html);
+        } catch {
+          return c.text('UI not found', 404);
+        }
       });
     }
   } catch {

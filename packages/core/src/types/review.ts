@@ -45,6 +45,10 @@ export interface ReviewJob {
   completedAt?: string;
   error?: string;
   reportId?: string;
+  ruleId?: string;
+  ruleName?: string;
+  ruleCategory?: string;
+  headSha?: string;
 }
 
 export type ReviewVerdict = 'APPROVE' | 'COMMENT' | 'REQUEST_CHANGES';
@@ -58,3 +62,135 @@ export interface ReviewReport {
   verdict?: ReviewVerdict;
   createdAt: string;
 }
+
+/**
+ * ルール起動のトリガー条件
+ */
+export interface RuleTrigger {
+  types?: Array<'opened' | 'synchronize' | 'reopened' | 'ready_for_review'>;
+  paths?: string[];
+  pathsIgnore?: string[];
+  draft?: boolean;
+  labels?: string[];
+}
+
+/**
+ * ルール並行実行制御
+ */
+export interface RuleConcurrency {
+  group?: string;
+  cancelInProgress?: boolean;
+}
+
+/**
+ * レビュールール定義
+ */
+export interface ReviewRule {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  engine: string;
+  instructions: string;
+  trigger: RuleTrigger;
+  concurrency?: RuleConcurrency;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type RuleResultVerdict = 'PASS' | 'WARN' | 'FAIL';
+export type FindingSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'INFO';
+export type FindingStatus = 'NEW' | 'PERSISTING' | 'RESOLVED';
+
+/**
+ * ルール実行時の個別指摘
+ */
+export interface RuleResultFinding {
+  id: string;
+  ruleId: string;
+  category: string;
+  title: string;
+  path: string;
+  line?: number;
+  severity: FindingSeverity;
+  status: FindingStatus;
+  body: string;
+  suggestion?: string;
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * 1ルールあたりの実行結果
+ */
+export interface RuleResult {
+  id?: string;
+  jobId?: string;
+  requestId?: string;
+  ruleId: string;
+  ruleName: string;
+  category: string;
+  headSha: string;
+  verdict: RuleResultVerdict;
+  summary: string;
+  findings: RuleResultFinding[];
+  metadata?: Record<string, unknown>;
+  createdAt?: string;
+}
+
+/**
+ * 汎用 AI Agent 設定
+ */
+export interface AgentBackendConfig<TOptions = Record<string, unknown>> {
+  id: string;
+  displayName: string;
+  binaryPath: string;
+  maxConcurrency: number;
+  timeoutMs: number;
+  options?: TOptions;
+}
+
+export interface AntigravityOptions {
+  model?: string;
+  effort?: string;
+  timeoutSeconds?: number;
+  printTimeout?: string;
+  sandbox?: boolean;
+  disableSlashCommands?: boolean;
+  inputFormat?: 'text' | 'stream-json';
+  outputFormat?: 'text' | 'json' | 'stream-json';
+  jsonSchema?: string;
+  customArgs?: string;
+}
+
+export interface ClaudeCodeOptions {
+  model?: string;
+  effort?: string;
+  timeoutSeconds?: number;
+  allowedTools?: string;
+  bare?: boolean;
+  inputFormat?: 'text' | 'stream-json';
+  outputFormat?: 'text' | 'json' | 'stream-json';
+  jsonSchema?: string;
+  customArgs?: string;
+}
+
+export interface MockEngineOptions {
+  delayMs?: number;
+}
+
+/**
+ * システム全体設定
+ */
+export interface SystemAppSettings {
+  defaultRuleIds: string[];
+  defaultRuleId?: string;
+  defaultBackendId: string;
+  globalMaxConcurrency: number;
+  backends: {
+    antigravity: AgentBackendConfig<AntigravityOptions>;
+    claudeCode: AgentBackendConfig<ClaudeCodeOptions>;
+    mock: AgentBackendConfig<MockEngineOptions>;
+  };
+}
+

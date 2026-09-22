@@ -2,12 +2,59 @@ import { eq } from 'drizzle-orm';
 import type { AppDatabase } from './db/index.ts';
 import { appSettingsTable } from './db/schema.ts';
 
+export interface AntigravityEngineConfig {
+  binPath: string;
+  model: string;
+  effort: string;
+  timeoutSeconds: number;
+  printTimeout: string;
+  sandbox: boolean;
+  disableSlashCommands: boolean;
+  inputFormat?: 'text' | 'stream-json';
+  outputFormat?: 'text' | 'json' | 'stream-json';
+  jsonSchema?: string;
+  customArgs?: string;
+}
+
+export interface ClaudeCodeEngineConfig {
+  binPath: string;
+  model: string;
+  effort: string;
+  timeoutSeconds: number;
+  allowedTools?: string;
+  bare: boolean;
+  inputFormat?: 'text' | 'stream-json';
+  outputFormat?: 'text' | 'json' | 'stream-json';
+  jsonSchema?: string;
+  customArgs?: string;
+}
+
+export interface MockEngineConfig {
+  delayMs: number;
+}
+
+export interface EngineSettingsMap {
+  antigravity: AntigravityEngineConfig;
+  claudeCode: ClaudeCodeEngineConfig;
+  mock: MockEngineConfig;
+}
+
 export interface AppSettings {
   autoQueue: boolean;
   autoQueueIncludeOwn: boolean;
   reviewEngine: 'antigravity' | 'claude-code' | 'mock';
   agyBin: string;
   claudeBin: string;
+  defaultRuleIds: string[];
+  defaultRuleId?: string;
+  defaultBackendId: string;
+  globalMaxConcurrency: number;
+  backendMaxConcurrency: {
+    antigravity: number;
+    claudeCode: number;
+    mock: number;
+  };
+  engineSettings: EngineSettingsMap;
 }
 
 export class SettingsService {
@@ -17,6 +64,15 @@ export class SettingsService {
   private readonly defaultReviewEngine: 'antigravity' | 'claude-code' | 'mock';
   private readonly defaultAgyBin: string;
   private readonly defaultClaudeBin: string;
+  private readonly defaultRuleIds: string[];
+  private readonly defaultBackendId: string;
+  private readonly defaultGlobalMaxConcurrency: number;
+  private readonly defaultBackendMaxConcurrency: {
+    antigravity: number;
+    claudeCode: number;
+    mock: number;
+  };
+  private readonly defaultEngineSettings: EngineSettingsMap;
 
   constructor(db: AppDatabase, defaultAutoQueue?: boolean, defaultAutoQueueIncludeOwn?: boolean) {
     this.db = db;
@@ -43,6 +99,44 @@ export class SettingsService {
 
     this.defaultAgyBin = Deno.env.get('AGY_BIN') ?? 'agy';
     this.defaultClaudeBin = Deno.env.get('CLAUDE_BIN') ?? 'claude';
+    this.defaultRuleIds = ['preset-correctness'];
+    this.defaultBackendId = 'antigravity';
+    this.defaultGlobalMaxConcurrency = 2;
+    this.defaultBackendMaxConcurrency = {
+      antigravity: 2,
+      claudeCode: 1,
+      mock: 5,
+    };
+    this.defaultEngineSettings = {
+      antigravity: {
+        binPath: this.defaultAgyBin,
+        model: 'gemini-3.1-pro',
+        effort: 'high',
+        timeoutSeconds: 900,
+        printTimeout: '',
+        sandbox: false,
+        disableSlashCommands: false,
+        inputFormat: 'text',
+        outputFormat: 'text',
+        jsonSchema: '',
+        customArgs: '',
+      },
+      claudeCode: {
+        binPath: this.defaultClaudeBin,
+        model: 'sonnet',
+        effort: 'high',
+        timeoutSeconds: 900,
+        allowedTools: '',
+        bare: false,
+        inputFormat: 'text',
+        outputFormat: 'text',
+        jsonSchema: '',
+        customArgs: '',
+      },
+      mock: {
+        delayMs: 500,
+      },
+    };
   }
 
   async getAllSettings(): Promise<AppSettings> {
@@ -69,6 +163,84 @@ export class SettingsService {
 
     const agyBin = map.get('agy_bin') ?? this.defaultAgyBin;
     const claudeBin = map.get('claude_bin') ?? this.defaultClaudeBin;
+    const legacyRuleId = map.get('default_rule_id') ?? 'preset-correctness';
+
+    let defaultRuleIds = this.defaultRuleIds;
+    const defaultRuleIdsVal = map.get('default_rule_ids');
+    if (defaultRuleIdsVal !== undefined) {
+      try {
+        const parsed = JSON.parse(defaultRuleIdsVal);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          defaultRuleIds = parsed;
+        }
+      } catch {
+        defaultRuleIds = [legacyRuleId];
+      }
+    } else if (map.has('default_rule_id')) {
+      defaultRuleIds = [legacyRuleId];
+    }
+
+    const defaultBackendId = map.get('default_backend_id') ?? this.defaultBackendId;
+
+    const globalMaxConcurrencyVal = map.get('global_max_concurrency');
+    const parsedGlobal = globalMaxConcurrencyVal !== undefined ? Number.parseInt(globalMaxConcurrencyVal, 10) : NaN;
+    const globalMaxConcurrency = !Number.isNaN(parsedGlobal) && parsedGlobal > 0
+      ? parsedGlobal
+      : this.defaultGlobalMaxConcurrency;
+
+    let backendMaxConcurrency = this.defaultBackendMaxConcurrency;
+    const backendMaxConcurrencyVal = map.get('backend_max_concurrency');
+    if (backendMaxConcurrencyVal !== undefined) {
+      try {
+        const parsed = JSON.parse(backendMaxConcurrencyVal);
+        if (typeof parsed === 'object' && parsed !== null) {
+          backendMaxConcurrency = {
+            antigravity: typeof parsed.antigravity === 'number' ? parsed.antigravity : this.defaultBackendMaxConcurrency.antigravity,
+            claudeCode: typeof parsed.claudeCode === 'number' ? parsed.claudeCode : this.defaultBackendMaxConcurrency.claudeCode,
+            mock: typeof parsed.mock === 'number' ? parsed.mock : this.defaultBackendMaxConcurrency.mock,
+          };
+        }
+      } catch {
+        // Fallback to default
+      }
+    }
+
+    let engineSettings = this.defaultEngineSettings;
+    const engineSettingsVal = map.get('engine_settings');
+    if (engineSettingsVal !== undefined) {
+      try {
+        const parsed = JSON.parse(engineSettingsVal);
+        if (typeof parsed === 'object' && parsed !== null) {
+          engineSettings = {
+            antigravity: {
+              ...this.defaultEngineSettings.antigravity,
+              ...(parsed.antigravity || {}),
+              model: (parsed.antigravity?.model && parsed.antigravity.model !== 'gemini-2.5-pro' && parsed.antigravity.model !== 'gemini-3.1-pro-high')
+                ? parsed.antigravity.model
+                : this.defaultEngineSettings.antigravity.model,
+              binPath: parsed.antigravity?.binPath || agyBin,
+            },
+            claudeCode: {
+              ...this.defaultEngineSettings.claudeCode,
+              ...(parsed.claudeCode || {}),
+              binPath: parsed.claudeCode?.binPath || claudeBin,
+            },
+            mock: {
+              ...this.defaultEngineSettings.mock,
+              ...(parsed.mock || {}),
+            },
+          };
+        }
+      } catch {
+        // Fallback to default
+      }
+    } else {
+      engineSettings = {
+        ...this.defaultEngineSettings,
+        antigravity: { ...this.defaultEngineSettings.antigravity, binPath: agyBin },
+        claudeCode: { ...this.defaultEngineSettings.claudeCode, binPath: claudeBin },
+      };
+    }
 
     return {
       autoQueue,
@@ -76,6 +248,12 @@ export class SettingsService {
       reviewEngine,
       agyBin,
       claudeBin,
+      defaultRuleIds,
+      defaultRuleId: defaultRuleIds[0] ?? legacyRuleId,
+      defaultBackendId,
+      globalMaxConcurrency,
+      backendMaxConcurrency,
+      engineSettings,
     };
   }
 
@@ -113,6 +291,33 @@ export class SettingsService {
     if (updates.claudeBin !== undefined) {
       await upsert('claude_bin', updates.claudeBin);
     }
+    if (updates.defaultRuleId !== undefined) {
+      await upsert('default_rule_id', updates.defaultRuleId);
+    }
+    if (updates.defaultRuleIds !== undefined) {
+      await upsert('default_rule_ids', JSON.stringify(updates.defaultRuleIds));
+      if (updates.defaultRuleIds.length > 0) {
+        await upsert('default_rule_id', updates.defaultRuleIds[0]);
+      }
+    }
+    if (updates.defaultBackendId !== undefined) {
+      await upsert('default_backend_id', updates.defaultBackendId);
+    }
+    if (updates.globalMaxConcurrency !== undefined) {
+      await upsert('global_max_concurrency', updates.globalMaxConcurrency.toString());
+    }
+    if (updates.backendMaxConcurrency !== undefined) {
+      await upsert('backend_max_concurrency', JSON.stringify(updates.backendMaxConcurrency));
+    }
+    if (updates.engineSettings !== undefined) {
+      await upsert('engine_settings', JSON.stringify(updates.engineSettings));
+      if (updates.engineSettings.antigravity?.binPath) {
+        await upsert('agy_bin', updates.engineSettings.antigravity.binPath);
+      }
+      if (updates.engineSettings.claudeCode?.binPath) {
+        await upsert('claude_bin', updates.engineSettings.claudeCode.binPath);
+      }
+    }
 
     return this.getAllSettings();
   }
@@ -132,3 +337,4 @@ export class SettingsService {
     return updated.autoQueue;
   }
 }
+
