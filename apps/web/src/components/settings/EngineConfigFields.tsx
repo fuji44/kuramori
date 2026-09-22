@@ -11,6 +11,7 @@ export interface AntigravityFieldsProps {
   values: Partial<AntigravityEngineConfig>;
   onChange: (updates: Partial<AntigravityEngineConfig>) => void;
   isOverride?: boolean;
+  disabled?: boolean;
   showAdvanced?: boolean;
   onToggleAdvanced?: () => void;
 }
@@ -19,6 +20,7 @@ export function AntigravityFields({
   values,
   onChange,
   isOverride = false,
+  disabled = false,
   showAdvanced,
   onToggleAdvanced,
 }: AntigravityFieldsProps) {
@@ -37,6 +39,10 @@ export function AntigravityFields({
     Boolean(values.customArgs?.trim()),
   ].filter(Boolean).length;
 
+  const inputClass = `w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-[#090d13]`;
+  const textareaClass = `w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded p-2.5 text-xs text-white focus:outline-none focus:border-sky-500 leading-relaxed resize-y font-mono disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-[#090d13]`;
+  const selectClass = `w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-[#090d13]`;
+
   return (
     <div className="space-y-4">
       {/* 1. バイナリパス (全体設定のみ) */}
@@ -47,10 +53,11 @@ export function AntigravityFields({
             <input
               type="text"
               required
+              disabled={disabled}
               value={values.binPath ?? ''}
               onChange={(e) => onChange({ binPath: e.target.value })}
               placeholder="例: agy または /home/user/.local/bin/agy"
-              className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
+              className={inputClass}
             />
           </div>
 
@@ -61,6 +68,7 @@ export function AntigravityFields({
               min={10}
               max={3600}
               step={1}
+              disabled={disabled}
               value={values.timeoutSeconds !== undefined ? values.timeoutSeconds : ''}
               onChange={(e) => {
                 const raw = e.target.value;
@@ -83,7 +91,7 @@ export function AntigravityFields({
                   onChange({ timeoutSeconds: 900 });
                 }
               }}
-              className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
+              className={inputClass}
             />
           </div>
         </div>
@@ -96,6 +104,7 @@ export function AntigravityFields({
           <input
             type="text"
             list="agy-model-suggestions"
+            disabled={disabled}
             value={values.model ?? ''}
             onChange={(e) => onChange({ model: e.target.value })}
             placeholder={
@@ -103,7 +112,7 @@ export function AntigravityFields({
                 ? '例: gemini-3.1-pro (未指定時は全体設定を継承)'
                 : '例: gemini-3.1-pro'
             }
-            className={`w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500`}
+            className={inputClass}
           />
           <datalist id="agy-model-suggestions">
             <option value="gemini-3.1-pro" label="推奨" />
@@ -121,6 +130,7 @@ export function AntigravityFields({
           <input
             type="text"
             list="agy-effort-suggestions"
+            disabled={disabled}
             value={values.effort ?? ''}
             onChange={(e) => onChange({ effort: e.target.value })}
             placeholder={
@@ -128,7 +138,7 @@ export function AntigravityFields({
                 ? '例: high (未指定時は全体設定を継承)'
                 : '例: high'
             }
-            className={`w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500`}
+            className={inputClass}
           />
           <datalist id="agy-effort-suggestions">
             <option value="high" />
@@ -145,6 +155,7 @@ export function AntigravityFields({
               min={10}
               max={3600}
               step={1}
+              disabled={disabled}
               value={values.timeoutSeconds !== undefined ? values.timeoutSeconds : ''}
               onChange={(e) => {
                 const raw = e.target.value;
@@ -158,7 +169,7 @@ export function AntigravityFields({
                 }
               }}
               placeholder="例: 900 (未指定時は継承)"
-              className="w-full bg-[#161b22] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
+              className={inputClass}
             />
           </div>
         )}
@@ -201,6 +212,7 @@ export function AntigravityFields({
             </label>
             <textarea
               rows={3}
+              disabled={disabled}
               value={values.systemPrompt ?? ''}
               onChange={(e) => onChange({ systemPrompt: e.target.value })}
               placeholder={
@@ -208,7 +220,7 @@ export function AntigravityFields({
                   ? '例: あなたはセキュリティ監査官です。脆弱性の悪用シナリオと緩和策を厳格に報告してください。(未指定時は全体設定を継承)'
                   : '例: あなたは建設的で厳格なシニアエンジニアです。指摘事項には理由と具体的な修正案を日本語で添えてください。'
               }
-              className={`w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded p-2.5 text-xs text-white focus:outline-none focus:border-sky-500 leading-relaxed resize-y font-mono`}
+              className={textareaClass}
             />
             <p className="text-[11px] text-[#8b949e] mt-1">
               {isOverride
@@ -223,6 +235,7 @@ export function AntigravityFields({
                 入力フォーマット (--input-format)
               </label>
               <select
+                disabled={disabled}
                 value={values.inputFormat ?? (isOverride ? '' : 'text')}
                 onChange={(e) => {
                   const val = e.target.value as 'text' | 'stream-json' | '';
@@ -235,7 +248,7 @@ export function AntigravityFields({
                     });
                   }
                 }}
-                className={`w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500`}
+                className={selectClass}
               >
                 {isOverride && <option value="">未指定 (全体設定を継承)</option>}
                 <option value="text">text (標準テキスト / 単発プロンプト)</option>
@@ -248,12 +261,13 @@ export function AntigravityFields({
                 出力フォーマット (--output-format)
               </label>
               <select
+                disabled={disabled}
                 value={values.outputFormat ?? (isOverride ? '' : 'text')}
                 onChange={(e) => {
                   const val = e.target.value as 'text' | 'json' | 'stream-json' | '';
                   onChange({ outputFormat: val === '' ? undefined : val });
                 }}
-                className={`w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500`}
+                className={selectClass}
               >
                 {isOverride && <option value="">未指定 (全体設定を継承)</option>}
                 <option value="text">text (標準テキスト)</option>
@@ -269,6 +283,7 @@ export function AntigravityFields({
             </label>
             <textarea
               rows={4}
+              disabled={disabled}
               value={values.jsonSchema ?? ''}
               onChange={(e) => onChange({ jsonSchema: e.target.value })}
               placeholder={
@@ -276,7 +291,7 @@ export function AntigravityFields({
                   ? '例: {"type":"object","properties":{...}} (未指定時は全体設定を継承)'
                   : '例: {"type":"object","properties":{...}} または schema.json のファイルパス'
               }
-              className={`w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded p-2.5 text-xs text-white font-mono focus:outline-none focus:border-sky-500 leading-relaxed resize-y`}
+              className={textareaClass}
             />
             <p className="text-[11px] text-[#8b949e] mt-1">
               指定時、モデルの最終出力を指定された JSON スキーマに厳格準拠（Structured Outputs）させます。
@@ -289,6 +304,7 @@ export function AntigravityFields({
             </label>
             <input
               type="text"
+              disabled={disabled}
               value={values.printTimeout ?? ''}
               onChange={(e) => onChange({ printTimeout: e.target.value })}
               placeholder={
@@ -296,7 +312,7 @@ export function AntigravityFields({
                   ? '例: 900s または 15m (未指定時は全体設定を継承)'
                   : '例: 900s または 15m (未指定時は 0s / 無制限)'
               }
-              className={`w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500`}
+              className={inputClass}
             />
             <p className="text-[11px] text-[#8b949e] mt-1">
               agy 自身の print モード（-p）内部時間制限です。指定時間でターンを打ち切り途中出力を返して正常終了します（単位: s, m）。
@@ -310,12 +326,13 @@ export function AntigravityFields({
                   ターミナルサンドボックス (--sandbox)
                 </label>
                 <select
+                  disabled={disabled}
                   value={values.sandbox === undefined ? '' : String(values.sandbox)}
                   onChange={(e) => {
                     const val = e.target.value;
                     onChange({ sandbox: val === '' ? undefined : val === 'true' });
                   }}
-                  className="w-full bg-[#161b22] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500"
+                  className={selectClass}
                 >
                   <option value="">未指定 (全体設定を継承)</option>
                   <option value="true">有効 (--sandbox を付与)</option>
@@ -325,6 +342,7 @@ export function AntigravityFields({
             ) : (
               <Checkbox
                 variant="card"
+                disabled={disabled}
                 checked={Boolean(values.sandbox)}
                 onChange={(checked) => onChange({ sandbox: checked })}
                 label="ターミナルサンドボックス (--sandbox)"
@@ -338,6 +356,7 @@ export function AntigravityFields({
                   スキルの展開を抑止 (--disable-slash-commands)
                 </label>
                 <select
+                  disabled={disabled}
                   value={
                     values.disableSlashCommands === undefined
                       ? ''
@@ -349,7 +368,7 @@ export function AntigravityFields({
                       disableSlashCommands: val === '' ? undefined : val === 'true',
                     });
                   }}
-                  className="w-full bg-[#161b22] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500"
+                  className={selectClass}
                 >
                   <option value="">未指定 (全体設定を継承)</option>
                   <option value="true">有効 (抑止する)</option>
@@ -359,6 +378,7 @@ export function AntigravityFields({
             ) : (
               <Checkbox
                 variant="card"
+                disabled={disabled}
                 checked={Boolean(values.disableSlashCommands)}
                 onChange={(checked) => onChange({ disableSlashCommands: checked })}
                 label="スキルの展開を抑止 (--disable-slash-commands)"
@@ -371,6 +391,7 @@ export function AntigravityFields({
             <label className="text-xs text-[#8b949e] block mb-1">追加カスタム引数 (Custom Args)</label>
             <input
               type="text"
+              disabled={disabled}
               value={values.customArgs ?? ''}
               onChange={(e) => onChange({ customArgs: e.target.value })}
               placeholder={
@@ -378,7 +399,7 @@ export function AntigravityFields({
                   ? '例: --project my-project (未指定時は全体設定を継承)'
                   : '例: --project my-project'
               }
-              className={`w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono text-xs focus:outline-none focus:border-sky-500`}
+              className={inputClass}
             />
           </div>
         </div>
@@ -391,6 +412,7 @@ export interface ClaudeCodeFieldsProps {
   values: Partial<ClaudeCodeEngineConfig>;
   onChange: (updates: Partial<ClaudeCodeEngineConfig>) => void;
   isOverride?: boolean;
+  disabled?: boolean;
   showAdvanced?: boolean;
   onToggleAdvanced?: () => void;
 }
@@ -399,6 +421,7 @@ export function ClaudeCodeFields({
   values,
   onChange,
   isOverride = false,
+  disabled = false,
   showAdvanced,
   onToggleAdvanced,
 }: ClaudeCodeFieldsProps) {
@@ -416,6 +439,10 @@ export function ClaudeCodeFields({
     Boolean(values.customArgs?.trim()),
   ].filter(Boolean).length;
 
+  const inputClass = `w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-[#090d13]`;
+  const textareaClass = `w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded p-2.5 text-xs text-white focus:outline-none focus:border-sky-500 leading-relaxed resize-y font-mono disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-[#090d13]`;
+  const selectClass = `w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-[#090d13]`;
+
   return (
     <div className="space-y-4">
       {/* 1. バイナリパス (全体設定のみ) */}
@@ -426,10 +453,11 @@ export function ClaudeCodeFields({
             <input
               type="text"
               required
+              disabled={disabled}
               value={values.binPath ?? ''}
               onChange={(e) => onChange({ binPath: e.target.value })}
               placeholder="例: claude または /usr/local/bin/claude"
-              className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
+              className={inputClass}
             />
           </div>
 
@@ -440,6 +468,7 @@ export function ClaudeCodeFields({
               min={10}
               max={3600}
               step={1}
+              disabled={disabled}
               value={values.timeoutSeconds !== undefined ? values.timeoutSeconds : ''}
               onChange={(e) => {
                 const raw = e.target.value;
@@ -462,7 +491,7 @@ export function ClaudeCodeFields({
                   onChange({ timeoutSeconds: 900 });
                 }
               }}
-              className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
+              className={inputClass}
             />
           </div>
         </div>
@@ -475,6 +504,7 @@ export function ClaudeCodeFields({
           <input
             type="text"
             list="claude-model-suggestions"
+            disabled={disabled}
             value={values.model ?? ''}
             onChange={(e) => onChange({ model: e.target.value })}
             placeholder={
@@ -482,7 +512,7 @@ export function ClaudeCodeFields({
                 ? '例: sonnet (未指定時は全体設定を継承)'
                 : '例: sonnet'
             }
-            className={`w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500`}
+            className={inputClass}
           />
           <datalist id="claude-model-suggestions">
             <option value="sonnet" label="推奨" />
@@ -507,6 +537,7 @@ export function ClaudeCodeFields({
           <input
             type="text"
             list="claude-effort-suggestions"
+            disabled={disabled}
             value={values.effort ?? ''}
             onChange={(e) => onChange({ effort: e.target.value })}
             placeholder={
@@ -514,7 +545,7 @@ export function ClaudeCodeFields({
                 ? '例: high (未指定時は全体設定を継承)'
                 : '例: high'
             }
-            className={`w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500`}
+            className={inputClass}
           />
           <datalist id="claude-effort-suggestions">
             <option value="high" />
@@ -533,6 +564,7 @@ export function ClaudeCodeFields({
               min={10}
               max={3600}
               step={1}
+              disabled={disabled}
               value={values.timeoutSeconds !== undefined ? values.timeoutSeconds : ''}
               onChange={(e) => {
                 const raw = e.target.value;
@@ -546,7 +578,7 @@ export function ClaudeCodeFields({
                 }
               }}
               placeholder="例: 900 (未指定時は継承)"
-              className="w-full bg-[#161b22] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
+              className={inputClass}
             />
           </div>
         )}
@@ -589,6 +621,7 @@ export function ClaudeCodeFields({
             </label>
             <textarea
               rows={3}
+              disabled={disabled}
               value={values.systemPrompt ?? ''}
               onChange={(e) => onChange({ systemPrompt: e.target.value })}
               placeholder={
@@ -596,7 +629,7 @@ export function ClaudeCodeFields({
                   ? '例: あなたはセキュリティ監査官です。脆弱性の悪用シナリオと緩和策を厳格に報告してください。(未指定時は全体設定を継承)'
                   : '例: あなたは建設的で厳格なシニアエンジニアです。指摘事項には理由と具体的な修正案を日本語で添えてください。'
               }
-              className={`w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded p-2.5 text-xs text-white focus:outline-none focus:border-sky-500 leading-relaxed resize-y font-mono`}
+              className={textareaClass}
             />
             <p className="text-[11px] text-[#8b949e] mt-1">
               {isOverride
@@ -611,6 +644,7 @@ export function ClaudeCodeFields({
                 入力フォーマット (--input-format)
               </label>
               <select
+                disabled={disabled}
                 value={values.inputFormat ?? (isOverride ? '' : 'text')}
                 onChange={(e) => {
                   const val = e.target.value as 'text' | 'stream-json' | '';
@@ -623,7 +657,7 @@ export function ClaudeCodeFields({
                     });
                   }
                 }}
-                className={`w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500`}
+                className={selectClass}
               >
                 {isOverride && <option value="">未指定 (全体設定を継承)</option>}
                 <option value="text">text (標準テキスト / 単発プロンプト)</option>
@@ -636,12 +670,13 @@ export function ClaudeCodeFields({
                 出力フォーマット (--output-format)
               </label>
               <select
+                disabled={disabled}
                 value={values.outputFormat ?? (isOverride ? '' : 'text')}
                 onChange={(e) => {
                   const val = e.target.value as 'text' | 'json' | 'stream-json' | '';
                   onChange({ outputFormat: val === '' ? undefined : val });
                 }}
-                className={`w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500`}
+                className={selectClass}
               >
                 {isOverride && <option value="">未指定 (全体設定を継承)</option>}
                 <option value="text">text (標準テキスト)</option>
@@ -657,6 +692,7 @@ export function ClaudeCodeFields({
             </label>
             <textarea
               rows={4}
+              disabled={disabled}
               value={values.jsonSchema ?? ''}
               onChange={(e) => onChange({ jsonSchema: e.target.value })}
               placeholder={
@@ -664,7 +700,7 @@ export function ClaudeCodeFields({
                   ? '例: {"type":"object","properties":{...}} (未指定時は全体設定を継承)'
                   : '例: {"type":"object","properties":{...}} または schema.json のファイルパス'
               }
-              className={`w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded p-2.5 text-xs text-white font-mono focus:outline-none focus:border-sky-500 leading-relaxed resize-y`}
+              className={textareaClass}
             />
             <p className="text-[11px] text-[#8b949e] mt-1">
               指定時、モデルの最終出力を指定された JSON スキーマに厳格準拠（Structured Outputs）させます。
@@ -677,6 +713,7 @@ export function ClaudeCodeFields({
             </label>
             <input
               type="text"
+              disabled={disabled}
               value={values.allowedTools ?? ''}
               onChange={(e) => onChange({ allowedTools: e.target.value })}
               placeholder={
@@ -684,7 +721,7 @@ export function ClaudeCodeFields({
                   ? '例: Bash,Edit,GlobTool (未指定時は全体設定を継承)'
                   : '例: Bash,Edit,GlobTool (カンマ区切り、空欄で全ツール許可)'
               }
-              className={`w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500`}
+              className={inputClass}
             />
             <p className="text-[11px] text-[#8b949e] mt-1">
               Claude Code CLI が利用可能なツールを制限します。カンマ区切りでツール名を指定します。
@@ -698,12 +735,13 @@ export function ClaudeCodeFields({
                   設定読み込みスキップ (--bare)
                 </label>
                 <select
+                  disabled={disabled}
                   value={values.bare === undefined ? '' : String(values.bare)}
                   onChange={(e) => {
                     const val = e.target.value;
                     onChange({ bare: val === '' ? undefined : val === 'true' });
                   }}
-                  className="w-full bg-[#161b22] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500"
+                  className={selectClass}
                 >
                   <option value="">未指定 (全体設定を継承)</option>
                   <option value="true">有効 (--bare を付与)</option>
@@ -713,6 +751,7 @@ export function ClaudeCodeFields({
             ) : (
               <Checkbox
                 variant="card"
+                disabled={disabled}
                 checked={Boolean(values.bare)}
                 onChange={(checked) => onChange({ bare: checked })}
                 label="設定読み込みスキップ (--bare)"
@@ -725,6 +764,7 @@ export function ClaudeCodeFields({
             <label className="text-xs text-[#8b949e] block mb-1">追加カスタム引数 (Custom Args)</label>
             <input
               type="text"
+              disabled={disabled}
               value={values.customArgs ?? ''}
               onChange={(e) => onChange({ customArgs: e.target.value })}
               placeholder={
@@ -732,7 +772,7 @@ export function ClaudeCodeFields({
                   ? '例: --dangerously-skip-permissions (未指定時は全体設定を継承)'
                   : '例: --dangerously-skip-permissions'
               }
-              className={`w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono text-xs focus:outline-none focus:border-sky-500`}
+              className={inputClass}
             />
           </div>
         </div>
@@ -745,9 +785,15 @@ export interface MockFieldsProps {
   values: Partial<MockEngineConfig>;
   onChange: (updates: Partial<MockEngineConfig>) => void;
   isOverride?: boolean;
+  disabled?: boolean;
 }
 
-export function MockFields({ values, onChange, isOverride = false }: MockFieldsProps) {
+export function MockFields({
+  values,
+  onChange,
+  isOverride = false,
+  disabled = false,
+}: MockFieldsProps) {
   return (
     <div className="space-y-4">
       <div>
@@ -759,11 +805,12 @@ export function MockFields({ values, onChange, isOverride = false }: MockFieldsP
           min={0}
           max={60000}
           step={100}
+          disabled={disabled}
           value={values.delayMs !== undefined ? values.delayMs : ''}
           onChange={(e) => {
             const raw = e.target.value;
             if (raw === '') {
-              onChange({ delayMs: (isOverride ? undefined : ('' as any)) });
+              onChange({ delayMs: isOverride ? undefined : ('' as any) });
             } else {
               const num = parseInt(raw, 10);
               if (!isNaN(num)) {
@@ -784,7 +831,7 @@ export function MockFields({ values, onChange, isOverride = false }: MockFieldsP
               ? '例: 500 (未指定時は全体設定を継承)'
               : '例: 500'
           }
-          className={`w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500`}
+          className={`w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-[#090d13]`}
         />
         <p className="text-[11px] text-[#8b949e] mt-1">
           レビュー処理の実行をシミュレートする待機時間（ms）です。
@@ -799,6 +846,7 @@ export interface EngineConfigFieldsProps {
   values: Record<string, any>;
   onChange: (updates: Record<string, any>) => void;
   isOverride?: boolean;
+  disabled?: boolean;
   showAdvanced?: boolean;
   onToggleAdvanced?: () => void;
 }
@@ -808,6 +856,7 @@ export function EngineConfigFields({
   values,
   onChange,
   isOverride = false,
+  disabled = false,
   showAdvanced,
   onToggleAdvanced,
 }: EngineConfigFieldsProps) {
@@ -817,6 +866,7 @@ export function EngineConfigFields({
         values={values}
         onChange={onChange}
         isOverride={isOverride}
+        disabled={disabled}
         showAdvanced={showAdvanced}
         onToggleAdvanced={onToggleAdvanced}
       />
@@ -829,6 +879,7 @@ export function EngineConfigFields({
         values={values}
         onChange={onChange}
         isOverride={isOverride}
+        disabled={disabled}
         showAdvanced={showAdvanced}
         onToggleAdvanced={onToggleAdvanced}
       />
@@ -841,6 +892,7 @@ export function EngineConfigFields({
         values={values}
         onChange={onChange}
         isOverride={isOverride}
+        disabled={disabled}
       />
     );
   }

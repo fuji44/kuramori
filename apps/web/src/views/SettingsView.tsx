@@ -122,6 +122,7 @@ export function SettingsView({
         {subview === 'rules' && (
           <RuleSettingsView
             rules={rules}
+            settings={settings}
             defaultRuleId={settings.defaultRuleIds?.[0] ?? settings.defaultRuleId}
             defaultBackendId={settings.defaultBackendId || settings.reviewEngine || 'antigravity'}
             onCreateRule={onCreateRule}

@@ -17,12 +17,13 @@ import {
   Sparkles,
   Sliders,
 } from 'lucide-react';
-import { ReviewRule, EngineOverrideConfig } from '../../types.ts';
+import { ReviewRule, EngineOverrideConfig, AppSettings } from '../../types.ts';
 import { Checkbox } from '../../components/Checkbox.tsx';
 import { EngineConfigFields } from '../../components/settings/EngineConfigFields.tsx';
 
 interface RuleSettingsViewProps {
   rules: ReviewRule[];
+  settings?: AppSettings;
   defaultRuleId?: string;
   defaultBackendId?: string;
   onCreateRule: (rule: Partial<ReviewRule>) => Promise<void>;
@@ -34,6 +35,7 @@ interface RuleSettingsViewProps {
 
 export function RuleSettingsView({
   rules,
+  settings,
   defaultRuleId,
   defaultBackendId = 'antigravity',
   onCreateRule,
@@ -72,7 +74,7 @@ export function RuleSettingsView({
     engineOverride: {},
   });
 
-  const [showOverride, setShowOverride] = useState(false);
+  const [overrideEnabled, setOverrideEnabled] = useState(false);
 
   const handleOpenCreateRule = () => {
     setRuleForm({
@@ -86,7 +88,7 @@ export function RuleSettingsView({
       enabled: true,
       engineOverride: {},
     });
-    setShowOverride(false);
+    setOverrideEnabled(false);
     setIsCreatingRule(true);
     setEditingRuleId(null);
     setConfirmDeleteId(null);
@@ -111,7 +113,7 @@ export function RuleSettingsView({
       enabled: rule.enabled,
       engineOverride: rule.engineOverride ? { ...rule.engineOverride } : {},
     });
-    setShowOverride(hasOverride);
+    setOverrideEnabled(hasOverride);
     setEditingRuleId(rule.id);
     setIsCreatingRule(false);
     setConfirmDeleteId(null);
@@ -132,9 +134,11 @@ export function RuleSettingsView({
         .filter(Boolean);
 
       const cleanOverride: EngineOverrideConfig = {};
-      for (const [key, value] of Object.entries(ruleForm.engineOverride)) {
-        if (value !== undefined && value !== null && value !== '') {
-          (cleanOverride as any)[key] = value;
+      if (overrideEnabled) {
+        for (const [key, value] of Object.entries(ruleForm.engineOverride)) {
+          if (value !== undefined && value !== null && value !== '') {
+            (cleanOverride as any)[key] = value;
+          }
         }
       }
 
@@ -144,7 +148,10 @@ export function RuleSettingsView({
         category: ruleForm.category,
         engine: ruleForm.engine,
         instructions: ruleForm.instructions.trim(),
-        engineOverride: Object.keys(overridePayload).length > 0 ? overridePayload : undefined,
+        engineOverride:
+          overrideEnabled && Object.keys(cleanOverride).length > 0
+            ? cleanOverride
+            : undefined,
         trigger: {
           types: ['opened', 'synchronize'],
           paths: pathsArray.length > 0 ? pathsArray : undefined,
@@ -268,34 +275,6 @@ export function RuleSettingsView({
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs text-[#8b949e] block mb-1">実行エンジン</label>
-              <select
-                value={ruleForm.engine}
-                onChange={(e) => setRuleForm({ ...ruleForm, engine: e.target.value })}
-                className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500"
-              >
-                <option value="default">default (システム既定エンジンに追従)</option>
-                <option value="antigravity">antigravity</option>
-                <option value="claude-code">claude-code</option>
-                <option value="mock">mock</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs text-[#8b949e] block mb-1">
-                対象ファイルパス (Globカンマ区切り)
-              </label>
-              <input
-                type="text"
-                value={ruleForm.paths}
-                onChange={(e) => setRuleForm({ ...ruleForm, paths: e.target.value })}
-                placeholder="例: **/auth/**, **/security/**, **/api/** (空欄で全ファイル)"
-                className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-white font-mono text-xs focus:outline-none focus:border-sky-500"
-              />
-            </div>
-          </div>
-
           <div>
             <label className="text-xs text-[#8b949e] block mb-1">
               レビュー指示文 (Instructions / Prompt) *
@@ -313,77 +292,151 @@ export function RuleSettingsView({
             </p>
           </div>
 
-          {/* Engine Override Accordion */}
+          <div>
+            <label className="text-xs text-[#8b949e] block mb-1">
+              対象ファイルパス (Globカンマ区切り)
+            </label>
+            <input
+              type="text"
+              value={ruleForm.paths}
+              onChange={(e) => setRuleForm({ ...ruleForm, paths: e.target.value })}
+              placeholder="例: **/auth/**, **/security/**, **/api/** (空欄で全ファイル)"
+              className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-white font-mono text-xs focus:outline-none focus:border-sky-500"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-[#8b949e] block mb-1">実行エンジン</label>
+            <select
+              value={ruleForm.engine}
+              onChange={(e) => setRuleForm({ ...ruleForm, engine: e.target.value })}
+              className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500"
+            >
+              <option value="default">default (システム既定エンジンに追従)</option>
+              <option value="antigravity">antigravity</option>
+              <option value="claude-code">claude-code</option>
+              <option value="mock">mock</option>
+            </select>
+          </div>
+
+          {/* Engine Override Section */}
           {(() => {
             const effectiveEngine =
               ruleForm.engine === 'default'
                 ? (defaultBackendId || 'antigravity')
                 : ruleForm.engine;
 
+            const globalConfig = (() => {
+              if (effectiveEngine === 'antigravity') {
+                return settings?.engineSettings?.antigravity ?? {
+                  binPath: settings?.agyBin || 'agy',
+                  model: 'gemini-3.1-pro',
+                  effort: 'high',
+                  timeoutSeconds: 900,
+                  printTimeout: '',
+                  sandbox: false,
+                  disableSlashCommands: false,
+                  inputFormat: 'text',
+                  outputFormat: 'text',
+                  jsonSchema: '',
+                  customArgs: '',
+                };
+              }
+              if (effectiveEngine === 'claude-code' || effectiveEngine === 'claudeCode') {
+                return settings?.engineSettings?.claudeCode ?? {
+                  binPath: settings?.claudeBin || 'claude',
+                  model: 'sonnet',
+                  effort: 'high',
+                  timeoutSeconds: 900,
+                  allowedTools: '',
+                  bare: false,
+                  inputFormat: 'text',
+                  outputFormat: 'text',
+                  jsonSchema: '',
+                  customArgs: '',
+                };
+              }
+              if (effectiveEngine === 'mock') {
+                return settings?.engineSettings?.mock ?? {
+                  delayMs: 1500,
+                };
+              }
+              return {};
+            })();
+
             const overrideCount = Object.values(ruleForm.engineOverride).filter(
               (v) => v !== undefined && v !== null && v !== ''
             ).length;
 
             return (
-              <div className="pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowOverride(!showOverride)}
-                  aria-expanded={showOverride}
-                  className="flex items-center justify-between w-full py-2.5 px-3.5 text-xs font-medium text-[#c9d1d9] bg-[#0d1117] hover:bg-[#1c2128] border border-[#30363d] rounded-lg transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <Sliders className="w-3.5 h-3.5 text-sky-400" />
-                    <span>エンジン設定の上書き（任意）</span>
-                    {overrideCount > 0 && (
-                      <span className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-sky-950 text-sky-300 border border-sky-800/80">
-                        {overrideCount} 項目上書き中
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-[#8b949e]">
-                    <span>{showOverride ? '閉じる' : '設定する'}</span>
-                    {showOverride ? (
-                      <ChevronUp className="w-3.5 h-3.5" />
-                    ) : (
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    )}
-                  </div>
-                </button>
+              <div className="space-y-3 pt-1">
+                <Checkbox
+                  variant="card"
+                  checked={overrideEnabled}
+                  onChange={(checked) => setOverrideEnabled(checked)}
+                  label="エンジン設定を上書きする"
+                  description="このルール固有のモデル・推論レベル・タイムアウト・システムプロンプト等のパラメータを適用します。チェックを外すとエンジンの全体設定が適用されます。"
+                />
 
-                {showOverride && (
-                  <div className="mt-2 space-y-4 p-4 rounded-lg bg-[#0d1117]/60 border border-[#30363d] border-l-2 border-l-sky-500">
+                <div
+                  className={`transition-all duration-200 ml-4 pl-3 border-l-2 ${
+                    overrideEnabled ? 'border-sky-500' : 'border-[#30363d]/60'
+                  }`}
+                >
+                  <div className="space-y-4 p-4 rounded-lg bg-[#0d1117]/60 border border-[#30363d]">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Sliders className="w-3.5 h-3.5 text-sky-400" />
+                        <span className="text-xs font-semibold text-white">
+                          {overrideEnabled ? 'ルール固有設定（編集中）' : '全体設定（適用中・読み取り専用）'}
+                        </span>
+                        {overrideEnabled && overrideCount > 0 && (
+                          <span className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-sky-950 text-sky-300 border border-sky-800/80">
+                            {overrideCount} 項目上書き中
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] font-mono px-2 py-0.5 rounded bg-sky-950 text-sky-400 border border-sky-800/60 shrink-0 self-start sm:self-auto">
+                        対象エンジン: {effectiveEngine}
+                      </div>
+                    </div>
+
+                    {!overrideEnabled && (
+                      <p className="text-[11px] text-[#8b949e]">
+                        現在はエンジンの全体設定が表示されています。設定を変更したい場合は、上の「エンジン設定を上書きする」にチェックを入れてください。
+                      </p>
+                    )}
+
+                    {overrideEnabled && (
                       <p className="text-[11px] text-[#8b949e]">
                         このルールを実行する際、エンジンの全体設定を包括的に上書き（完全置換）します。空欄の項目はエンジンの全体設定がそのまま適用されます。
                       </p>
-                      <div className="text-[11px] font-mono px-2 py-0.5 rounded bg-sky-950 text-sky-400 border border-sky-800/60 shrink-0 self-start sm:self-auto">
-                        対象: {effectiveEngine}
-                      </div>
-                    </div>
+                    )}
 
                     {ruleForm.engine === 'default' && (
                       <div className="flex items-center gap-2 p-2.5 rounded-lg bg-sky-950/40 border border-sky-800/60 text-xs text-sky-300">
                         <Sparkles className="w-4 h-4 shrink-0 text-sky-400" />
                         <span>
-                          実行エンジンが「既定 (default)」のため、現在のシステム既定エンジン（<strong>{effectiveEngine}</strong>）向けの上書き設定が表示されています。
+                          実行エンジンが「既定 (default)」のため、現在のシステム既定エンジン（<strong>{effectiveEngine}</strong>）向けの設定が表示されています。
                         </span>
                       </div>
                     )}
 
                     <EngineConfigFields
                       engine={effectiveEngine}
-                      values={ruleForm.engineOverride}
-                      onChange={(updates) =>
+                      values={overrideEnabled ? ruleForm.engineOverride : globalConfig}
+                      onChange={(updates) => {
+                        if (!overrideEnabled) return;
                         setRuleForm((prev) => ({
                           ...prev,
                           engineOverride: { ...prev.engineOverride, ...updates },
-                        }))
-                      }
+                        }));
+                      }}
                       isOverride={true}
+                      disabled={!overrideEnabled}
                     />
                   </div>
-                )}
+                </div>
               </div>
             );
           })()}
