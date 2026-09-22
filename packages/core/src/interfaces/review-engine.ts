@@ -1,4 +1,4 @@
-import type { ReviewVerdict } from '../types/review.ts';
+import type { ReviewVerdict, ReviewRule, RuleResult, RuleResultFinding } from '../types/review.ts';
 import type { ReviewReportData } from '../schema/review-report.ts';
 
 export interface ReviewExecutionContext {
@@ -10,6 +10,9 @@ export interface ReviewExecutionContext {
   worktreePath: string;
   outputDir: string;
   logPath: string;
+  rule?: ReviewRule;
+  interCommitDiff?: string;
+  previousFindings?: RuleResultFinding[];
 }
 
 export interface ReviewExecutionResult {
@@ -20,6 +23,7 @@ export interface ReviewExecutionResult {
   reportData?: ReviewReportData;
   reportHtmlPath?: string;
   rawFindingsPath?: string;
+  ruleResult?: RuleResult;
   error?: string;
 }
 

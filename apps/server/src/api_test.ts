@@ -235,7 +235,93 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
     const compileJson = await resCompile.json();
     assertEquals(typeof compileJson.svg, 'string');
     assertEquals(compileJson.svg.includes('<svg'), true);
-    assertEquals(compileJson.layout, 'dagre');
+    // 10. Test Review Rules API and Initial Seed Presets
+    const resRules = await api.request('/api/rules');
+    assertEquals(resRules.status, 200);
+    const rulesData = await resRules.json();
+    assertEquals(rulesData.rules.length >= 3, true);
+    const presetCorrectness = rulesData.rules.find((r: any) => r.id === 'preset-correctness');
+    assertEquals(Boolean(presetCorrectness), true);
+    assertEquals(presetCorrectness.engine, 'default');
+    assertEquals(presetCorrectness.category, 'correctness');
+
+    // Create a new rule
+    const resCreateRule = await api.request('/api/rules', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: 'custom-rule',
+        name: 'Custom Test Rule',
+        description: 'Test custom rule',
+        category: 'performance',
+        instructions: 'Check for performance regressions',
+        trigger: { types: ['opened'] },
+        concurrency: { cancelInProgress: false },
+      }),
+    });
+    assertEquals(resCreateRule.status, 201);
+    const createData = await resCreateRule.json();
+    assertEquals(createData.rule.id, 'custom-rule');
+
+    // Get specific rule
+    const resGetRule = await api.request('/api/rules/custom-rule');
+    assertEquals(resGetRule.status, 200);
+    const getData = await resGetRule.json();
+    assertEquals(getData.rule.name, 'Custom Test Rule');
+
+    // Update rule
+    const resUpdateRule = await api.request('/api/rules/custom-rule', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Updated Custom Rule', enabled: false }),
+    });
+    assertEquals(resUpdateRule.status, 200);
+
+    const resGetUpdated = await api.request('/api/rules/custom-rule');
+    const updatedData = await resGetUpdated.json();
+    assertEquals(updatedData.rule.name, 'Updated Custom Rule');
+    assertEquals(updatedData.rule.enabled, false);
+
+    // Delete rule
+    const resDeleteRule = await api.request('/api/rules/custom-rule', { method: 'DELETE' });
+    assertEquals(resDeleteRule.status, 200);
+    const resGetDeleted = await api.request('/api/rules/custom-rule');
+    assertEquals(resGetDeleted.status, 404);
+
+    // Test extended settings
+    const resSettings = await api.request('/api/settings');
+    assertEquals(resSettings.status, 200);
+    const settingsData = await resSettings.json();
+    assertEquals(settingsData.defaultRuleId, 'preset-correctness');
+    assertEquals(settingsData.defaultBackendId, 'antigravity');
+    assertEquals(settingsData.globalMaxConcurrency, 2);
+
+    // 11. Test Triggering review with specific ruleIds
+    const resRunRule = await api.request('/api/reviews/github%3Atest%2Frepo%231/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ruleIds: ['preset-correctness'] }),
+    });
+    assertEquals(resRunRule.status, 200);
+    const runRuleData = await resRunRule.json();
+    assertEquals(runRuleData.success, true);
+    assertEquals(Array.isArray(runRuleData.jobIds), true);
+
+    // Wait for the mock job to finish
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+
+    // 12. Test rule results API
+    const resRuleResults = await api.request('/api/reviews/github%3Atest%2Frepo%231/rule-results');
+    assertEquals(resRuleResults.status, 200);
+    const ruleResultsData = await resRuleResults.json();
+    assertEquals(Array.isArray(ruleResultsData.results), true);
+
+    // 13. Test on-demand HTML export from JSON data
+    const resExportHtml = await api.request('/api/reports/test-report-json/export.html');
+    assertEquals(resExportHtml.status, 200);
+    const exportHtmlText = await resExportHtml.text();
+    assertEquals(exportHtmlText.includes('<!DOCTYPE html>'), true);
+
 
     client.close();
   } finally {

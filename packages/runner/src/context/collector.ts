@@ -31,6 +31,25 @@ export interface ReviewPreFlightContext {
   existingComments: ExistingCommentContext[];
 }
 
+export interface RulePreFlightContext extends ReviewPreFlightContext {
+  rule?: {
+    id: string;
+    name: string;
+    category: string;
+    instructions: string;
+  };
+  interCommitDiff?: string;
+  previousFindings?: Array<{
+    id: string;
+    ruleId: string;
+    path: string;
+    line?: number;
+    title: string;
+    body: string;
+  }>;
+}
+
+
 /**
  * PR 本文から関連する Issue / Story の参照を抽出する
  * 例: "#123", "org/repo#123", "https://github.com/org/repo/issues/123"

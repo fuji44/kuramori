@@ -2,12 +2,14 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { desc, eq } from 'drizzle-orm';
 import type { AppDatabase } from './db/index.ts';
-import { reviewJobsTable, reviewReportsTable, reviewRequestsTable } from './db/schema.ts';
+import { reviewJobsTable, reviewReportsTable, reviewRequestsTable, reviewRulesTable, reviewRuleResultsTable } from './db/schema.ts';
+
 import type { ReportStorage } from '@review-base/core';
 import type { GitHubPoller } from './poller.ts';
 import type { ReviewQueue } from './queue.ts';
 import type { SettingsService } from './settings.ts';
-import { compileD2ToSvg } from '@review-base/runner';
+import { compileD2ToSvg, generateStandaloneReviewHtml } from '@review-base/runner';
+
 
 export interface ApiDependencies {
   db: AppDatabase;
@@ -89,11 +91,57 @@ export function createApi(deps: ApiDependencies) {
     return c.json({ success: true, message: 'Polled successfully' });
   });
 
-  // Trigger review manually for a specific PR
+  // Trigger review manually for a specific PR (supports optional ruleId or ruleIds)
   app.post('/api/reviews/:id/run', async (c) => {
     const id = decodeURIComponent(c.req.param('id'));
-    const jobId = await deps.queue.enqueue(id);
-    return c.json({ success: true, jobId });
+    let ruleIds: string[] | undefined;
+    try {
+      const body = await c.req.json();
+      if (body.ruleIds && Array.isArray(body.ruleIds)) {
+        ruleIds = body.ruleIds.map(String);
+      } else if (body.ruleId && typeof body.ruleId === 'string') {
+        ruleIds = [body.ruleId];
+      }
+    } catch {
+      // Body is optional
+    }
+
+    const jobIds = await deps.queue.enqueueRules(id, ruleIds);
+    return c.json({ success: true, jobIds, jobId: jobIds[0] ?? '' });
+  });
+
+  // Get all rule results for a PR
+  app.get('/api/reviews/:id/rule-results', async (c) => {
+    const id = decodeURIComponent(c.req.param('id'));
+    const rows = await deps.db
+      .select()
+      .from(reviewRuleResultsTable)
+      .where(eq(reviewRuleResultsTable.requestId, id))
+      .orderBy(desc(reviewRuleResultsTable.createdAt));
+
+    const results = rows.map((r) => {
+      let findings = [];
+      try {
+        findings = JSON.parse(r.findings);
+      } catch {
+        // ignore
+      }
+      let metadata = undefined;
+      if (r.metadata) {
+        try {
+          metadata = JSON.parse(r.metadata);
+        } catch {
+          // ignore
+        }
+      }
+      return {
+        ...r,
+        findings,
+        metadata,
+      };
+    });
+
+    return c.json({ results });
   });
 
   // Serve generated review HTML report
@@ -105,17 +153,26 @@ export function createApi(deps: ApiDependencies) {
     }
 
     const html = await deps.storage.getReportHtml(id);
-    if (html === null) {
+    if (html !== null) {
+      c.header('X-Content-Type-Options', 'nosniff');
+      c.header('X-Frame-Options', 'SAMEORIGIN');
+      c.header(
+        'Content-Security-Policy',
+        "default-src 'self' 'unsafe-inline' https:; script-src 'unsafe-inline' 'self'; frame-ancestors 'self'"
+      );
+      return c.html(html);
+    }
+
+    // On-demand HTML generation from reportData
+    const data = await deps.storage.getReportData(id);
+    if (data === null) {
       return c.text('Report not found', 404);
     }
 
+    const generatedHtml = generateStandaloneReviewHtml(data);
     c.header('X-Content-Type-Options', 'nosniff');
     c.header('X-Frame-Options', 'SAMEORIGIN');
-    c.header(
-      'Content-Security-Policy',
-      "default-src 'self' 'unsafe-inline' https:; script-src 'unsafe-inline' 'self'; frame-ancestors 'self'"
-    );
-    return c.html(html);
+    return c.html(generatedHtml);
   });
 
   // Serve generated review JSON report data
@@ -126,11 +183,49 @@ export function createApi(deps: ApiDependencies) {
     }
 
     const data = await deps.storage.getReportData(id);
-    if (data === null) {
+    if (data !== null) {
+      return c.json(data);
+    }
+
+    const reportRecords = await deps.db
+      .select()
+      .from(reviewReportsTable)
+      .where(eq(reviewReportsTable.id, id));
+    const report = reportRecords[0];
+    if (!report) {
       return c.json({ error: 'Report data not found' }, 404);
     }
 
-    return c.json(data);
+    return c.json({
+      verdict: report.verdict ?? 'COMMENT',
+      summary: {
+        brief: report.summary ?? '',
+        changedCode: [],
+        reachPaths: [],
+      },
+      comments: [],
+      createdAt: report.createdAt,
+    });
+  });
+
+  // On-demand export HTML report
+  app.get('/api/reports/:id/export.html', async (c) => {
+    const id = c.req.param('id');
+    if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
+      return c.text('Invalid report ID format', 400);
+    }
+
+    let html = await deps.storage.getReportHtml(id);
+    if (html === null) {
+      const data = await deps.storage.getReportData(id);
+      if (data === null) {
+        return c.text('Report not found', 404);
+      }
+      html = generateStandaloneReviewHtml(data);
+    }
+
+    c.header('Content-Disposition', `attachment; filename="report-${id}.html"`);
+    return c.html(html);
   });
 
   // Serve job execution log
@@ -147,6 +242,156 @@ export function createApi(deps: ApiDependencies) {
     } catch {
       return c.text('No log available for this job', 404);
     }
+  });
+
+  // Review Rules CRUD
+  app.get('/api/rules', async (c) => {
+    const rows = await deps.db.select().from(reviewRulesTable);
+    const rules = rows.map((row) => {
+      let trigger = {};
+      try {
+        trigger = JSON.parse(row.triggerJson);
+      } catch {
+        // Fallback to empty object
+      }
+      let concurrency = undefined;
+      if (row.concurrencyJson) {
+        try {
+          concurrency = JSON.parse(row.concurrencyJson);
+        } catch {
+          // Fallback to undefined
+        }
+      }
+      return {
+        id: row.id,
+        name: row.name,
+        description: row.description,
+        category: row.category,
+        engine: row.engine,
+        instructions: row.instructions,
+        trigger,
+        concurrency,
+        enabled: Boolean(row.enabled),
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      };
+    });
+    return c.json({ rules });
+  });
+
+  app.post('/api/rules', async (c) => {
+    try {
+      const body = await c.req.json();
+      if (!body.name || !body.instructions) {
+        return c.json({ error: 'name and instructions are required' }, 400);
+      }
+
+      const now = new Date().toISOString();
+      const id = body.id || `rule-${crypto.randomUUID().slice(0, 8)}`;
+      const newRule = {
+        id,
+        name: String(body.name),
+        description: body.description ? String(body.description) : '',
+        category: body.category ? String(body.category) : 'general',
+        engine: body.engine ? String(body.engine) : 'default',
+        instructions: String(body.instructions),
+        triggerJson: JSON.stringify(body.trigger ?? { types: ['opened', 'synchronize'] }),
+        concurrencyJson: body.concurrency ? JSON.stringify(body.concurrency) : null,
+        enabled: body.enabled !== false,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      await deps.db.insert(reviewRulesTable).values(newRule);
+      return c.json({
+        success: true,
+        rule: {
+          ...newRule,
+          trigger: body.trigger ?? { types: ['opened', 'synchronize'] },
+          concurrency: body.concurrency,
+          enabled: newRule.enabled,
+        },
+      }, 201);
+    } catch {
+      return c.json({ error: 'Invalid JSON payload' }, 400);
+    }
+  });
+
+  app.get('/api/rules/:id', async (c) => {
+    const id = c.req.param('id');
+    const rows = await deps.db.select().from(reviewRulesTable).where(eq(reviewRulesTable.id, id));
+    if (rows.length === 0) {
+      return c.json({ error: 'Rule not found' }, 404);
+    }
+    const row = rows[0];
+    let trigger = {};
+    try {
+      trigger = JSON.parse(row.triggerJson);
+    } catch {
+      // Fallback
+    }
+    let concurrency = undefined;
+    if (row.concurrencyJson) {
+      try {
+        concurrency = JSON.parse(row.concurrencyJson);
+      } catch {
+        // Fallback
+      }
+    }
+    return c.json({
+      rule: {
+        id: row.id,
+        name: row.name,
+        description: row.description,
+        category: row.category,
+        engine: row.engine,
+        instructions: row.instructions,
+        trigger,
+        concurrency,
+        enabled: Boolean(row.enabled),
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      },
+    });
+  });
+
+  app.put('/api/rules/:id', async (c) => {
+    const id = c.req.param('id');
+    const existing = await deps.db.select().from(reviewRulesTable).where(eq(reviewRulesTable.id, id));
+    if (existing.length === 0) {
+      return c.json({ error: 'Rule not found' }, 404);
+    }
+
+    try {
+      const body = await c.req.json();
+      const now = new Date().toISOString();
+      const updates: Record<string, unknown> = { updatedAt: now };
+
+      if (body.name !== undefined) updates.name = String(body.name);
+      if (body.description !== undefined) updates.description = String(body.description);
+      if (body.category !== undefined) updates.category = String(body.category);
+      if (body.engine !== undefined) updates.engine = String(body.engine);
+      if (body.instructions !== undefined) updates.instructions = String(body.instructions);
+      if (body.trigger !== undefined) updates.triggerJson = JSON.stringify(body.trigger);
+      if (body.concurrency !== undefined) updates.concurrencyJson = JSON.stringify(body.concurrency);
+      if (body.enabled !== undefined) updates.enabled = body.enabled ? true : false;
+
+      await deps.db.update(reviewRulesTable).set(updates).where(eq(reviewRulesTable.id, id));
+      return c.json({ success: true });
+    } catch {
+      return c.json({ error: 'Invalid JSON payload' }, 400);
+    }
+  });
+
+  app.delete('/api/rules/:id', async (c) => {
+    const id = c.req.param('id');
+    const existing = await deps.db.select().from(reviewRulesTable).where(eq(reviewRulesTable.id, id));
+    if (existing.length === 0) {
+      return c.json({ error: 'Rule not found' }, 404);
+    }
+
+    await deps.db.delete(reviewRulesTable).where(eq(reviewRulesTable.id, id));
+    return c.json({ success: true });
   });
 
   // Settings endpoints

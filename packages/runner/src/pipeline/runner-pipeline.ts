@@ -4,6 +4,10 @@ import {
   type ReviewExecutionContext,
   type ReviewExecutionResult,
   type ReviewReportData,
+  type RuleResult,
+  type RuleResultFinding,
+  type RuleResultVerdict,
+  type FindingSeverity,
   getReviewReportJsonSchema,
 } from '@review-base/core';
 import { collectPreFlightContext } from '../context/collector.ts';
@@ -29,7 +33,21 @@ export async function executePreFlight(
   await log(`[Pre-flight] Collecting context for ${context.repository}#${context.number}...`);
   const preFlightData = await collectPreFlightContext(context.repository, context.number);
 
-  const contextJsonStr = JSON.stringify(preFlightData, null, 2);
+  const fullPreFlight = {
+    ...preFlightData,
+    rule: context.rule
+      ? {
+          id: context.rule.id,
+          name: context.rule.name,
+          category: context.rule.category,
+          instructions: context.rule.instructions,
+        }
+      : undefined,
+    interCommitDiff: context.interCommitDiff,
+    previousFindings: context.previousFindings,
+  };
+
+  const contextJsonStr = JSON.stringify(fullPreFlight, null, 2);
   const worktreeContextPath = join(context.worktreePath, 'context.json');
   const outputContextPath = join(context.outputDir, 'context.json');
 
@@ -40,7 +58,7 @@ export async function executePreFlight(
   try {
     await Deno.remove(join(context.outputDir, 'review.json'));
   } catch {
-    // ignore
+    // クリーンアップエラーは無視
   }
 
   await log(`[Pre-flight] context.json written to worktree and output dir.`);
@@ -59,12 +77,21 @@ export async function buildReviewPrompt(
     skillInstructions = 'Perform deep PR review based on context.json and output review.json';
   }
 
+  let ruleSpecificPrompt = '';
+  if (context.rule) {
+    ruleSpecificPrompt = `
+=== SPECIALIZED REVIEW RULE: ${context.rule.name} (Category: ${context.rule.category}) ===
+You MUST focus heavily on the following specific instructions for this review:
+${context.rule.instructions}
+`;
+  }
+
   const jsonSchema = JSON.stringify(getReviewReportJsonSchema(), null, 2);
   const targetReviewJsonPath = join(context.outputDir, 'review.json');
 
   return `
 You are an autonomous senior code reviewer performing a deep review of Pull Request ${context.repository}#${context.number}.
-
+${ruleSpecificPrompt}
 === INSTRUCTIONS & SKILL GUIDELINES ===
 ${skillInstructions}
 
@@ -218,6 +245,71 @@ export async function executePostFlight(
     ? reportData.summary.brief
     : (reportData.summary.brief.problem ?? reportData.summary.brief.approach ?? '');
 
+  // RuleResult の構築
+  const ruleId = context.rule?.id ?? 'default';
+  const ruleName = context.rule?.name ?? 'General Review';
+  const category = context.rule?.category ?? 'general';
+
+  let ruleVerdict: RuleResultVerdict = 'PASS';
+  if (reportData.verdict === 'REQUEST_CHANGES') {
+    ruleVerdict = 'FAIL';
+  } else if (reportData.verdict === 'COMMENT') {
+    ruleVerdict = 'WARN';
+  }
+
+  const previousFindings = context.previousFindings ?? [];
+  const findings: RuleResultFinding[] = reportData.comments.map((c, idx) => {
+    const isPersisting = previousFindings.some(
+      (pf) => pf.path === c.path && (pf.title === c.title || (pf.line !== undefined && c.line !== undefined && Math.abs(pf.line - c.line) <= 3))
+    );
+
+    let severity: FindingSeverity = 'MEDIUM';
+    if (c.severity === 'P1') severity = 'CRITICAL';
+    else if (c.severity === 'P2') severity = 'HIGH';
+    else if (c.severity === 'P3') severity = 'LOW';
+
+    return {
+      id: c.id || `F${idx + 1}`,
+      ruleId,
+      category: c.category ?? category,
+      title: c.title,
+      path: c.path,
+      line: c.line,
+      severity,
+      status: isPersisting ? 'PERSISTING' : 'NEW',
+      body: c.body,
+      suggestion: c.suggestion?.replacement ?? c.suggestion?.snippet,
+    };
+  });
+
+  // 過去の指摘で今回解消されたものを RESOLVED として記録
+  for (const pf of previousFindings) {
+    const stillExists = findings.some((f) => f.path === pf.path && f.title === pf.title);
+    if (!stillExists) {
+      findings.push({
+        id: pf.id,
+        ruleId: pf.ruleId,
+        category,
+        title: pf.title,
+        path: pf.path,
+        line: pf.line,
+        severity: 'INFO',
+        status: 'RESOLVED',
+        body: pf.body,
+      });
+    }
+  }
+
+  const ruleResult: RuleResult = {
+    ruleId,
+    ruleName,
+    category,
+    headSha: context.headSha,
+    verdict: ruleVerdict,
+    summary: briefText,
+    findings,
+  };
+
   return {
     success: true,
     verdict: reportData.verdict,
@@ -225,6 +317,7 @@ export async function executePostFlight(
     reportJsonPath: finalJsonPath,
     reportHtmlPath: htmlReportPath,
     reportData,
+    ruleResult,
   };
 }
 
