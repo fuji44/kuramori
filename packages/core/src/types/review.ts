@@ -83,6 +83,67 @@ export interface RuleConcurrency {
 }
 
 /**
+ * 全 AI CLI エンジン共通の基底設定
+ */
+export interface BaseCliEngineConfig {
+  binPath: string;
+  model: string;
+  effort: string;
+  timeoutSeconds: number;
+  systemPrompt?: string;
+  inputFormat?: 'text' | 'stream-json';
+  outputFormat?: 'text' | 'json' | 'stream-json';
+  jsonSchema?: string;
+  customArgs?: string;
+}
+
+export interface AntigravityEngineConfig extends BaseCliEngineConfig {
+  printTimeout: string;
+  sandbox: boolean;
+  disableSlashCommands: boolean;
+}
+
+export interface ClaudeCodeEngineConfig extends BaseCliEngineConfig {
+  allowedTools?: string;
+  bare: boolean;
+}
+
+export interface MockEngineConfig {
+  delayMs: number;
+}
+
+export interface EngineSettingsMap {
+  antigravity: AntigravityEngineConfig;
+  claudeCode: ClaudeCodeEngineConfig;
+  mock: MockEngineConfig;
+}
+
+/**
+ * ルール単位での包括的オーバーライド設定
+ */
+export type EngineOverrideConfig = Partial<AntigravityEngineConfig & ClaudeCodeEngineConfig>;
+
+/**
+ * 包括的設定リゾルバ
+ */
+export function resolveEngineConfig<T extends object>(
+  baseConfig: T,
+  override?: Record<string, unknown> | null
+): T {
+  if (!override) {
+    return { ...baseConfig };
+  }
+
+  const result = { ...baseConfig } as Record<string, unknown>;
+  for (const [key, value] of Object.entries(override)) {
+    if (value !== undefined && value !== null && value !== '') {
+      result[key] = value;
+    }
+  }
+  return result as T;
+}
+
+/**
  * レビュールール定義
  */
 export interface ReviewRule {
@@ -92,6 +153,7 @@ export interface ReviewRule {
   category: string;
   engine: string;
   instructions: string;
+  engineOverride?: EngineOverrideConfig;
   trigger: RuleTrigger;
   concurrency?: RuleConcurrency;
   enabled: boolean;

@@ -216,6 +216,9 @@ export function EngineSettingsView({
     if (engines.claudeCode.jsonSchema?.trim()) {
       parts.push('--json-schema', `'${engines.claudeCode.jsonSchema.trim()}'`);
     }
+    if (engines.claudeCode.systemPrompt?.trim()) {
+      parts.push('--append-system-prompt', `"${engines.claudeCode.systemPrompt.trim().slice(0, 30)}..."`);
+    }
     if (engines.claudeCode.allowedTools?.trim()) {
       parts.push('--allowed-tools', `"${engines.claudeCode.allowedTools.trim()}"`);
     }
@@ -229,6 +232,7 @@ export function EngineSettingsView({
   const currentBackend = formSettings.defaultBackendId || formSettings.reviewEngine || 'antigravity';
 
   const agyAdvancedCount = [
+    Boolean(engines.antigravity.systemPrompt?.trim()),
     engines.antigravity.inputFormat && engines.antigravity.inputFormat !== 'text',
     engines.antigravity.outputFormat && engines.antigravity.outputFormat !== 'text',
     Boolean(engines.antigravity.jsonSchema?.trim()),
@@ -239,6 +243,7 @@ export function EngineSettingsView({
   ].filter(Boolean).length;
 
   const claudeAdvancedCount = [
+    Boolean(engines.claudeCode.systemPrompt?.trim()),
     engines.claudeCode.inputFormat && engines.claudeCode.inputFormat !== 'text',
     engines.claudeCode.outputFormat && engines.claudeCode.outputFormat !== 'text',
     Boolean(engines.claudeCode.jsonSchema?.trim()),
@@ -472,6 +477,22 @@ export function EngineSettingsView({
 
           {showAgyAdvanced && (
             <div className="space-y-4 pt-1 pl-3 border-l-2 border-sky-800/40">
+              <div>
+                <label className="text-xs text-[#8b949e] block mb-1">
+                  システムプロンプト / インタラクション (System Prompt)
+                </label>
+                <textarea
+                  rows={3}
+                  value={engines.antigravity.systemPrompt ?? ''}
+                  onChange={(e) => updateAntigravity({ systemPrompt: e.target.value })}
+                  placeholder="例: あなたは建設的で厳格なシニアエンジニアです。指摘事項には理由と具体的な修正案を日本語で添えてください。"
+                  className="w-full bg-[#0d1117] border border-[#30363d] rounded p-2.5 text-xs text-white focus:outline-none focus:border-sky-500 leading-relaxed resize-y font-mono"
+                />
+                <p className="text-[11px] text-[#8b949e] mt-1">
+                  エージェントのペルソナや振る舞い、共通のレビュー方針を規定します。ルール側で上書きされていない場合に標準として適用されます。
+                </p>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs text-[#8b949e] block mb-1">
@@ -702,6 +723,22 @@ export function EngineSettingsView({
 
           {showClaudeAdvanced && (
             <div className="space-y-4 pt-1 pl-3 border-l-2 border-sky-800/40">
+              <div>
+                <label className="text-xs text-[#8b949e] block mb-1">
+                  システムプロンプト / インタラクション (--append-system-prompt)
+                </label>
+                <textarea
+                  rows={3}
+                  value={engines.claudeCode.systemPrompt ?? ''}
+                  onChange={(e) => updateClaudeCode({ systemPrompt: e.target.value })}
+                  placeholder="例: あなたは建設的で厳格なシニアエンジニアです。指摘事項には理由と具体的な修正案を日本語で添えてください。"
+                  className="w-full bg-[#0d1117] border border-[#30363d] rounded p-2.5 text-xs text-white focus:outline-none focus:border-sky-500 leading-relaxed resize-y font-mono"
+                />
+                <p className="text-[11px] text-[#8b949e] mt-1">
+                  エージェントのペルソナや振る舞い、共通のレビュー方針を規定します。CLI 実行時に --append-system-prompt として渡されます。
+                </p>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs text-[#8b949e] block mb-1">

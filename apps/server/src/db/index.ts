@@ -80,11 +80,18 @@ export async function initDatabase(client: ReturnType<typeof createClient>) {
       instructions TEXT NOT NULL,
       trigger_json TEXT NOT NULL,
       concurrency_json TEXT,
+      engine_override_json TEXT,
       enabled INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
   `);
+
+  try {
+    await client.execute('ALTER TABLE review_rules ADD COLUMN engine_override_json TEXT;');
+  } catch {
+    // Column might already exist
+  }
 
   await client.execute(`
     CREATE TABLE IF NOT EXISTS review_jobs (

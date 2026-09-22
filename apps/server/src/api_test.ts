@@ -255,6 +255,11 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
         description: 'Test custom rule',
         category: 'performance',
         instructions: 'Check for performance regressions',
+        engineOverride: {
+          model: 'gemini-3.8-flash',
+          systemPrompt: 'Specialized performance prompt',
+          timeoutSeconds: 300,
+        },
         trigger: { types: ['opened'] },
         concurrency: { cancelInProgress: false },
       }),
@@ -262,18 +267,29 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
     assertEquals(resCreateRule.status, 201);
     const createData = await resCreateRule.json();
     assertEquals(createData.rule.id, 'custom-rule');
+    assertEquals(createData.rule.engineOverride?.model, 'gemini-3.8-flash');
+    assertEquals(createData.rule.engineOverride?.systemPrompt, 'Specialized performance prompt');
 
     // Get specific rule
     const resGetRule = await api.request('/api/rules/custom-rule');
     assertEquals(resGetRule.status, 200);
     const getData = await resGetRule.json();
     assertEquals(getData.rule.name, 'Custom Test Rule');
+    assertEquals(getData.rule.engineOverride?.model, 'gemini-3.8-flash');
+    assertEquals(getData.rule.engineOverride?.timeoutSeconds, 300);
 
     // Update rule
     const resUpdateRule = await api.request('/api/rules/custom-rule', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'Updated Custom Rule', enabled: false }),
+      body: JSON.stringify({
+        name: 'Updated Custom Rule',
+        enabled: false,
+        engineOverride: {
+          model: 'claude-3-7-sonnet',
+          systemPrompt: 'Updated system prompt',
+        },
+      }),
     });
     assertEquals(resUpdateRule.status, 200);
 
@@ -281,6 +297,8 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
     const updatedData = await resGetUpdated.json();
     assertEquals(updatedData.rule.name, 'Updated Custom Rule');
     assertEquals(updatedData.rule.enabled, false);
+    assertEquals(updatedData.rule.engineOverride?.model, 'claude-3-7-sonnet');
+    assertEquals(updatedData.rule.engineOverride?.systemPrompt, 'Updated system prompt');
 
     // Delete rule
     const resDeleteRule = await api.request('/api/rules/custom-rule', { method: 'DELETE' });

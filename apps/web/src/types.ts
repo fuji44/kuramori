@@ -49,74 +49,30 @@ export interface RuleConcurrency {
   cancelInProgress?: boolean;
 }
 
-export interface ReviewRule {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  engine: string;
-  instructions: string;
-  trigger: RuleTrigger;
-  concurrency?: RuleConcurrency;
-  enabled: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface RuleResultFinding {
-  id: string;
-  ruleId: string;
-  category: string;
-  title: string;
-  path: string;
-  line?: number;
-  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'INFO';
-  status: 'NEW' | 'PERSISTING' | 'RESOLVED';
-  body: string;
-  suggestion?: string;
-  metadata?: Record<string, unknown>;
-}
-
-export interface RuleResult {
-  id: string;
-  jobId: string;
-  requestId: string;
-  ruleId: string;
-  ruleName: string;
-  category: string;
-  headSha: string;
-  verdict: 'PASS' | 'WARN' | 'FAIL';
-  summary: string;
-  findings: RuleResultFinding[];
-  metadata?: Record<string, unknown>;
-  createdAt: string;
-}
-
-export interface AntigravityEngineConfig {
+/**
+ * 全 AI CLI エンジン共通の基底設定
+ */
+export interface BaseCliEngineConfig {
   binPath: string;
   model: string;
   effort: string;
   timeoutSeconds: number;
+  systemPrompt?: string;
+  inputFormat?: 'text' | 'stream-json';
+  outputFormat?: 'text' | 'json' | 'stream-json';
+  jsonSchema?: string;
+  customArgs?: string;
+}
+
+export interface AntigravityEngineConfig extends BaseCliEngineConfig {
   printTimeout: string;
   sandbox: boolean;
   disableSlashCommands: boolean;
-  inputFormat?: 'text' | 'stream-json';
-  outputFormat?: 'text' | 'json' | 'stream-json';
-  jsonSchema?: string;
-  customArgs?: string;
 }
 
-export interface ClaudeCodeEngineConfig {
-  binPath: string;
-  model: string;
-  effort: string;
-  timeoutSeconds: number;
+export interface ClaudeCodeEngineConfig extends BaseCliEngineConfig {
   allowedTools?: string;
   bare: boolean;
-  inputFormat?: 'text' | 'stream-json';
-  outputFormat?: 'text' | 'json' | 'stream-json';
-  jsonSchema?: string;
-  customArgs?: string;
 }
 
 export interface MockEngineConfig {
@@ -127,6 +83,23 @@ export interface EngineSettingsMap {
   antigravity: AntigravityEngineConfig;
   claudeCode: ClaudeCodeEngineConfig;
   mock: MockEngineConfig;
+}
+
+export type EngineOverrideConfig = Partial<AntigravityEngineConfig & ClaudeCodeEngineConfig>;
+
+export interface ReviewRule {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  engine: string;
+  instructions: string;
+  engineOverride?: EngineOverrideConfig;
+  trigger: RuleTrigger;
+  concurrency?: RuleConcurrency;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AppSettings {

@@ -15,8 +15,9 @@ import {
   Ban,
   Clock,
   Sparkles,
+  Sliders,
 } from 'lucide-react';
-import { ReviewRule } from '../../types.ts';
+import { ReviewRule, EngineOverrideConfig } from '../../types.ts';
 import { Checkbox } from '../../components/Checkbox.tsx';
 
 interface RuleSettingsViewProps {
@@ -55,6 +56,11 @@ export function RuleSettingsView({
     paths: string;
     cancelInProgress: boolean;
     enabled: boolean;
+    overrideModel: string;
+    overrideEffort: string;
+    overrideTimeoutSeconds: string;
+    overrideSystemPrompt: string;
+    overrideCustomArgs: string;
   }>({
     name: '',
     description: '',
@@ -64,7 +70,14 @@ export function RuleSettingsView({
     paths: '',
     cancelInProgress: true,
     enabled: true,
+    overrideModel: '',
+    overrideEffort: '',
+    overrideTimeoutSeconds: '',
+    overrideSystemPrompt: '',
+    overrideCustomArgs: '',
   });
+
+  const [showOverride, setShowOverride] = useState(false);
 
   const handleOpenCreateRule = () => {
     setRuleForm({
@@ -76,13 +89,26 @@ export function RuleSettingsView({
       paths: '',
       cancelInProgress: true,
       enabled: true,
+      overrideModel: '',
+      overrideEffort: '',
+      overrideTimeoutSeconds: '',
+      overrideSystemPrompt: '',
+      overrideCustomArgs: '',
     });
+    setShowOverride(false);
     setIsCreatingRule(true);
     setEditingRuleId(null);
     setConfirmDeleteId(null);
   };
 
   const handleOpenEditRule = (rule: ReviewRule) => {
+    const hasOverride = Boolean(
+      rule.engineOverride?.model ||
+      rule.engineOverride?.effort ||
+      rule.engineOverride?.timeoutSeconds ||
+      rule.engineOverride?.systemPrompt ||
+      rule.engineOverride?.customArgs
+    );
     setRuleForm({
       id: rule.id,
       name: rule.name,
@@ -93,7 +119,15 @@ export function RuleSettingsView({
       paths: rule.trigger?.paths ? rule.trigger.paths.join(', ') : '',
       cancelInProgress: rule.concurrency?.cancelInProgress ?? true,
       enabled: rule.enabled,
+      overrideModel: rule.engineOverride?.model ?? '',
+      overrideEffort: rule.engineOverride?.effort ?? '',
+      overrideTimeoutSeconds: rule.engineOverride?.timeoutSeconds
+        ? String(rule.engineOverride.timeoutSeconds)
+        : '',
+      overrideSystemPrompt: rule.engineOverride?.systemPrompt ?? '',
+      overrideCustomArgs: rule.engineOverride?.customArgs ?? '',
     });
+    setShowOverride(hasOverride);
     setEditingRuleId(rule.id);
     setIsCreatingRule(false);
     setConfirmDeleteId(null);
@@ -113,12 +147,27 @@ export function RuleSettingsView({
         .map((p) => p.trim())
         .filter(Boolean);
 
+      const overridePayload: EngineOverrideConfig = {};
+      if (ruleForm.overrideModel.trim()) overridePayload.model = ruleForm.overrideModel.trim();
+      if (ruleForm.overrideEffort.trim()) overridePayload.effort = ruleForm.overrideEffort.trim();
+      if (ruleForm.overrideTimeoutSeconds.trim()) {
+        const parsed = parseInt(ruleForm.overrideTimeoutSeconds.trim(), 10);
+        if (!isNaN(parsed) && parsed > 0) overridePayload.timeoutSeconds = parsed;
+      }
+      if (ruleForm.overrideSystemPrompt.trim()) {
+        overridePayload.systemPrompt = ruleForm.overrideSystemPrompt.trim();
+      }
+      if (ruleForm.overrideCustomArgs.trim()) {
+        overridePayload.customArgs = ruleForm.overrideCustomArgs.trim();
+      }
+
       const rulePayload: Partial<ReviewRule> = {
         name: ruleForm.name.trim(),
         description: ruleForm.description.trim(),
         category: ruleForm.category,
         engine: ruleForm.engine,
         instructions: ruleForm.instructions.trim(),
+        engineOverride: Object.keys(overridePayload).length > 0 ? overridePayload : undefined,
         trigger: {
           types: ['opened', 'synchronize'],
           paths: pathsArray.length > 0 ? pathsArray : undefined,
@@ -287,6 +336,124 @@ export function RuleSettingsView({
             </p>
           </div>
 
+          {/* Engine Override Accordion */}
+          <div className="pt-1">
+            <button
+              type="button"
+              onClick={() => setShowOverride(!showOverride)}
+              aria-expanded={showOverride}
+              className="flex items-center justify-between w-full py-2.5 px-3.5 text-xs font-medium text-[#c9d1d9] bg-[#0d1117] hover:bg-[#1c2128] border border-[#30363d] rounded-lg transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <Sliders className="w-3.5 h-3.5 text-sky-400" />
+                <span>エンジン設定の上書き（任意）</span>
+                {(() => {
+                  const count = [
+                    Boolean(ruleForm.overrideModel.trim()),
+                    Boolean(ruleForm.overrideEffort.trim()),
+                    Boolean(ruleForm.overrideTimeoutSeconds.trim()),
+                    Boolean(ruleForm.overrideSystemPrompt.trim()),
+                    Boolean(ruleForm.overrideCustomArgs.trim()),
+                  ].filter(Boolean).length;
+                  return count > 0 ? (
+                    <span className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-sky-950 text-sky-300 border border-sky-800/80">
+                      {count} 項目上書き中
+                    </span>
+                  ) : null;
+                })()}
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-[#8b949e]">
+                <span>{showOverride ? '閉じる' : '設定する'}</span>
+                {showOverride ? (
+                  <ChevronUp className="w-3.5 h-3.5" />
+                ) : (
+                  <ChevronDown className="w-3.5 h-3.5" />
+                )}
+              </div>
+            </button>
+          </div>
+
+          {showOverride && (
+            <div className="space-y-4 p-4 rounded-lg bg-[#0d1117]/60 border border-[#30363d] border-l-2 border-l-sky-500">
+              <p className="text-[11px] text-[#8b949e]">
+                このルールを実行する際、エンジンの全体設定を包括的に上書き（完全置換）します。空欄の項目はエンジンの全体設定がそのまま適用されます。
+              </p>
+
+              <div>
+                <label className="text-xs text-[#8b949e] block mb-1">
+                  システムプロンプト / インタラクション (System Prompt 上書き)
+                </label>
+                <textarea
+                  rows={3}
+                  value={ruleForm.overrideSystemPrompt}
+                  onChange={(e) =>
+                    setRuleForm({ ...ruleForm, overrideSystemPrompt: e.target.value })
+                  }
+                  placeholder="例: あなたはセキュリティ監査官です。脆弱性の悪用シナリオと緩和策を厳格に報告してください。"
+                  className="w-full bg-[#161b22] border border-[#30363d] rounded p-2.5 text-xs text-white focus:outline-none focus:border-sky-500 leading-relaxed resize-y font-mono"
+                />
+                <p className="text-[11px] text-[#8b949e] mt-1">
+                  指定した場合、エンジンの既定システムプロンプトをこの内容で完全に置き換えます。
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs text-[#8b949e] block mb-1">モデル (--model)</label>
+                  <input
+                    type="text"
+                    value={ruleForm.overrideModel}
+                    onChange={(e) =>
+                      setRuleForm({ ...ruleForm, overrideModel: e.target.value })
+                    }
+                    placeholder="例: gemini-3.8-flash"
+                    className="w-full bg-[#161b22] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-sky-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-[#8b949e] block mb-1">推論レベル (--effort)</label>
+                  <input
+                    type="text"
+                    value={ruleForm.overrideEffort}
+                    onChange={(e) =>
+                      setRuleForm({ ...ruleForm, overrideEffort: e.target.value })
+                    }
+                    placeholder="例: low / high"
+                    className="w-full bg-[#161b22] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-sky-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-[#8b949e] block mb-1">タイムアウト (秒)</label>
+                  <input
+                    type="number"
+                    min={30}
+                    max={3600}
+                    step={30}
+                    value={ruleForm.overrideTimeoutSeconds}
+                    onChange={(e) =>
+                      setRuleForm({ ...ruleForm, overrideTimeoutSeconds: e.target.value })
+                    }
+                    placeholder="例: 300"
+                    className="w-full bg-[#161b22] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-sky-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs text-[#8b949e] block mb-1">追加カスタム引数 (Custom Args)</label>
+                <input
+                  type="text"
+                  value={ruleForm.overrideCustomArgs}
+                  onChange={(e) =>
+                    setRuleForm({ ...ruleForm, overrideCustomArgs: e.target.value })
+                  }
+                  placeholder="例: --sandbox または追加の CLI フラグ"
+                  className="w-full bg-[#161b22] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-sky-500"
+                />
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-3 border-t border-[#30363d]">
             <div className="flex items-center gap-6">
               <Checkbox
@@ -367,6 +534,13 @@ export function RuleSettingsView({
                       <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#21262d] text-[#8b949e] font-mono border border-[#30363d]">
                         engine: {rule.engine}
                       </span>
+
+                      {rule.engineOverride && Object.keys(rule.engineOverride).length > 0 && (
+                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-purple-950 text-purple-300 font-mono border border-purple-800/60 flex items-center gap-1">
+                          <Sliders className="w-3 h-3" />
+                          <span>設定上書きあり</span>
+                        </span>
+                      )}
 
                       {isDefault && (
                         <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800/80 font-semibold flex items-center gap-1">

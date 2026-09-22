@@ -31,6 +31,7 @@ export const reviewRulesTable = sqliteTable('review_rules', {
   instructions: text('instructions').notNull(),
   triggerJson: text('trigger_json').notNull(),
   concurrencyJson: text('concurrency_json'),
+  engineOverrideJson: text('engine_override_json'),
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),

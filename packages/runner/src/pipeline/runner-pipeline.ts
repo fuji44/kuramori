@@ -68,7 +68,8 @@ export async function executePreFlight(
  * AI エージェントに渡すレビュー指示プロンプトを構築する
  */
 export async function buildReviewPrompt(
-  context: ReviewExecutionContext
+  context: ReviewExecutionContext,
+  systemPrompt?: string
 ): Promise<string> {
   let skillInstructions = '';
   try {
@@ -76,6 +77,10 @@ export async function buildReviewPrompt(
   } catch {
     skillInstructions = 'Perform deep PR review based on context.json and output review.json';
   }
+
+  const systemSection = systemPrompt?.trim()
+    ? `\n=== SYSTEM INSTRUCTIONS (ROLE & BEHAVIOR) ===\n${systemPrompt.trim()}\n`
+    : '';
 
   let ruleSpecificPrompt = '';
   if (context.rule) {
@@ -91,6 +96,7 @@ ${context.rule.instructions}
 
   return `
 You are an autonomous senior code reviewer performing a deep review of Pull Request ${context.repository}#${context.number}.
+${systemSection}
 ${ruleSpecificPrompt}
 === INSTRUCTIONS & SKILL GUIDELINES ===
 ${skillInstructions}

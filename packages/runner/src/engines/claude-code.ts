@@ -6,6 +6,7 @@ export interface ClaudeCodeEngineOptions {
   timeoutMs?: number; // default: 15 minutes
   model?: string;
   effort?: string;
+  systemPrompt?: string;
   allowedTools?: string;
   bare?: boolean;
   inputFormat?: 'text' | 'stream-json';
@@ -20,6 +21,7 @@ export class ClaudeCodeEngine implements ReviewEngine {
   private readonly timeoutMs: number;
   private readonly model?: string;
   private readonly effort?: string;
+  private readonly systemPrompt?: string;
   private readonly allowedTools?: string;
   private readonly bare?: boolean;
   private readonly inputFormat?: 'text' | 'stream-json';
@@ -32,6 +34,7 @@ export class ClaudeCodeEngine implements ReviewEngine {
     this.timeoutMs = options?.timeoutMs ?? 15 * 60 * 1000;
     this.model = options?.model;
     this.effort = options?.effort;
+    this.systemPrompt = options?.systemPrompt;
     this.allowedTools = options?.allowedTools;
     this.bare = options?.bare;
     this.inputFormat = options?.inputFormat;
@@ -73,6 +76,9 @@ export class ClaudeCodeEngine implements ReviewEngine {
       }
       if (this.effort) {
         args.push('--effort', this.effort);
+      }
+      if (this.systemPrompt?.trim()) {
+        args.push('--append-system-prompt', this.systemPrompt.trim());
       }
       if (this.inputFormat && this.inputFormat !== 'text') {
         args.push('--input-format', this.inputFormat);

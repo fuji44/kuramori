@@ -1,43 +1,21 @@
 import { eq } from 'drizzle-orm';
 import type { AppDatabase } from './db/index.ts';
 import { appSettingsTable } from './db/schema.ts';
+import type {
+  AntigravityEngineConfig,
+  ClaudeCodeEngineConfig,
+  MockEngineConfig,
+  EngineSettingsMap,
+} from '@review-base/core';
 
-export interface AntigravityEngineConfig {
-  binPath: string;
-  model: string;
-  effort: string;
-  timeoutSeconds: number;
-  printTimeout: string;
-  sandbox: boolean;
-  disableSlashCommands: boolean;
-  inputFormat?: 'text' | 'stream-json';
-  outputFormat?: 'text' | 'json' | 'stream-json';
-  jsonSchema?: string;
-  customArgs?: string;
-}
-
-export interface ClaudeCodeEngineConfig {
-  binPath: string;
-  model: string;
-  effort: string;
-  timeoutSeconds: number;
-  allowedTools?: string;
-  bare: boolean;
-  inputFormat?: 'text' | 'stream-json';
-  outputFormat?: 'text' | 'json' | 'stream-json';
-  jsonSchema?: string;
-  customArgs?: string;
-}
-
-export interface MockEngineConfig {
-  delayMs: number;
-}
-
-export interface EngineSettingsMap {
-  antigravity: AntigravityEngineConfig;
-  claudeCode: ClaudeCodeEngineConfig;
-  mock: MockEngineConfig;
-}
+export type {
+  BaseCliEngineConfig,
+  AntigravityEngineConfig,
+  ClaudeCodeEngineConfig,
+  MockEngineConfig,
+  EngineSettingsMap,
+  EngineOverrideConfig,
+} from '@review-base/core';
 
 export interface AppSettings {
   autoQueue: boolean;
@@ -113,6 +91,7 @@ export class SettingsService {
         model: 'gemini-3.1-pro',
         effort: 'high',
         timeoutSeconds: 900,
+        systemPrompt: '',
         printTimeout: '',
         sandbox: false,
         disableSlashCommands: false,
@@ -126,6 +105,7 @@ export class SettingsService {
         model: 'sonnet',
         effort: 'high',
         timeoutSeconds: 900,
+        systemPrompt: '',
         allowedTools: '',
         bare: false,
         inputFormat: 'text',

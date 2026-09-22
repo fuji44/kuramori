@@ -15,12 +15,13 @@ import {
   extractChangedFilesFromDiff,
   matchRuleTrigger,
 } from '@review-base/runner';
-import type {
-  ReportStorage,
-  ReviewEngine,
-  VCSProvider,
-  ReviewRule,
-  RuleResultFinding,
+import {
+  type ReportStorage,
+  type ReviewEngine,
+  type VCSProvider,
+  type ReviewRule,
+  type RuleResultFinding,
+  resolveEngineConfig,
 } from '@review-base/core';
 import type { SettingsService, AppSettings } from './settings.ts';
 import { aggregateRuleResults } from './aggregator.ts';
@@ -109,7 +110,11 @@ export class ReviewQueue {
     });
   }
 
-  private resolveEngineInstance(engineName: string, settings: AppSettings): ReviewEngine {
+  private resolveEngineInstance(
+    engineName: string,
+    settings: AppSettings,
+    rule?: ReviewRule
+  ): ReviewEngine {
     if (this.defaultEngine) {
       return this.defaultEngine;
     }
@@ -118,34 +123,63 @@ export class ReviewQueue {
       return new MockReviewEngine({ delayMs: settings.engineSettings?.mock?.delayMs });
     }
     if (engineName === 'claude-code') {
-      const cfg = settings.engineSettings?.claudeCode;
+      const baseCfg = settings.engineSettings?.claudeCode ?? {
+        binPath: settings.claudeBin,
+        model: 'sonnet',
+        effort: 'high',
+        timeoutSeconds: 900,
+        systemPrompt: '',
+        allowedTools: '',
+        bare: false,
+        inputFormat: 'text',
+        outputFormat: 'text',
+        jsonSchema: '',
+        customArgs: '',
+      };
+      const cfg = resolveEngineConfig(baseCfg, rule?.engineOverride);
       return new ClaudeCodeEngine({
-        claudeBinaryPath: cfg?.binPath || settings.claudeBin,
-        model: cfg?.model,
-        effort: cfg?.effort,
-        timeoutMs: (cfg?.timeoutSeconds ?? 900) * 1000,
-        allowedTools: cfg?.allowedTools,
-        bare: cfg?.bare,
-        inputFormat: cfg?.inputFormat,
-        outputFormat: cfg?.outputFormat,
-        jsonSchema: cfg?.jsonSchema,
-        customArgs: cfg?.customArgs,
+        claudeBinaryPath: cfg.binPath || settings.claudeBin,
+        model: cfg.model,
+        effort: cfg.effort,
+        timeoutMs: (cfg.timeoutSeconds ?? 900) * 1000,
+        systemPrompt: cfg.systemPrompt,
+        allowedTools: cfg.allowedTools,
+        bare: cfg.bare,
+        inputFormat: cfg.inputFormat,
+        outputFormat: cfg.outputFormat,
+        jsonSchema: cfg.jsonSchema,
+        customArgs: cfg.customArgs,
       });
     }
     // default: antigravity
-    const cfg = settings.engineSettings?.antigravity;
+    const baseCfg = settings.engineSettings?.antigravity ?? {
+      binPath: settings.agyBin,
+      model: 'gemini-3.1-pro',
+      effort: 'high',
+      timeoutSeconds: 900,
+      systemPrompt: '',
+      printTimeout: '',
+      sandbox: false,
+      disableSlashCommands: false,
+      inputFormat: 'text',
+      outputFormat: 'text',
+      jsonSchema: '',
+      customArgs: '',
+    };
+    const cfg = resolveEngineConfig(baseCfg, rule?.engineOverride);
     return new AntigravityEngine({
-      agyBinaryPath: cfg?.binPath || settings.agyBin,
-      model: cfg?.model,
-      effort: cfg?.effort,
-      timeoutMs: (cfg?.timeoutSeconds ?? 900) * 1000,
-      printTimeout: cfg?.printTimeout,
-      sandbox: cfg?.sandbox,
-      disableSlashCommands: cfg?.disableSlashCommands,
-      inputFormat: cfg?.inputFormat,
-      outputFormat: cfg?.outputFormat,
-      jsonSchema: cfg?.jsonSchema,
-      customArgs: cfg?.customArgs,
+      agyBinaryPath: cfg.binPath || settings.agyBin,
+      model: cfg.model,
+      effort: cfg.effort,
+      timeoutMs: (cfg.timeoutSeconds ?? 900) * 1000,
+      systemPrompt: cfg.systemPrompt,
+      printTimeout: cfg.printTimeout,
+      sandbox: cfg.sandbox,
+      disableSlashCommands: cfg.disableSlashCommands,
+      inputFormat: cfg.inputFormat,
+      outputFormat: cfg.outputFormat,
+      jsonSchema: cfg.jsonSchema,
+      customArgs: cfg.customArgs,
     });
   }
 
@@ -221,6 +255,14 @@ export class ReviewQueue {
       } catch {
         // ignore
       }
+      let engineOverride = undefined;
+      if (r.engineOverrideJson) {
+        try {
+          engineOverride = JSON.parse(r.engineOverrideJson);
+        } catch {
+          // ignore
+        }
+      }
       return {
         id: r.id,
         name: r.name,
@@ -228,6 +270,7 @@ export class ReviewQueue {
         category: r.category,
         engine: r.engine,
         instructions: r.instructions,
+        engineOverride,
         trigger,
         enabled: Boolean(r.enabled),
         createdAt: r.createdAt,
@@ -485,6 +528,14 @@ export class ReviewQueue {
           } catch {
             // ignore
           }
+          let engineOverride = undefined;
+          if (r.engineOverrideJson) {
+            try {
+              engineOverride = JSON.parse(r.engineOverrideJson);
+            } catch {
+              // ignore
+            }
+          }
           rule = {
             id: r.id,
             name: r.name,
@@ -492,6 +543,7 @@ export class ReviewQueue {
             category: r.category,
             engine: r.engine,
             instructions: r.instructions,
+            engineOverride,
             trigger,
             enabled: Boolean(r.enabled),
             createdAt: r.createdAt,
@@ -523,7 +575,7 @@ export class ReviewQueue {
         }
       }
 
-      const engineInstance = this.resolveEngineInstance(job.engine, settings);
+      const engineInstance = this.resolveEngineInstance(job.engine, settings, rule);
 
       const result = await engineInstance.execute({
         jobId,

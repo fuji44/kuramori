@@ -6,6 +6,7 @@ export interface AntigravityEngineOptions {
   timeoutMs?: number; // default: 15 minutes
   model?: string;
   effort?: string;
+  systemPrompt?: string;
   printTimeout?: string;
   sandbox?: boolean;
   disableSlashCommands?: boolean;
@@ -21,6 +22,7 @@ export class AntigravityEngine implements ReviewEngine {
   private readonly timeoutMs: number;
   private readonly model?: string;
   private readonly effort?: string;
+  private readonly systemPrompt?: string;
   private readonly printTimeout?: string;
   private readonly sandbox?: boolean;
   private readonly disableSlashCommands?: boolean;
@@ -34,6 +36,7 @@ export class AntigravityEngine implements ReviewEngine {
     this.timeoutMs = options?.timeoutMs ?? 15 * 60 * 1000;
     this.model = options?.model;
     this.effort = options?.effort;
+    this.systemPrompt = options?.systemPrompt;
     this.printTimeout = options?.printTimeout;
     this.sandbox = options?.sandbox;
     this.disableSlashCommands = options?.disableSlashCommands;
@@ -61,7 +64,7 @@ export class AntigravityEngine implements ReviewEngine {
       await executePreFlight(context, log);
 
       // 2. プロンプト生成 (専用スキル + Zod 4 スキーマ)
-      const prompt = await buildReviewPrompt(context);
+      const prompt = await buildReviewPrompt(context, this.systemPrompt);
 
       // 3. Antigravity CLI 実行 (cmd.output で確実に終了検知)
       await log(`[Engine] Running agy command...`);

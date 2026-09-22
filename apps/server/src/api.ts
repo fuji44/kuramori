@@ -262,6 +262,14 @@ export function createApi(deps: ApiDependencies) {
           // Fallback to undefined
         }
       }
+      let engineOverride = undefined;
+      if (row.engineOverrideJson) {
+        try {
+          engineOverride = JSON.parse(row.engineOverrideJson);
+        } catch {
+          // Fallback to undefined
+        }
+      }
       return {
         id: row.id,
         name: row.name,
@@ -269,6 +277,7 @@ export function createApi(deps: ApiDependencies) {
         category: row.category,
         engine: row.engine,
         instructions: row.instructions,
+        engineOverride,
         trigger,
         concurrency,
         enabled: Boolean(row.enabled),
@@ -295,6 +304,7 @@ export function createApi(deps: ApiDependencies) {
         category: body.category ? String(body.category) : 'general',
         engine: body.engine ? String(body.engine) : 'default',
         instructions: String(body.instructions),
+        engineOverrideJson: body.engineOverride ? JSON.stringify(body.engineOverride) : null,
         triggerJson: JSON.stringify(body.trigger ?? { types: ['opened', 'synchronize'] }),
         concurrencyJson: body.concurrency ? JSON.stringify(body.concurrency) : null,
         enabled: body.enabled !== false,
@@ -307,6 +317,7 @@ export function createApi(deps: ApiDependencies) {
         success: true,
         rule: {
           ...newRule,
+          engineOverride: body.engineOverride,
           trigger: body.trigger ?? { types: ['opened', 'synchronize'] },
           concurrency: body.concurrency,
           enabled: newRule.enabled,
@@ -338,6 +349,14 @@ export function createApi(deps: ApiDependencies) {
         // Fallback
       }
     }
+    let engineOverride = undefined;
+    if (row.engineOverrideJson) {
+      try {
+        engineOverride = JSON.parse(row.engineOverrideJson);
+      } catch {
+        // Fallback
+      }
+    }
     return c.json({
       rule: {
         id: row.id,
@@ -346,6 +365,7 @@ export function createApi(deps: ApiDependencies) {
         category: row.category,
         engine: row.engine,
         instructions: row.instructions,
+        engineOverride,
         trigger,
         concurrency,
         enabled: Boolean(row.enabled),
@@ -372,6 +392,9 @@ export function createApi(deps: ApiDependencies) {
       if (body.category !== undefined) updates.category = String(body.category);
       if (body.engine !== undefined) updates.engine = String(body.engine);
       if (body.instructions !== undefined) updates.instructions = String(body.instructions);
+      if (body.engineOverride !== undefined) {
+        updates.engineOverrideJson = body.engineOverride ? JSON.stringify(body.engineOverride) : null;
+      }
       if (body.trigger !== undefined) updates.triggerJson = JSON.stringify(body.trigger);
       if (body.concurrency !== undefined) updates.concurrencyJson = JSON.stringify(body.concurrency);
       if (body.enabled !== undefined) updates.enabled = body.enabled ? true : false;
