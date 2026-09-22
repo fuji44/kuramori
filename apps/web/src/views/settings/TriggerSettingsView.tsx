@@ -306,39 +306,45 @@ export function TriggerSettingsView({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-80 overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
               {rules.map((rule) => {
                 const isSelected = triggerForm.ruleIds.includes(rule.id);
                 return (
                   <div
                     key={rule.id}
                     onClick={() => handleToggleRule(rule.id)}
-                    className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                    className={`p-3 rounded-lg border cursor-pointer transition-all flex items-start gap-3 ${
                       isSelected
-                        ? 'bg-sky-950/30 border-sky-600/80 text-white'
-                        : 'bg-[#0d1117] border-[#30363d] text-[#8b949e] hover:border-[#8b949e]/50 hover:text-white'
+                        ? 'bg-sky-950/30 border-sky-800/80 text-white'
+                        : 'bg-[#0d1117] border-[#30363d] text-[#8b949e] hover:border-[#8b949e]/60'
                     }`}
                   >
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => {}}
-                      className="mt-0.5 rounded border-[#30363d] bg-[#161b22] text-sky-600 focus:ring-0 focus:ring-offset-0 pointer-events-none"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-xs font-semibold text-white">{rule.name}</span>
-                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-sky-950 text-sky-400 border border-sky-800/60 font-medium">
+                    <div className="mt-0.5 shrink-0 text-sky-400">
+                      {isSelected ? (
+                        <CheckSquare className="w-4 h-4" />
+                      ) : (
+                        <Square className="w-4 h-4 text-[#8b949e]" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                        <span className={`text-xs font-semibold ${isSelected ? 'text-white' : 'text-[#c9d1d9]'}`}>
+                          {rule.name}
+                        </span>
+                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#161b22] text-sky-400 border border-sky-800/40">
                           {rule.category}
                         </span>
                         <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#21262d] text-[#8b949e] font-mono">
                           engine: {rule.engine}
                         </span>
+                        {!rule.enabled && (
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-neutral-800 text-neutral-400">
+                            無効化中
+                          </span>
+                        )}
                       </div>
                       {rule.description && (
-                        <p className="text-[11px] text-[#8b949e] line-clamp-1 mt-1">
-                          {rule.description}
-                        </p>
+                        <p className="text-xs text-[#8b949e] line-clamp-1">{rule.description}</p>
                       )}
                     </div>
                   </div>
@@ -356,7 +362,7 @@ export function TriggerSettingsView({
             <Checkbox
               checked={triggerForm.enabled}
               onChange={(checked) => setTriggerForm({ ...triggerForm, enabled: checked })}
-              label="このトリガーを有効化"
+              label="トリガーを有効化"
             />
 
             <div className="flex items-center gap-2 self-end sm:self-auto">
