@@ -11,6 +11,9 @@ import {
   Box,
   Copy,
   Check,
+  ChevronDown,
+  ChevronUp,
+  Sliders,
 } from 'lucide-react';
 import { AppSettings, EngineSettingsMap } from '../../types.ts';
 import { Checkbox } from '../../components/Checkbox.tsx';
@@ -77,6 +80,8 @@ export function EngineSettingsView({
 }: EngineSettingsViewProps) {
   const [formSettings, setFormSettings] = useState<AppSettings>(settings);
   const [saving, setSaving] = useState(false);
+  const [showAgyAdvanced, setShowAgyAdvanced] = useState(false);
+  const [showClaudeAdvanced, setShowClaudeAdvanced] = useState(false);
 
   useEffect(() => {
     setFormSettings(settings);
@@ -222,6 +227,25 @@ export function EngineSettingsView({
   })();
 
   const currentBackend = formSettings.defaultBackendId || formSettings.reviewEngine || 'antigravity';
+
+  const agyAdvancedCount = [
+    engines.antigravity.inputFormat && engines.antigravity.inputFormat !== 'text',
+    engines.antigravity.outputFormat && engines.antigravity.outputFormat !== 'text',
+    Boolean(engines.antigravity.jsonSchema?.trim()),
+    Boolean(engines.antigravity.printTimeout?.trim()),
+    Boolean(engines.antigravity.sandbox),
+    Boolean(engines.antigravity.disableSlashCommands),
+    Boolean(engines.antigravity.customArgs?.trim()),
+  ].filter(Boolean).length;
+
+  const claudeAdvancedCount = [
+    engines.claudeCode.inputFormat && engines.claudeCode.inputFormat !== 'text',
+    engines.claudeCode.outputFormat && engines.claudeCode.outputFormat !== 'text',
+    Boolean(engines.claudeCode.jsonSchema?.trim()),
+    Boolean(engines.claudeCode.allowedTools?.trim()),
+    Boolean(engines.claudeCode.bare),
+    Boolean(engines.claudeCode.customArgs?.trim()),
+  ].filter(Boolean).length;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -419,107 +443,138 @@ export function EngineSettingsView({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs text-[#8b949e] block mb-1">
-                入力フォーマット (--input-format)
-              </label>
-              <select
-                value={engines.antigravity.inputFormat ?? 'text'}
-                onChange={(e) => {
-                  const val = e.target.value as 'text' | 'stream-json';
-                  updateAntigravity({
-                    inputFormat: val,
-                    ...(val === 'stream-json' ? { outputFormat: 'stream-json' } : {}),
-                  });
-                }}
-                className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500"
-              >
-                <option value="text">text (標準テキスト / 単発プロンプト)</option>
-                <option value="stream-json">stream-json (NDJSON 入力)</option>
-              </select>
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => setShowAgyAdvanced(!showAgyAdvanced)}
+              aria-expanded={showAgyAdvanced}
+              className="flex items-center justify-between w-full py-2.5 px-3.5 text-xs font-medium text-[#c9d1d9] bg-[#0d1117] hover:bg-[#1c2128] border border-[#30363d] rounded-lg transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <Sliders className="w-3.5 h-3.5 text-sky-400" />
+                <span>高度な設定</span>
+                {agyAdvancedCount > 0 && (
+                  <span className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-sky-950 text-sky-300 border border-sky-800/80">
+                    {agyAdvancedCount} 項目設定中
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-[#8b949e]">
+                <span>{showAgyAdvanced ? '閉じる' : '表示する'}</span>
+                {showAgyAdvanced ? (
+                  <ChevronUp className="w-3.5 h-3.5" />
+                ) : (
+                  <ChevronDown className="w-3.5 h-3.5" />
+                )}
+              </div>
+            </button>
+          </div>
+
+          {showAgyAdvanced && (
+            <div className="space-y-4 pt-1 pl-3 border-l-2 border-sky-800/40">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-[#8b949e] block mb-1">
+                    入力フォーマット (--input-format)
+                  </label>
+                  <select
+                    value={engines.antigravity.inputFormat ?? 'text'}
+                    onChange={(e) => {
+                      const val = e.target.value as 'text' | 'stream-json';
+                      updateAntigravity({
+                        inputFormat: val,
+                        ...(val === 'stream-json' ? { outputFormat: 'stream-json' } : {}),
+                      });
+                    }}
+                    className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500"
+                  >
+                    <option value="text">text (標準テキスト / 単発プロンプト)</option>
+                    <option value="stream-json">stream-json (NDJSON 入力)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs text-[#8b949e] block mb-1">
+                    出力フォーマット (--output-format)
+                  </label>
+                  <select
+                    value={engines.antigravity.outputFormat ?? 'text'}
+                    onChange={(e) =>
+                      updateAntigravity({
+                        outputFormat: e.target.value as 'text' | 'json' | 'stream-json',
+                      })
+                    }
+                    className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500"
+                  >
+                    <option value="text">text (標準テキスト)</option>
+                    <option value="json">json (構造化 JSON / トークン使用量含む)</option>
+                    <option value="stream-json">stream-json (NDJSON 逐次ストリーム)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs text-[#8b949e] block mb-1">
+                  JSON スキーマ制約 (--json-schema)
+                </label>
+                <textarea
+                  rows={4}
+                  value={engines.antigravity.jsonSchema ?? ''}
+                  onChange={(e) => updateAntigravity({ jsonSchema: e.target.value })}
+                  placeholder='例: {"type":"object","properties":{...}} または schema.json のファイルパス'
+                  className="w-full bg-[#0d1117] border border-[#30363d] rounded p-2.5 text-xs text-white font-mono focus:outline-none focus:border-sky-500 leading-relaxed resize-y"
+                />
+                <p className="text-[11px] text-[#8b949e] mt-1">
+                  指定時、モデルの最終出力を指定された JSON スキーマに厳格準拠（Structured Outputs）させます。
+                </p>
+              </div>
+
+              <div>
+                <label className="text-xs text-[#8b949e] block mb-1">
+                  Print タイムアウト (--print-timeout)
+                </label>
+                <input
+                  type="text"
+                  value={engines.antigravity.printTimeout ?? ''}
+                  onChange={(e) => updateAntigravity({ printTimeout: e.target.value })}
+                  placeholder="例: 900s または 15m (未指定時は 0s / 無制限)"
+                  className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
+                />
+                <p className="text-[11px] text-[#8b949e] mt-1">
+                  agy 自身の print モード（-p）内部時間制限です。指定時間でターンを打ち切り途中出力を返して正常終了します（単位: s, m）。
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <Checkbox
+                  variant="card"
+                  checked={engines.antigravity.sandbox}
+                  onChange={(checked) => updateAntigravity({ sandbox: checked })}
+                  label="ターミナルサンドボックス (--sandbox)"
+                  description="エージェントのシェル操作を制限されたセキュアなサンドボックス内で実行します。"
+                />
+
+                <Checkbox
+                  variant="card"
+                  checked={engines.antigravity.disableSlashCommands}
+                  onChange={(checked) => updateAntigravity({ disableSlashCommands: checked })}
+                  label="スキルの展開を抑止 (--disable-slash-commands)"
+                  description="プロンプト内のスラッシュコマンドや意図しないスキルの展開を無効化します。"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-[#8b949e] block mb-1">追加カスタム引数 (Custom Args)</label>
+                <input
+                  type="text"
+                  value={engines.antigravity.customArgs ?? ''}
+                  onChange={(e) => updateAntigravity({ customArgs: e.target.value })}
+                  placeholder="例: --project my-project"
+                  className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono text-xs focus:outline-none focus:border-sky-500"
+                />
+              </div>
             </div>
-
-            <div>
-              <label className="text-xs text-[#8b949e] block mb-1">
-                出力フォーマット (--output-format)
-              </label>
-              <select
-                value={engines.antigravity.outputFormat ?? 'text'}
-                onChange={(e) =>
-                  updateAntigravity({
-                    outputFormat: e.target.value as 'text' | 'json' | 'stream-json',
-                  })
-                }
-                className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500"
-              >
-                <option value="text">text (標準テキスト)</option>
-                <option value="json">json (構造化 JSON / トークン使用量含む)</option>
-                <option value="stream-json">stream-json (NDJSON 逐次ストリーム)</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs text-[#8b949e] block mb-1">
-              JSON スキーマ制約 (--json-schema)
-            </label>
-            <textarea
-              rows={4}
-              value={engines.antigravity.jsonSchema ?? ''}
-              onChange={(e) => updateAntigravity({ jsonSchema: e.target.value })}
-              placeholder='例: {"type":"object","properties":{...}} または schema.json のファイルパス'
-              className="w-full bg-[#0d1117] border border-[#30363d] rounded p-2.5 text-xs text-white font-mono focus:outline-none focus:border-sky-500 leading-relaxed resize-y"
-            />
-            <p className="text-[11px] text-[#8b949e] mt-1">
-              指定時、モデルの最終出力を指定された JSON スキーマに厳格準拠（Structured Outputs）させます。
-            </p>
-          </div>
-
-          <div>
-            <label className="text-xs text-[#8b949e] block mb-1">
-              Print タイムアウト (--print-timeout)
-            </label>
-            <input
-              type="text"
-              value={engines.antigravity.printTimeout ?? ''}
-              onChange={(e) => updateAntigravity({ printTimeout: e.target.value })}
-              placeholder="例: 900s または 15m (未指定時は 0s / 無制限)"
-              className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
-            />
-            <p className="text-[11px] text-[#8b949e] mt-1">
-              agy 自身の print モード（-p）内部時間制限です。指定時間でターンを打ち切り途中出力を返して正常終了します（単位: s, m）。
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-            <Checkbox
-              variant="card"
-              checked={engines.antigravity.sandbox}
-              onChange={(checked) => updateAntigravity({ sandbox: checked })}
-              label="ターミナルサンドボックス (--sandbox)"
-              description="エージェントのシェル操作を制限されたセキュアなサンドボックス内で実行します。"
-            />
-
-            <Checkbox
-              variant="card"
-              checked={engines.antigravity.disableSlashCommands}
-              onChange={(checked) => updateAntigravity({ disableSlashCommands: checked })}
-              label="スキルの展開を抑止 (--disable-slash-commands)"
-              description="プロンプト内のスラッシュコマンドや意図しないスキルの展開を無効化します。"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs text-[#8b949e] block mb-1">追加カスタム引数 (Custom Args)</label>
-            <input
-              type="text"
-              value={engines.antigravity.customArgs ?? ''}
-              onChange={(e) => updateAntigravity({ customArgs: e.target.value })}
-              placeholder="例: --project my-project"
-              className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono text-xs focus:outline-none focus:border-sky-500"
-            />
-          </div>
+          )}
 
           <CommandPreview command={agyPreviewCommand} />
         </div>
@@ -618,96 +673,127 @@ export function EngineSettingsView({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs text-[#8b949e] block mb-1">
-                入力フォーマット (--input-format)
-              </label>
-              <select
-                value={engines.claudeCode.inputFormat ?? 'text'}
-                onChange={(e) => {
-                  const val = e.target.value as 'text' | 'stream-json';
-                  updateClaudeCode({
-                    inputFormat: val,
-                    ...(val === 'stream-json' ? { outputFormat: 'stream-json' } : {}),
-                  });
-                }}
-                className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500"
-              >
-                <option value="text">text (標準テキスト / 単発プロンプト)</option>
-                <option value="stream-json">stream-json (NDJSON 入力)</option>
-              </select>
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => setShowClaudeAdvanced(!showClaudeAdvanced)}
+              aria-expanded={showClaudeAdvanced}
+              className="flex items-center justify-between w-full py-2.5 px-3.5 text-xs font-medium text-[#c9d1d9] bg-[#0d1117] hover:bg-[#1c2128] border border-[#30363d] rounded-lg transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <Sliders className="w-3.5 h-3.5 text-sky-400" />
+                <span>高度な設定</span>
+                {claudeAdvancedCount > 0 && (
+                  <span className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-sky-950 text-sky-300 border border-sky-800/80">
+                    {claudeAdvancedCount} 項目設定中
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-[#8b949e]">
+                <span>{showClaudeAdvanced ? '閉じる' : '表示する'}</span>
+                {showClaudeAdvanced ? (
+                  <ChevronUp className="w-3.5 h-3.5" />
+                ) : (
+                  <ChevronDown className="w-3.5 h-3.5" />
+                )}
+              </div>
+            </button>
+          </div>
+
+          {showClaudeAdvanced && (
+            <div className="space-y-4 pt-1 pl-3 border-l-2 border-sky-800/40">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-[#8b949e] block mb-1">
+                    入力フォーマット (--input-format)
+                  </label>
+                  <select
+                    value={engines.claudeCode.inputFormat ?? 'text'}
+                    onChange={(e) => {
+                      const val = e.target.value as 'text' | 'stream-json';
+                      updateClaudeCode({
+                        inputFormat: val,
+                        ...(val === 'stream-json' ? { outputFormat: 'stream-json' } : {}),
+                      });
+                    }}
+                    className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500"
+                  >
+                    <option value="text">text (標準テキスト / 単発プロンプト)</option>
+                    <option value="stream-json">stream-json (NDJSON 入力)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs text-[#8b949e] block mb-1">
+                    出力フォーマット (--output-format)
+                  </label>
+                  <select
+                    value={engines.claudeCode.outputFormat ?? 'text'}
+                    onChange={(e) =>
+                      updateClaudeCode({
+                        outputFormat: e.target.value as 'text' | 'json' | 'stream-json',
+                      })
+                    }
+                    className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500"
+                  >
+                    <option value="text">text (標準テキスト)</option>
+                    <option value="json">json (構造化 JSON / トークン使用量含む)</option>
+                    <option value="stream-json">stream-json (NDJSON 逐次ストリーム)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs text-[#8b949e] block mb-1">
+                  JSON スキーマ制約 (--json-schema)
+                </label>
+                <textarea
+                  rows={4}
+                  value={engines.claudeCode.jsonSchema ?? ''}
+                  onChange={(e) => updateClaudeCode({ jsonSchema: e.target.value })}
+                  placeholder='例: {"type":"object","properties":{...}} または schema.json のファイルパス'
+                  className="w-full bg-[#0d1117] border border-[#30363d] rounded p-2.5 text-xs text-white font-mono focus:outline-none focus:border-sky-500 leading-relaxed resize-y"
+                />
+                <p className="text-[11px] text-[#8b949e] mt-1">
+                  指定時、モデルの最終出力を指定された JSON スキーマに厳格準拠（Structured Outputs）させます。
+                </p>
+              </div>
+
+              <div>
+                <label className="text-xs text-[#8b949e] block mb-1">
+                  許可ツール制限 (--allowed-tools)
+                </label>
+                <input
+                  type="text"
+                  value={engines.claudeCode.allowedTools ?? ''}
+                  onChange={(e) => updateClaudeCode({ allowedTools: e.target.value })}
+                  placeholder="例: Read, Grep, Bash(git *) (空欄で全ツール)"
+                  className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono text-xs focus:outline-none focus:border-sky-500"
+                />
+              </div>
+
+              <div className="pt-1">
+                <Checkbox
+                  variant="card"
+                  checked={engines.claudeCode.bare}
+                  onChange={(checked) => updateClaudeCode({ bare: checked })}
+                  label="軽量モード (--bare)"
+                  description="フックやプラグイン同期をスキップし、最小限のオーバーヘッドでレビューを実行します。"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-[#8b949e] block mb-1">追加カスタム引数 (Custom Args)</label>
+                <input
+                  type="text"
+                  value={engines.claudeCode.customArgs ?? ''}
+                  onChange={(e) => updateClaudeCode({ customArgs: e.target.value })}
+                  placeholder="例: --permission-mode acceptEdits"
+                  className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono text-xs focus:outline-none focus:border-sky-500"
+                />
+              </div>
             </div>
-
-            <div>
-              <label className="text-xs text-[#8b949e] block mb-1">
-                出力フォーマット (--output-format)
-              </label>
-              <select
-                value={engines.claudeCode.outputFormat ?? 'text'}
-                onChange={(e) =>
-                  updateClaudeCode({
-                    outputFormat: e.target.value as 'text' | 'json' | 'stream-json',
-                  })
-                }
-                className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500"
-              >
-                <option value="text">text (標準テキスト)</option>
-                <option value="json">json (構造化 JSON / トークン使用量含む)</option>
-                <option value="stream-json">stream-json (NDJSON 逐次ストリーム)</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs text-[#8b949e] block mb-1">
-              JSON スキーマ制約 (--json-schema)
-            </label>
-            <textarea
-              rows={4}
-              value={engines.claudeCode.jsonSchema ?? ''}
-              onChange={(e) => updateClaudeCode({ jsonSchema: e.target.value })}
-              placeholder='例: {"type":"object","properties":{...}} または schema.json のファイルパス'
-              className="w-full bg-[#0d1117] border border-[#30363d] rounded p-2.5 text-xs text-white font-mono focus:outline-none focus:border-sky-500 leading-relaxed resize-y"
-            />
-            <p className="text-[11px] text-[#8b949e] mt-1">
-              指定時、モデルの最終出力を指定された JSON スキーマに厳格準拠（Structured Outputs）させます。
-            </p>
-          </div>
-
-          <div>
-            <label className="text-xs text-[#8b949e] block mb-1">
-              許可ツール制限 (--allowed-tools)
-            </label>
-            <input
-              type="text"
-              value={engines.claudeCode.allowedTools ?? ''}
-              onChange={(e) => updateClaudeCode({ allowedTools: e.target.value })}
-              placeholder="例: Read, Grep, Bash(git *) (空欄で全ツール)"
-              className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono text-xs focus:outline-none focus:border-sky-500"
-            />
-          </div>
-
-          <div className="pt-1">
-            <Checkbox
-              variant="card"
-              checked={engines.claudeCode.bare}
-              onChange={(checked) => updateClaudeCode({ bare: checked })}
-              label="軽量モード (--bare)"
-              description="フックやプラグイン同期をスキップし、最小限のオーバーヘッドでレビューを実行します。"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs text-[#8b949e] block mb-1">追加カスタム引数 (Custom Args)</label>
-            <input
-              type="text"
-              value={engines.claudeCode.customArgs ?? ''}
-              onChange={(e) => updateClaudeCode({ customArgs: e.target.value })}
-              placeholder="例: --permission-mode acceptEdits"
-              className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono text-xs focus:outline-none focus:border-sky-500"
-            />
-          </div>
+          )}
 
           <CommandPreview command={claudePreviewCommand} />
         </div>
