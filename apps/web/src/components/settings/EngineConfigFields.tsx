@@ -60,7 +60,7 @@ export function AntigravityFields({
               type="number"
               min={10}
               max={3600}
-              step={30}
+              step={1}
               value={values.timeoutSeconds !== undefined ? values.timeoutSeconds : ''}
               onChange={(e) => {
                 const raw = e.target.value;
@@ -144,7 +144,7 @@ export function AntigravityFields({
               type="number"
               min={10}
               max={3600}
-              step={30}
+              step={1}
               value={values.timeoutSeconds !== undefined ? values.timeoutSeconds : ''}
               onChange={(e) => {
                 const raw = e.target.value;
@@ -439,7 +439,7 @@ export function ClaudeCodeFields({
               type="number"
               min={10}
               max={3600}
-              step={30}
+              step={1}
               value={values.timeoutSeconds !== undefined ? values.timeoutSeconds : ''}
               onChange={(e) => {
                 const raw = e.target.value;
@@ -532,7 +532,7 @@ export function ClaudeCodeFields({
               type="number"
               min={10}
               max={3600}
-              step={30}
+              step={1}
               value={values.timeoutSeconds !== undefined ? values.timeoutSeconds : ''}
               onChange={(e) => {
                 const raw = e.target.value;
