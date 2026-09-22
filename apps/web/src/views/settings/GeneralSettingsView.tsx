@@ -81,11 +81,14 @@ export function GeneralSettingsView({
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-white tracking-tight">全般設定</h2>
-        <p className="text-xs text-[#8b949e] mt-1">
-          デフォルト実行ルール、並列スロットル制限、新着 PR 自動キューイングなどの全般動作を設定します。
-        </p>
+      <div className="flex items-center gap-2.5">
+        <Sliders className="w-5 h-5 text-sky-400" />
+        <div>
+          <h2 className="text-xl font-bold text-white tracking-tight">全般</h2>
+          <p className="text-xs text-[#8b949e] mt-0.5">
+            デフォルト実行ルール、並列スロットル制限、新着 PR の自動キューイングなど、システム全体の動作を管理します。
+          </p>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">

@@ -391,11 +391,14 @@ export function TriggerSettingsView({
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-white tracking-tight">トリガー設定</h2>
-          <p className="text-xs text-[#8b949e] mt-1">
-            対象リポジトリやファイル変更パスの条件と、自動実行するレビュールールを紐づけます。
-          </p>
+        <div className="flex items-center gap-2.5">
+          <Zap className="w-5 h-5 text-sky-400" />
+          <div>
+            <h2 className="text-xl font-bold text-white tracking-tight">トリガー</h2>
+            <p className="text-xs text-[#8b949e] mt-0.5">
+              対象リポジトリやファイル変更パスの条件と、自動実行するレビュールールの紐づけを管理します。
+            </p>
+          </div>
         </div>
         <button
           type="button"

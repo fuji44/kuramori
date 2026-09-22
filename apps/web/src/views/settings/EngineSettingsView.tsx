@@ -256,11 +256,14 @@ export function EngineSettingsView({
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-white tracking-tight">レビューエンジン設定</h2>
-        <p className="text-xs text-[#8b949e] mt-1">
-          デフォルト実行エンジンの選択、および各 AI エージェント CLI（Antigravity, Claude Code, Mock）の動作パラメータを設定します。
-        </p>
+      <div className="flex items-center gap-2.5">
+        <Cpu className="w-5 h-5 text-sky-400" />
+        <div>
+          <h2 className="text-xl font-bold text-white tracking-tight">エンジン</h2>
+          <p className="text-xs text-[#8b949e] mt-0.5">
+            デフォルト実行エンジンの選択と、各 AI エージェント CLI（Antigravity, Claude Code, Mock）の動作パラメータを管理します。
+          </p>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">

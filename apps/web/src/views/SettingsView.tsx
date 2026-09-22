@@ -52,9 +52,9 @@ export function SettingsView({
       {/* Settings Sidebar */}
       <aside className="w-full md:w-64 border-b md:border-b-0 md:border-r border-[#30363d] bg-[#161b22] p-4 flex flex-col shrink-0">
         <div className="pb-3 mb-3 border-b border-[#30363d]">
-          <div className="flex items-center gap-2">
-            <Settings className="w-4 h-4 text-sky-400" />
-            <h1 className="text-sm font-bold text-white tracking-wide">設定</h1>
+          <div className="flex items-center gap-2.5">
+            <Settings className="w-5 h-5 text-sky-400" />
+            <h1 className="text-sm font-bold text-white tracking-tight">設定</h1>
           </div>
         </div>
 
@@ -71,7 +71,7 @@ export function SettingsView({
           >
             <div className="flex items-center gap-2.5">
               <Sliders className="w-4 h-4 text-sky-400" />
-              <span>全般設定</span>
+              <span>全般</span>
             </div>
           </button>
 
@@ -86,7 +86,7 @@ export function SettingsView({
           >
             <div className="flex items-center gap-2.5">
               <Cpu className="w-4 h-4 text-sky-400" />
-              <span>レビューエンジン</span>
+              <span>エンジン</span>
             </div>
           </button>
 
@@ -101,7 +101,7 @@ export function SettingsView({
           >
             <div className="flex items-center gap-2.5">
               <Shield className="w-4 h-4 text-sky-400" />
-              <span>レビュールール</span>
+              <span>ルール</span>
             </div>
             <span className="ml-2 px-1.5 py-0.2 rounded-full bg-[#0d1117] text-sky-400 text-[10px] font-mono border border-sky-900/60">
               {rules.length}
@@ -119,7 +119,7 @@ export function SettingsView({
           >
             <div className="flex items-center gap-2.5">
               <Zap className="w-4 h-4 text-sky-400" />
-              <span>トリガー設定</span>
+              <span>トリガー</span>
             </div>
             <span className="ml-2 px-1.5 py-0.2 rounded-full bg-[#0d1117] text-sky-400 text-[10px] font-mono border border-sky-900/60">
               {triggers.length}

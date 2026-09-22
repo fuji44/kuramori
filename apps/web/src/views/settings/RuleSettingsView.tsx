@@ -448,11 +448,14 @@ export function RuleSettingsView({
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-white tracking-tight">レビュールール設定</h2>
-          <p className="text-xs text-[#8b949e] mt-1">
-            PR 評価時に並列実行される独立した観点（セキュリティ、正確性、設計など）のルールを定義・管理します。
-          </p>
+        <div className="flex items-center gap-2.5">
+          <Shield className="w-5 h-5 text-sky-400" />
+          <div>
+            <h2 className="text-xl font-bold text-white tracking-tight">ルール</h2>
+            <p className="text-xs text-[#8b949e] mt-0.5">
+              PR 評価時に並列実行される独立した観点（セキュリティ、正確性、設計など）のルールを管理します。
+            </p>
+          </div>
         </div>
         <button
           type="button"
