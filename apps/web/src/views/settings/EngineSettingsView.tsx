@@ -16,7 +16,11 @@ import {
   Sliders,
 } from 'lucide-react';
 import { AppSettings, EngineSettingsMap } from '../../types.ts';
-import { Checkbox } from '../../components/Checkbox.tsx';
+import {
+  AntigravityFields,
+  ClaudeCodeFields,
+  MockFields,
+} from '../../components/settings/EngineConfigFields.tsx';
 
 interface EngineSettingsViewProps {
   settings: AppSettings;
@@ -231,27 +235,6 @@ export function EngineSettingsView({
 
   const currentBackend = formSettings.defaultBackendId || formSettings.reviewEngine || 'antigravity';
 
-  const agyAdvancedCount = [
-    Boolean(engines.antigravity.systemPrompt?.trim()),
-    engines.antigravity.inputFormat && engines.antigravity.inputFormat !== 'text',
-    engines.antigravity.outputFormat && engines.antigravity.outputFormat !== 'text',
-    Boolean(engines.antigravity.jsonSchema?.trim()),
-    Boolean(engines.antigravity.printTimeout?.trim()),
-    Boolean(engines.antigravity.sandbox),
-    Boolean(engines.antigravity.disableSlashCommands),
-    Boolean(engines.antigravity.customArgs?.trim()),
-  ].filter(Boolean).length;
-
-  const claudeAdvancedCount = [
-    Boolean(engines.claudeCode.systemPrompt?.trim()),
-    engines.claudeCode.inputFormat && engines.claudeCode.inputFormat !== 'text',
-    engines.claudeCode.outputFormat && engines.claudeCode.outputFormat !== 'text',
-    Boolean(engines.claudeCode.jsonSchema?.trim()),
-    Boolean(engines.claudeCode.allowedTools?.trim()),
-    Boolean(engines.claudeCode.bare),
-    Boolean(engines.claudeCode.customArgs?.trim()),
-  ].filter(Boolean).length;
-
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
@@ -375,227 +358,12 @@ export function EngineSettingsView({
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs text-[#8b949e] block mb-1">agy バイナリパス *</label>
-              <input
-                type="text"
-                required
-                value={engines.antigravity.binPath}
-                onChange={(e) => updateAntigravity({ binPath: e.target.value })}
-                placeholder="例: agy または /home/user/.local/bin/agy"
-                className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs text-[#8b949e] block mb-1">
-                実行タイムアウト (秒)
-              </label>
-              <input
-                type="number"
-                min={60}
-                max={3600}
-                step={30}
-                value={engines.antigravity.timeoutSeconds}
-                onChange={(e) =>
-                  updateAntigravity({ timeoutSeconds: parseInt(e.target.value, 10) || 900 })
-                }
-                className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs text-[#8b949e] block mb-1">モデル (--model)</label>
-              <input
-                type="text"
-                list="agy-model-suggestions"
-                value={engines.antigravity.model}
-                onChange={(e) => updateAntigravity({ model: e.target.value })}
-                placeholder="例: gemini-3.1-pro"
-                className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
-              />
-              <datalist id="agy-model-suggestions">
-                <option value="gemini-3.1-pro" label="推奨" />
-                <option value="gemini-3.8-flash" label="高速" />
-                <option value="gemini-3.7-flash" />
-                <option value="gemini-3.6-flash" />
-                <option value="claude-sonnet-4-6" />
-                <option value="claude-opus-4-6" />
-                <option value="gpt-oss-120b" />
-              </datalist>
-            </div>
-
-            <div>
-              <label className="text-xs text-[#8b949e] block mb-1">
-                推論レベル (--effort)
-              </label>
-              <input
-                type="text"
-                list="agy-effort-suggestions"
-                value={engines.antigravity.effort}
-                onChange={(e) => updateAntigravity({ effort: e.target.value })}
-                placeholder="例: high"
-                className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
-              />
-              <datalist id="agy-effort-suggestions">
-                <option value="high" />
-                <option value="medium" />
-                <option value="low" />
-              </datalist>
-            </div>
-          </div>
-
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={() => setShowAgyAdvanced(!showAgyAdvanced)}
-              aria-expanded={showAgyAdvanced}
-              className="flex items-center justify-between w-full py-2.5 px-3.5 text-xs font-medium text-[#c9d1d9] bg-[#0d1117] hover:bg-[#1c2128] border border-[#30363d] rounded-lg transition-colors cursor-pointer"
-            >
-              <div className="flex items-center gap-2">
-                <Sliders className="w-3.5 h-3.5 text-sky-400" />
-                <span>高度な設定</span>
-                {agyAdvancedCount > 0 && (
-                  <span className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-sky-950 text-sky-300 border border-sky-800/80">
-                    {agyAdvancedCount} 項目設定中
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-[#8b949e]">
-                <span>{showAgyAdvanced ? '閉じる' : '表示する'}</span>
-                {showAgyAdvanced ? (
-                  <ChevronUp className="w-3.5 h-3.5" />
-                ) : (
-                  <ChevronDown className="w-3.5 h-3.5" />
-                )}
-              </div>
-            </button>
-          </div>
-
-          {showAgyAdvanced && (
-            <div className="space-y-4 pt-1 pl-3 border-l-2 border-sky-800/40">
-              <div>
-                <label className="text-xs text-[#8b949e] block mb-1">
-                  システムプロンプト / インタラクション (System Prompt)
-                </label>
-                <textarea
-                  rows={3}
-                  value={engines.antigravity.systemPrompt ?? ''}
-                  onChange={(e) => updateAntigravity({ systemPrompt: e.target.value })}
-                  placeholder="例: あなたは建設的で厳格なシニアエンジニアです。指摘事項には理由と具体的な修正案を日本語で添えてください。"
-                  className="w-full bg-[#0d1117] border border-[#30363d] rounded p-2.5 text-xs text-white focus:outline-none focus:border-sky-500 leading-relaxed resize-y font-mono"
-                />
-                <p className="text-[11px] text-[#8b949e] mt-1">
-                  エージェントのペルソナや振る舞い、共通のレビュー方針を規定します。ルール側で上書きされていない場合に標準として適用されます。
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs text-[#8b949e] block mb-1">
-                    入力フォーマット (--input-format)
-                  </label>
-                  <select
-                    value={engines.antigravity.inputFormat ?? 'text'}
-                    onChange={(e) => {
-                      const val = e.target.value as 'text' | 'stream-json';
-                      updateAntigravity({
-                        inputFormat: val,
-                        ...(val === 'stream-json' ? { outputFormat: 'stream-json' } : {}),
-                      });
-                    }}
-                    className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500"
-                  >
-                    <option value="text">text (標準テキスト / 単発プロンプト)</option>
-                    <option value="stream-json">stream-json (NDJSON 入力)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs text-[#8b949e] block mb-1">
-                    出力フォーマット (--output-format)
-                  </label>
-                  <select
-                    value={engines.antigravity.outputFormat ?? 'text'}
-                    onChange={(e) =>
-                      updateAntigravity({
-                        outputFormat: e.target.value as 'text' | 'json' | 'stream-json',
-                      })
-                    }
-                    className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500"
-                  >
-                    <option value="text">text (標準テキスト)</option>
-                    <option value="json">json (構造化 JSON / トークン使用量含む)</option>
-                    <option value="stream-json">stream-json (NDJSON 逐次ストリーム)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs text-[#8b949e] block mb-1">
-                  JSON スキーマ制約 (--json-schema)
-                </label>
-                <textarea
-                  rows={4}
-                  value={engines.antigravity.jsonSchema ?? ''}
-                  onChange={(e) => updateAntigravity({ jsonSchema: e.target.value })}
-                  placeholder='例: {"type":"object","properties":{...}} または schema.json のファイルパス'
-                  className="w-full bg-[#0d1117] border border-[#30363d] rounded p-2.5 text-xs text-white font-mono focus:outline-none focus:border-sky-500 leading-relaxed resize-y"
-                />
-                <p className="text-[11px] text-[#8b949e] mt-1">
-                  指定時、モデルの最終出力を指定された JSON スキーマに厳格準拠（Structured Outputs）させます。
-                </p>
-              </div>
-
-              <div>
-                <label className="text-xs text-[#8b949e] block mb-1">
-                  Print タイムアウト (--print-timeout)
-                </label>
-                <input
-                  type="text"
-                  value={engines.antigravity.printTimeout ?? ''}
-                  onChange={(e) => updateAntigravity({ printTimeout: e.target.value })}
-                  placeholder="例: 900s または 15m (未指定時は 0s / 無制限)"
-                  className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
-                />
-                <p className="text-[11px] text-[#8b949e] mt-1">
-                  agy 自身の print モード（-p）内部時間制限です。指定時間でターンを打ち切り途中出力を返して正常終了します（単位: s, m）。
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <Checkbox
-                  variant="card"
-                  checked={engines.antigravity.sandbox}
-                  onChange={(checked) => updateAntigravity({ sandbox: checked })}
-                  label="ターミナルサンドボックス (--sandbox)"
-                  description="エージェントのシェル操作を制限されたセキュアなサンドボックス内で実行します。"
-                />
-
-                <Checkbox
-                  variant="card"
-                  checked={engines.antigravity.disableSlashCommands}
-                  onChange={(checked) => updateAntigravity({ disableSlashCommands: checked })}
-                  label="スキルの展開を抑止 (--disable-slash-commands)"
-                  description="プロンプト内のスラッシュコマンドや意図しないスキルの展開を無効化します。"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs text-[#8b949e] block mb-1">追加カスタム引数 (Custom Args)</label>
-                <input
-                  type="text"
-                  value={engines.antigravity.customArgs ?? ''}
-                  onChange={(e) => updateAntigravity({ customArgs: e.target.value })}
-                  placeholder="例: --project my-project"
-                  className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono text-xs focus:outline-none focus:border-sky-500"
-                />
-              </div>
-            </div>
-          )}
+          <AntigravityFields
+            values={engines.antigravity}
+            onChange={updateAntigravity}
+            showAdvanced={showAgyAdvanced}
+            onToggleAdvanced={() => setShowAgyAdvanced(!showAgyAdvanced)}
+          />
 
           <CommandPreview command={agyPreviewCommand} />
         </div>
@@ -612,225 +380,12 @@ export function EngineSettingsView({
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs text-[#8b949e] block mb-1">claude バイナリパス *</label>
-              <input
-                type="text"
-                required
-                value={engines.claudeCode.binPath}
-                onChange={(e) => updateClaudeCode({ binPath: e.target.value })}
-                placeholder="例: claude または /usr/local/bin/claude"
-                className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs text-[#8b949e] block mb-1">
-                実行タイムアウト (秒)
-              </label>
-              <input
-                type="number"
-                min={60}
-                max={3600}
-                step={30}
-                value={engines.claudeCode.timeoutSeconds}
-                onChange={(e) =>
-                  updateClaudeCode({ timeoutSeconds: parseInt(e.target.value, 10) || 900 })
-                }
-                className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs text-[#8b949e] block mb-1">モデル (--model)</label>
-              <input
-                type="text"
-                list="claude-model-suggestions"
-                value={engines.claudeCode.model}
-                onChange={(e) => updateClaudeCode({ model: e.target.value })}
-                placeholder="例: sonnet"
-                className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
-              />
-              <datalist id="claude-model-suggestions">
-                <option value="sonnet" label="推奨" />
-                <option value="opus" label="推論" />
-                <option value="haiku" label="高速" />
-                <option value="best" label="最高性能" />
-                <option value="fable" />
-                <option value="opusplan" label="ハイブリッド" />
-                <option value="sonnet[1m]" />
-                <option value="opus[1m]" />
-                <option value="default" />
-                <option value="claude-opus-4-8" />
-                <option value="claude-sonnet-4-6" />
-                <option value="claude-sonnet-4-5" />
-                <option value="claude-haiku-4-5" />
-                <option value="claude-3-7-sonnet-20250219" />
-              </datalist>
-            </div>
-
-            <div>
-              <label className="text-xs text-[#8b949e] block mb-1">
-                推論レベル (--effort)
-              </label>
-              <input
-                type="text"
-                list="claude-effort-suggestions"
-                value={engines.claudeCode.effort}
-                onChange={(e) => updateClaudeCode({ effort: e.target.value })}
-                placeholder="例: high"
-                className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
-              />
-              <datalist id="claude-effort-suggestions">
-                <option value="high" />
-                <option value="xhigh" />
-                <option value="max" />
-                <option value="medium" />
-                <option value="low" />
-              </datalist>
-            </div>
-          </div>
-
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={() => setShowClaudeAdvanced(!showClaudeAdvanced)}
-              aria-expanded={showClaudeAdvanced}
-              className="flex items-center justify-between w-full py-2.5 px-3.5 text-xs font-medium text-[#c9d1d9] bg-[#0d1117] hover:bg-[#1c2128] border border-[#30363d] rounded-lg transition-colors cursor-pointer"
-            >
-              <div className="flex items-center gap-2">
-                <Sliders className="w-3.5 h-3.5 text-sky-400" />
-                <span>高度な設定</span>
-                {claudeAdvancedCount > 0 && (
-                  <span className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-sky-950 text-sky-300 border border-sky-800/80">
-                    {claudeAdvancedCount} 項目設定中
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-[#8b949e]">
-                <span>{showClaudeAdvanced ? '閉じる' : '表示する'}</span>
-                {showClaudeAdvanced ? (
-                  <ChevronUp className="w-3.5 h-3.5" />
-                ) : (
-                  <ChevronDown className="w-3.5 h-3.5" />
-                )}
-              </div>
-            </button>
-          </div>
-
-          {showClaudeAdvanced && (
-            <div className="space-y-4 pt-1 pl-3 border-l-2 border-sky-800/40">
-              <div>
-                <label className="text-xs text-[#8b949e] block mb-1">
-                  システムプロンプト / インタラクション (--append-system-prompt)
-                </label>
-                <textarea
-                  rows={3}
-                  value={engines.claudeCode.systemPrompt ?? ''}
-                  onChange={(e) => updateClaudeCode({ systemPrompt: e.target.value })}
-                  placeholder="例: あなたは建設的で厳格なシニアエンジニアです。指摘事項には理由と具体的な修正案を日本語で添えてください。"
-                  className="w-full bg-[#0d1117] border border-[#30363d] rounded p-2.5 text-xs text-white focus:outline-none focus:border-sky-500 leading-relaxed resize-y font-mono"
-                />
-                <p className="text-[11px] text-[#8b949e] mt-1">
-                  エージェントのペルソナや振る舞い、共通のレビュー方針を規定します。CLI 実行時に --append-system-prompt として渡されます。
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs text-[#8b949e] block mb-1">
-                    入力フォーマット (--input-format)
-                  </label>
-                  <select
-                    value={engines.claudeCode.inputFormat ?? 'text'}
-                    onChange={(e) => {
-                      const val = e.target.value as 'text' | 'stream-json';
-                      updateClaudeCode({
-                        inputFormat: val,
-                        ...(val === 'stream-json' ? { outputFormat: 'stream-json' } : {}),
-                      });
-                    }}
-                    className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500"
-                  >
-                    <option value="text">text (標準テキスト / 単発プロンプト)</option>
-                    <option value="stream-json">stream-json (NDJSON 入力)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs text-[#8b949e] block mb-1">
-                    出力フォーマット (--output-format)
-                  </label>
-                  <select
-                    value={engines.claudeCode.outputFormat ?? 'text'}
-                    onChange={(e) =>
-                      updateClaudeCode({
-                        outputFormat: e.target.value as 'text' | 'json' | 'stream-json',
-                      })
-                    }
-                    className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500"
-                  >
-                    <option value="text">text (標準テキスト)</option>
-                    <option value="json">json (構造化 JSON / トークン使用量含む)</option>
-                    <option value="stream-json">stream-json (NDJSON 逐次ストリーム)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs text-[#8b949e] block mb-1">
-                  JSON スキーマ制約 (--json-schema)
-                </label>
-                <textarea
-                  rows={4}
-                  value={engines.claudeCode.jsonSchema ?? ''}
-                  onChange={(e) => updateClaudeCode({ jsonSchema: e.target.value })}
-                  placeholder='例: {"type":"object","properties":{...}} または schema.json のファイルパス'
-                  className="w-full bg-[#0d1117] border border-[#30363d] rounded p-2.5 text-xs text-white font-mono focus:outline-none focus:border-sky-500 leading-relaxed resize-y"
-                />
-                <p className="text-[11px] text-[#8b949e] mt-1">
-                  指定時、モデルの最終出力を指定された JSON スキーマに厳格準拠（Structured Outputs）させます。
-                </p>
-              </div>
-
-              <div>
-                <label className="text-xs text-[#8b949e] block mb-1">
-                  許可ツール制限 (--allowed-tools)
-                </label>
-                <input
-                  type="text"
-                  value={engines.claudeCode.allowedTools ?? ''}
-                  onChange={(e) => updateClaudeCode({ allowedTools: e.target.value })}
-                  placeholder="例: Read, Grep, Bash(git *) (空欄で全ツール)"
-                  className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono text-xs focus:outline-none focus:border-sky-500"
-                />
-              </div>
-
-              <div className="pt-1">
-                <Checkbox
-                  variant="card"
-                  checked={engines.claudeCode.bare}
-                  onChange={(checked) => updateClaudeCode({ bare: checked })}
-                  label="軽量モード (--bare)"
-                  description="フックやプラグイン同期をスキップし、最小限のオーバーヘッドでレビューを実行します。"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs text-[#8b949e] block mb-1">追加カスタム引数 (Custom Args)</label>
-                <input
-                  type="text"
-                  value={engines.claudeCode.customArgs ?? ''}
-                  onChange={(e) => updateClaudeCode({ customArgs: e.target.value })}
-                  placeholder="例: --permission-mode acceptEdits"
-                  className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono text-xs focus:outline-none focus:border-sky-500"
-                />
-              </div>
-            </div>
-          )}
+          <ClaudeCodeFields
+            values={engines.claudeCode}
+            onChange={updateClaudeCode}
+            showAdvanced={showClaudeAdvanced}
+            onToggleAdvanced={() => setShowClaudeAdvanced(!showClaudeAdvanced)}
+          />
 
           <CommandPreview command={claudePreviewCommand} />
         </div>
@@ -848,21 +403,10 @@ export function EngineSettingsView({
           </div>
 
           <div className="max-w-xs">
-            <label className="text-xs text-[#8b949e] block mb-1">
-              疑似処理遅延時間 (ミリ秒)
-            </label>
-            <input
-              type="number"
-              min={0}
-              max={10000}
-              step={100}
-              value={engines.mock.delayMs}
-              onChange={(e) => updateMock({ delayMs: parseInt(e.target.value, 10) || 0 })}
-              className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
+            <MockFields
+              values={engines.mock}
+              onChange={updateMock}
             />
-            <p className="text-[11px] text-[#8b949e] mt-1">
-              テスト実行時にジョブが実行中ステータスになる時間をシミュレートします。
-            </p>
           </div>
 
           <div className="pt-2">

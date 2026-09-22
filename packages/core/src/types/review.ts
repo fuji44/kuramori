@@ -121,7 +121,7 @@ export interface EngineSettingsMap {
 /**
  * ルール単位での包括的オーバーライド設定
  */
-export type EngineOverrideConfig = Partial<AntigravityEngineConfig & ClaudeCodeEngineConfig>;
+export type EngineOverrideConfig = Partial<AntigravityEngineConfig & ClaudeCodeEngineConfig & MockEngineConfig>;
 
 /**
  * 包括的設定リゾルバ

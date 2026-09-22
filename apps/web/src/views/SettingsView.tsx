@@ -123,6 +123,7 @@ export function SettingsView({
           <RuleSettingsView
             rules={rules}
             defaultRuleId={settings.defaultRuleIds?.[0] ?? settings.defaultRuleId}
+            defaultBackendId={settings.defaultBackendId || settings.reviewEngine || 'antigravity'}
             onCreateRule={onCreateRule}
             onUpdateRule={onUpdateRule}
             onDeleteRule={onDeleteRule}

@@ -85,7 +85,7 @@ export interface EngineSettingsMap {
   mock: MockEngineConfig;
 }
 
-export type EngineOverrideConfig = Partial<AntigravityEngineConfig & ClaudeCodeEngineConfig>;
+export type EngineOverrideConfig = Partial<AntigravityEngineConfig & ClaudeCodeEngineConfig & MockEngineConfig>;
 
 export interface ReviewRule {
   id: string;
