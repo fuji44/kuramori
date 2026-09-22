@@ -6,6 +6,7 @@ import {
   reviewRequestsTable,
   reviewRulesTable,
   reviewRuleResultsTable,
+  reviewTriggersTable,
 } from './db/schema.ts';
 import {
   WorktreeManager,
@@ -14,12 +15,14 @@ import {
   MockReviewEngine,
   extractChangedFilesFromDiff,
   matchRuleTrigger,
+  filterRulesByTriggers,
 } from '@review-base/runner';
 import {
   type ReportStorage,
   type ReviewEngine,
   type VCSProvider,
   type ReviewRule,
+  type ReviewTrigger,
   type RuleResultFinding,
   resolveEngineConfig,
 } from '@review-base/core';
@@ -307,14 +310,48 @@ export class ReviewQueue {
         }
       }
 
+      const triggerRecords = await this.db.select().from(reviewTriggersTable);
+      const triggers: ReviewTrigger[] = triggerRecords.map((t) => {
+        let paths: string[] | undefined = undefined;
+        let pathsIgnore: string[] | undefined = undefined;
+        let ruleIds: string[] = [];
+        try {
+          if (t.pathsJson) paths = JSON.parse(t.pathsJson);
+          if (t.pathsIgnoreJson) pathsIgnore = JSON.parse(t.pathsIgnoreJson);
+          if (t.ruleIdsJson) ruleIds = JSON.parse(t.ruleIdsJson);
+        } catch {
+          // ignore
+        }
+        return {
+          id: t.id,
+          name: t.name,
+          repository: t.repository,
+          paths,
+          pathsIgnore,
+          ruleIds,
+          enabled: Boolean(t.enabled),
+          createdAt: t.createdAt,
+          updatedAt: t.updatedAt,
+        };
+      });
+
       const event = {
         eventType: 'synchronize' as const,
+        repository: pr.repository,
         changedFiles,
         isDraft: Boolean(pr.isDraft),
         labels: parsedLabels,
       };
 
-      targetRules = rules.filter((r) => r.enabled && matchRuleTrigger(r, event));
+      // ReviewTrigger (リポジトリ×パス条件) に合致するルールを優先選定
+      if (triggers.length > 0) {
+        targetRules = filterRulesByTriggers(triggers, rules, event);
+      }
+
+      // トリガー未設定または非該当の場合、旧来の rule.trigger でもマッチ試行
+      if (targetRules.length === 0) {
+        targetRules = rules.filter((r) => r.enabled && matchRuleTrigger(r, event));
+      }
 
       // マッチするルールがない場合は defaultRuleIds を使用
       if (targetRules.length === 0) {

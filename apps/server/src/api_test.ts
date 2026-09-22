@@ -340,6 +340,48 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
     const exportHtmlText = await resExportHtml.text();
     assertEquals(exportHtmlText.includes('<!DOCTYPE html>'), true);
 
+    // 14. Test triggers CRUD endpoints
+    const resCreateTrigger = await api.request('/api/triggers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: 'test-trigger',
+        name: 'Backend PR Trigger',
+        repository: 'test/repo',
+        paths: ['src/backend/**'],
+        ruleIds: ['preset-correctness'],
+        enabled: true,
+      }),
+    });
+    assertEquals(resCreateTrigger.status, 201);
+
+    const resGetTriggers = await api.request('/api/triggers');
+    assertEquals(resGetTriggers.status, 200);
+    const triggersData = await resGetTriggers.json();
+    assertEquals(triggersData.triggers.length, 1);
+    assertEquals(triggersData.triggers[0].name, 'Backend PR Trigger');
+    assertEquals(triggersData.triggers[0].repository, 'test/repo');
+    assertEquals(triggersData.triggers[0].paths, ['src/backend/**']);
+
+    const resGetTrigger = await api.request('/api/triggers/test-trigger');
+    assertEquals(resGetTrigger.status, 200);
+    const triggerDetail = await resGetTrigger.json();
+    assertEquals(triggerDetail.trigger.id, 'test-trigger');
+
+    const resUpdateTrigger = await api.request('/api/triggers/test-trigger', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Updated Backend Trigger',
+        paths: ['src/backend/**', 'api/**'],
+      }),
+    });
+    assertEquals(resUpdateTrigger.status, 200);
+
+    const resDeleteTrigger = await api.request('/api/triggers/test-trigger', { method: 'DELETE' });
+    assertEquals(resDeleteTrigger.status, 200);
+    const resGetDeletedTrigger = await api.request('/api/triggers/test-trigger');
+    assertEquals(resGetDeletedTrigger.status, 404);
 
     client.close();
   } finally {

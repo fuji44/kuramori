@@ -64,7 +64,7 @@ export interface ReviewReport {
 }
 
 /**
- * ルール起動のトリガー条件
+ * ルール起動のトリガー条件（後方互換用）
  */
 export interface RuleTrigger {
   types?: Array<'opened' | 'synchronize' | 'reopened' | 'ready_for_review'>;
@@ -72,6 +72,21 @@ export interface RuleTrigger {
   pathsIgnore?: string[];
   draft?: boolean;
   labels?: string[];
+}
+
+/**
+ * レビュートリガー定義（リポジトリ・変更パスと発動ルールのバインディング）
+ */
+export interface ReviewTrigger {
+  id: string;
+  name: string;
+  repository: string; // 例: "fuji44/review-base" または "*" (全リポジトリ)
+  paths?: string[]; // 対象ファイルパス (Glob)
+  pathsIgnore?: string[]; // 除外ファイルパス (Glob)
+  ruleIds: string[]; // 発動させるルール ID のリスト
+  enabled: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 /**
@@ -154,7 +169,7 @@ export interface ReviewRule {
   engine: string;
   instructions: string;
   engineOverride?: EngineOverrideConfig;
-  trigger: RuleTrigger;
+  trigger?: RuleTrigger;
   concurrency?: RuleConcurrency;
   enabled: boolean;
   createdAt: string;

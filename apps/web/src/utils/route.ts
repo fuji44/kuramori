@@ -9,7 +9,7 @@ export type AppRoute =
   | { view: 'reviews'; params: FilterUrlParams }
   | { view: 'reports' }
   | { view: 'report'; reportId: string }
-  | { view: 'settings'; subview: 'general' | 'engines' | 'rules' };
+  | { view: 'settings'; subview: 'general' | 'engines' | 'rules' | 'triggers' };
 
 export function parseRoute(pathname: string, search: string): AppRoute {
   // Normalize pathname
@@ -25,6 +25,10 @@ export function parseRoute(pathname: string, search: string): AppRoute {
 
   if (cleanPath === '/settings/rules') {
     return { view: 'settings', subview: 'rules' };
+  }
+
+  if (cleanPath === '/settings/triggers') {
+    return { view: 'settings', subview: 'triggers' };
   }
 
   if (cleanPath === '/reports') {

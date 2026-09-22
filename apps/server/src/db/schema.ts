@@ -29,9 +29,21 @@ export const reviewRulesTable = sqliteTable('review_rules', {
   category: text('category').notNull().default('general'),
   engine: text('engine').notNull().default('default'),
   instructions: text('instructions').notNull(),
-  triggerJson: text('trigger_json').notNull(),
+  triggerJson: text('trigger_json').notNull().default('{}'),
   concurrencyJson: text('concurrency_json'),
   engineOverrideJson: text('engine_override_json'),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const reviewTriggersTable = sqliteTable('review_triggers', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  repository: text('repository').notNull(),
+  pathsJson: text('paths_json'),
+  pathsIgnoreJson: text('paths_ignore_json'),
+  ruleIdsJson: text('rule_ids_json').notNull(),
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),

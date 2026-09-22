@@ -4,21 +4,28 @@ import {
   Shield,
   Sliders,
   Cpu,
+  Zap,
 } from 'lucide-react';
-import { AppSettings, ReviewRule } from '../types.ts';
+import { AppSettings, ReviewRule, ReviewTrigger } from '../types.ts';
 import { GeneralSettingsView } from './settings/GeneralSettingsView.tsx';
 import { EngineSettingsView } from './settings/EngineSettingsView.tsx';
 import { RuleSettingsView } from './settings/RuleSettingsView.tsx';
+import { TriggerSettingsView } from './settings/TriggerSettingsView.tsx';
 
 interface SettingsViewProps {
-  subview: 'general' | 'engines' | 'rules';
-  onNavigateSubview: (subview: 'general' | 'engines' | 'rules') => void;
+  subview: 'general' | 'engines' | 'rules' | 'triggers';
+  onNavigateSubview: (subview: 'general' | 'engines' | 'rules' | 'triggers') => void;
   settings: AppSettings;
   rules: ReviewRule[];
+  triggers?: ReviewTrigger[];
+  knownRepositories?: string[];
   onSaveSettings: (settings: AppSettings) => Promise<void>;
   onCreateRule: (rule: Partial<ReviewRule>) => Promise<void>;
   onUpdateRule: (id: string, updates: Partial<ReviewRule>) => Promise<void>;
   onDeleteRule: (id: string) => Promise<void>;
+  onCreateTrigger?: (trigger: Partial<ReviewTrigger>) => Promise<void>;
+  onUpdateTrigger?: (id: string, updates: Partial<ReviewTrigger>) => Promise<void>;
+  onDeleteTrigger?: (id: string) => Promise<void>;
   onShowSuccess: (msg: string) => void;
   onShowError: (msg: string) => void;
 }
@@ -28,10 +35,15 @@ export function SettingsView({
   onNavigateSubview,
   settings,
   rules,
+  triggers = [],
+  knownRepositories = [],
   onSaveSettings,
   onCreateRule,
   onUpdateRule,
   onDeleteRule,
+  onCreateTrigger = async () => {},
+  onUpdateTrigger = async () => {},
+  onDeleteTrigger = async () => {},
   onShowSuccess,
   onShowError,
 }: SettingsViewProps) {
@@ -95,6 +107,24 @@ export function SettingsView({
               {rules.length}
             </span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => onNavigateSubview('triggers')}
+            className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors shrink-0 ${
+              subview === 'triggers'
+                ? 'bg-sky-950 text-white border border-sky-800/80 shadow-sm'
+                : 'text-[#8b949e] hover:text-white hover:bg-[#21262d]'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <Zap className="w-4 h-4 text-sky-400" />
+              <span>トリガー設定</span>
+            </div>
+            <span className="ml-2 px-1.5 py-0.2 rounded-full bg-[#0d1117] text-sky-400 text-[10px] font-mono border border-sky-900/60">
+              {triggers.length}
+            </span>
+          </button>
         </nav>
       </aside>
 
@@ -128,6 +158,19 @@ export function SettingsView({
             onCreateRule={onCreateRule}
             onUpdateRule={onUpdateRule}
             onDeleteRule={onDeleteRule}
+            onShowSuccess={onShowSuccess}
+            onShowError={onShowError}
+          />
+        )}
+
+        {subview === 'triggers' && (
+          <TriggerSettingsView
+            triggers={triggers}
+            rules={rules}
+            knownRepositories={knownRepositories}
+            onCreateTrigger={onCreateTrigger}
+            onUpdateTrigger={onUpdateTrigger}
+            onDeleteTrigger={onDeleteTrigger}
             onShowSuccess={onShowSuccess}
             onShowError={onShowError}
           />

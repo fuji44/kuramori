@@ -94,6 +94,20 @@ export async function initDatabase(client: ReturnType<typeof createClient>) {
   }
 
   await client.execute(`
+    CREATE TABLE IF NOT EXISTS review_triggers (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      repository TEXT NOT NULL,
+      paths_json TEXT,
+      paths_ignore_json TEXT,
+      rule_ids_json TEXT NOT NULL,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+  `);
+
+  await client.execute(`
     CREATE TABLE IF NOT EXISTS review_jobs (
       id TEXT PRIMARY KEY,
       request_id TEXT NOT NULL REFERENCES review_requests(id),

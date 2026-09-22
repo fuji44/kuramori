@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { desc, eq } from 'drizzle-orm';
 import type { AppDatabase } from './db/index.ts';
-import { reviewJobsTable, reviewReportsTable, reviewRequestsTable, reviewRulesTable, reviewRuleResultsTable } from './db/schema.ts';
+import { reviewJobsTable, reviewReportsTable, reviewRequestsTable, reviewRulesTable, reviewRuleResultsTable, reviewTriggersTable } from './db/schema.ts';
 
 import type { ReportStorage } from '@review-base/core';
 import type { GitHubPoller } from './poller.ts';
@@ -414,6 +414,136 @@ export function createApi(deps: ApiDependencies) {
     }
 
     await deps.db.delete(reviewRulesTable).where(eq(reviewRulesTable.id, id));
+    return c.json({ success: true });
+  });
+
+  // Triggers CRUD endpoints
+  app.get('/api/triggers', async (c) => {
+    const rows = await deps.db.select().from(reviewTriggersTable);
+    const triggers = rows.map((row) => {
+      let paths: string[] | undefined = undefined;
+      let pathsIgnore: string[] | undefined = undefined;
+      let ruleIds: string[] = [];
+      try {
+        if (row.pathsJson) paths = JSON.parse(row.pathsJson);
+        if (row.pathsIgnoreJson) pathsIgnore = JSON.parse(row.pathsIgnoreJson);
+        if (row.ruleIdsJson) ruleIds = JSON.parse(row.ruleIdsJson);
+      } catch {
+        // Fallback
+      }
+      return {
+        id: row.id,
+        name: row.name,
+        repository: row.repository,
+        paths,
+        pathsIgnore,
+        ruleIds,
+        enabled: Boolean(row.enabled),
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      };
+    });
+    return c.json({ triggers });
+  });
+
+  app.post('/api/triggers', async (c) => {
+    try {
+      const body = await c.req.json();
+      if (!body.name || !body.repository) {
+        return c.json({ error: 'Name and repository are required' }, 400);
+      }
+      const now = new Date().toISOString();
+      const id = body.id || `trigger-${Date.now()}`;
+      const newTrigger = {
+        id,
+        name: String(body.name),
+        repository: String(body.repository),
+        pathsJson: body.paths && Array.isArray(body.paths) ? JSON.stringify(body.paths) : null,
+        pathsIgnoreJson: body.pathsIgnore && Array.isArray(body.pathsIgnore) ? JSON.stringify(body.pathsIgnore) : null,
+        ruleIdsJson: JSON.stringify(Array.isArray(body.ruleIds) ? body.ruleIds : []),
+        enabled: body.enabled !== false,
+        createdAt: now,
+        updatedAt: now,
+      };
+      await deps.db.insert(reviewTriggersTable).values(newTrigger);
+      return c.json({ success: true, trigger: { ...newTrigger, paths: body.paths, pathsIgnore: body.pathsIgnore, ruleIds: body.ruleIds || [] } }, 201);
+    } catch {
+      return c.json({ error: 'Invalid JSON payload' }, 400);
+    }
+  });
+
+  app.get('/api/triggers/:id', async (c) => {
+    const id = c.req.param('id');
+    const rows = await deps.db.select().from(reviewTriggersTable).where(eq(reviewTriggersTable.id, id));
+    if (rows.length === 0) {
+      return c.json({ error: 'Trigger not found' }, 404);
+    }
+    const row = rows[0];
+    let paths: string[] | undefined = undefined;
+    let pathsIgnore: string[] | undefined = undefined;
+    let ruleIds: string[] = [];
+    try {
+      if (row.pathsJson) paths = JSON.parse(row.pathsJson);
+      if (row.pathsIgnoreJson) pathsIgnore = JSON.parse(row.pathsIgnoreJson);
+      if (row.ruleIdsJson) ruleIds = JSON.parse(row.ruleIdsJson);
+    } catch {
+      // Fallback
+    }
+    return c.json({
+      trigger: {
+        id: row.id,
+        name: row.name,
+        repository: row.repository,
+        paths,
+        pathsIgnore,
+        ruleIds,
+        enabled: Boolean(row.enabled),
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      },
+    });
+  });
+
+  app.put('/api/triggers/:id', async (c) => {
+    const id = c.req.param('id');
+    const existing = await deps.db.select().from(reviewTriggersTable).where(eq(reviewTriggersTable.id, id));
+    if (existing.length === 0) {
+      return c.json({ error: 'Trigger not found' }, 404);
+    }
+
+    try {
+      const body = await c.req.json();
+      const now = new Date().toISOString();
+      const updates: Record<string, unknown> = { updatedAt: now };
+
+      if (body.name !== undefined) updates.name = String(body.name);
+      if (body.repository !== undefined) updates.repository = String(body.repository);
+      if (body.paths !== undefined) {
+        updates.pathsJson = Array.isArray(body.paths) && body.paths.length > 0 ? JSON.stringify(body.paths) : null;
+      }
+      if (body.pathsIgnore !== undefined) {
+        updates.pathsIgnoreJson = Array.isArray(body.pathsIgnore) && body.pathsIgnore.length > 0 ? JSON.stringify(body.pathsIgnore) : null;
+      }
+      if (body.ruleIds !== undefined) {
+        updates.ruleIdsJson = JSON.stringify(Array.isArray(body.ruleIds) ? body.ruleIds : []);
+      }
+      if (body.enabled !== undefined) updates.enabled = body.enabled ? true : false;
+
+      await deps.db.update(reviewTriggersTable).set(updates).where(eq(reviewTriggersTable.id, id));
+      return c.json({ success: true });
+    } catch {
+      return c.json({ error: 'Invalid JSON payload' }, 400);
+    }
+  });
+
+  app.delete('/api/triggers/:id', async (c) => {
+    const id = c.req.param('id');
+    const existing = await deps.db.select().from(reviewTriggersTable).where(eq(reviewTriggersTable.id, id));
+    if (existing.length === 0) {
+      return c.json({ error: 'Trigger not found' }, 404);
+    }
+
+    await deps.db.delete(reviewTriggersTable).where(eq(reviewTriggersTable.id, id));
     return c.json({ success: true });
   });
 

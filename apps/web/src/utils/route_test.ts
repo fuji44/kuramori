@@ -77,6 +77,12 @@ Deno.test('route - parseRoute identifies settings paths', () => {
   if (rulesRoute.view === 'settings') {
     assertEquals(rulesRoute.subview, 'rules');
   }
+
+  const triggersRoute = parseRoute('/settings/triggers', '');
+  assertEquals(triggersRoute.view, 'settings');
+  if (triggersRoute.view === 'settings') {
+    assertEquals(triggersRoute.subview, 'triggers');
+  }
 });
 
 Deno.test('route - buildRouteUrl formats paths accurately', () => {

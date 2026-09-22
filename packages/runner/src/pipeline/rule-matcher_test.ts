@@ -1,6 +1,12 @@
 import { assertEquals } from 'jsr:@std/assert@^1.0.11';
 import type { ReviewRule } from '@review-base/core';
-import { matchRuleTrigger, filterMatchingRules, type PrEvaluationEvent } from './rule-matcher.ts';
+import {
+  matchRuleTrigger,
+  filterMatchingRules,
+  matchReviewTrigger,
+  filterRulesByTriggers,
+  type PrEvaluationEvent,
+} from './rule-matcher.ts';
 
 const baseRule: ReviewRule = {
   id: 'rule-test',
@@ -138,4 +144,99 @@ Deno.test('RuleMatcher - filters matching rules from array', () => {
   const matched = filterMatchingRules(rules, event);
   assertEquals(matched.length, 1);
   assertEquals(matched[0].id, 'r1');
+});
+
+Deno.test('ReviewTriggerMatcher - matches repository and paths', () => {
+  const trigger = {
+    id: 'trig-1',
+    name: 'Server Trigger',
+    repository: 'fuji44/review-base',
+    paths: ['apps/server/**'],
+    ruleIds: ['rule-server-1'],
+    enabled: true,
+  };
+
+  // 一致するリポジトリとパス
+  assertEquals(
+    matchReviewTrigger(trigger, {
+      eventType: 'synchronize',
+      repository: 'fuji44/review-base',
+      changedFiles: ['apps/server/src/api.ts'],
+      isDraft: false,
+    }),
+    true
+  );
+
+  // 異なるリポジトリ
+  assertEquals(
+    matchReviewTrigger(trigger, {
+      eventType: 'synchronize',
+      repository: 'other/repo',
+      changedFiles: ['apps/server/src/api.ts'],
+      isDraft: false,
+    }),
+    false
+  );
+
+  // リポジトリ一致だがパス不一致
+  assertEquals(
+    matchReviewTrigger(trigger, {
+      eventType: 'synchronize',
+      repository: 'fuji44/review-base',
+      changedFiles: ['apps/web/src/App.tsx'],
+      isDraft: false,
+    }),
+    false
+  );
+
+  // '*' は全リポジトリ対象
+  const wildcardTrigger = {
+    ...trigger,
+    repository: '*',
+  };
+  assertEquals(
+    matchReviewTrigger(wildcardTrigger, {
+      eventType: 'synchronize',
+      repository: 'any-org/any-repo',
+      changedFiles: ['apps/server/src/api.ts'],
+      isDraft: false,
+    }),
+    true
+  );
+});
+
+Deno.test('ReviewTriggerMatcher - filters rules by triggers', () => {
+  const rules: ReviewRule[] = [
+    { ...baseRule, id: 'rule-sec', name: 'Security' },
+    { ...baseRule, id: 'rule-perf', name: 'Performance' },
+    { ...baseRule, id: 'rule-disabled', name: 'Disabled', enabled: false },
+  ];
+
+  const triggers = [
+    {
+      id: 't1',
+      name: 'Auth files',
+      repository: 'org/backend',
+      paths: ['**/auth/**'],
+      ruleIds: ['rule-sec'],
+      enabled: true,
+    },
+    {
+      id: 't2',
+      name: 'All files',
+      repository: 'org/backend',
+      ruleIds: ['rule-perf', 'rule-disabled'],
+      enabled: true,
+    },
+  ];
+
+  const matched = filterRulesByTriggers(triggers, rules, {
+    eventType: 'synchronize',
+    repository: 'org/backend',
+    changedFiles: ['src/auth/login.ts'],
+    isDraft: false,
+  });
+
+  assertEquals(matched.length, 2);
+  assertEquals(matched.map((r) => r.id).sort(), ['rule-perf', 'rule-sec']);
 });

@@ -87,6 +87,18 @@ export interface EngineSettingsMap {
 
 export type EngineOverrideConfig = Partial<AntigravityEngineConfig & ClaudeCodeEngineConfig & MockEngineConfig>;
 
+export interface ReviewTrigger {
+  id: string;
+  name: string;
+  repository: string;
+  paths?: string[];
+  pathsIgnore?: string[];
+  ruleIds: string[];
+  enabled: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface ReviewRule {
   id: string;
   name: string;
@@ -95,7 +107,7 @@ export interface ReviewRule {
   engine: string;
   instructions: string;
   engineOverride?: EngineOverrideConfig;
-  trigger: RuleTrigger;
+  trigger?: RuleTrigger;
   concurrency?: RuleConcurrency;
   enabled: boolean;
   createdAt: string;

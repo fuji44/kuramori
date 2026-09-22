@@ -9,7 +9,7 @@ import {
   FileText,
 } from 'lucide-react';
 
-import { ReviewItem, AppSettings, ReviewRule } from './types.ts';
+import { ReviewItem, AppSettings, ReviewRule, ReviewTrigger } from './types.ts';
 import { useAppRoute, AppRoute, navigateTo } from './utils/route.ts';
 import { DashboardView } from './views/DashboardView.tsx';
 import { PrListView } from './views/PrListView.tsx';
@@ -24,6 +24,7 @@ export default function App() {
 
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [rules, setRules] = useState<ReviewRule[]>([]);
+  const [triggers, setTriggers] = useState<ReviewTrigger[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -128,15 +129,29 @@ export default function App() {
     }
   };
 
+  const fetchTriggers = async () => {
+    try {
+      const res = await fetch('/api/triggers');
+      if (res.ok) {
+        const data = await res.json();
+        setTriggers(data.triggers ?? []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch triggers', err);
+    }
+  };
+
   useEffect(() => {
     fetchReviews();
     fetchSettings();
     fetchRules();
+    fetchTriggers();
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         fetchReviews();
         fetchRules();
+        fetchTriggers();
       }
     };
 
@@ -277,6 +292,56 @@ export default function App() {
       }
     } catch (err) {
       console.error('Failed to delete rule', err);
+      throw err;
+    }
+  };
+
+  const handleCreateTrigger = async (newTrigger: Partial<ReviewTrigger>) => {
+    try {
+      const res = await fetch('/api/triggers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newTrigger),
+      });
+      if (res.ok) {
+        await fetchTriggers();
+      } else {
+        throw new Error('Failed to create trigger');
+      }
+    } catch (err) {
+      console.error('Failed to create trigger', err);
+      throw err;
+    }
+  };
+
+  const handleUpdateTrigger = async (id: string, updates: Partial<ReviewTrigger>) => {
+    try {
+      const res = await fetch(`/api/triggers/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      if (res.ok) {
+        await fetchTriggers();
+      } else {
+        throw new Error('Failed to update trigger');
+      }
+    } catch (err) {
+      console.error('Failed to update trigger', err);
+      throw err;
+    }
+  };
+
+  const handleDeleteTrigger = async (id: string) => {
+    try {
+      const res = await fetch(`/api/triggers/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        await fetchTriggers();
+      } else {
+        throw new Error('Failed to delete trigger');
+      }
+    } catch (err) {
+      console.error('Failed to delete trigger', err);
       throw err;
     }
   };
@@ -473,10 +538,15 @@ export default function App() {
             onNavigateSubview={(subview) => navigate({ view: 'settings', subview })}
             settings={settings}
             rules={rules}
+            triggers={triggers}
+            knownRepositories={Array.from(new Set(items.map((i) => i.repository))).filter(Boolean)}
             onSaveSettings={handleSaveSettings}
             onCreateRule={handleCreateRule}
             onUpdateRule={handleUpdateRule}
             onDeleteRule={handleDeleteRule}
+            onCreateTrigger={handleCreateTrigger}
+            onUpdateTrigger={handleUpdateTrigger}
+            onDeleteTrigger={handleDeleteTrigger}
             onShowSuccess={showSuccess}
             onShowError={showError}
           />

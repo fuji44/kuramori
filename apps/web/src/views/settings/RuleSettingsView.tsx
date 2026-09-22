@@ -7,7 +7,6 @@ import {
   ChevronDown,
   ChevronUp,
   Save,
-  FileCode,
   Tag,
   Cpu,
   CheckCircle2,
@@ -58,7 +57,6 @@ export function RuleSettingsView({
     category: string;
     engine: string;
     instructions: string;
-    paths: string;
     cancelInProgress: boolean;
     enabled: boolean;
     engineOverride: EngineOverrideConfig;
@@ -68,7 +66,6 @@ export function RuleSettingsView({
     category: 'correctness',
     engine: 'default',
     instructions: '',
-    paths: '',
     cancelInProgress: true,
     enabled: true,
     engineOverride: {},
@@ -83,7 +80,6 @@ export function RuleSettingsView({
       category: 'correctness',
       engine: 'default',
       instructions: '',
-      paths: '',
       cancelInProgress: true,
       enabled: true,
       engineOverride: {},
@@ -108,7 +104,6 @@ export function RuleSettingsView({
       category: rule.category,
       engine: rule.engine,
       instructions: rule.instructions,
-      paths: rule.trigger?.paths ? rule.trigger.paths.join(', ') : '',
       cancelInProgress: rule.concurrency?.cancelInProgress ?? true,
       enabled: rule.enabled,
       engineOverride: rule.engineOverride ? { ...rule.engineOverride } : {},
@@ -128,11 +123,6 @@ export function RuleSettingsView({
     e.preventDefault();
     setSaving(true);
     try {
-      const pathsArray = ruleForm.paths
-        .split(',')
-        .map((p) => p.trim())
-        .filter(Boolean);
-
       const cleanOverride: EngineOverrideConfig = {};
       if (overrideEnabled) {
         for (const [key, value] of Object.entries(ruleForm.engineOverride)) {
@@ -152,11 +142,6 @@ export function RuleSettingsView({
           overrideEnabled && Object.keys(cleanOverride).length > 0
             ? cleanOverride
             : undefined,
-        trigger: {
-          types: ['opened', 'synchronize'],
-          paths: pathsArray.length > 0 ? pathsArray : undefined,
-          draft: false,
-        },
         concurrency: {
           cancelInProgress: ruleForm.cancelInProgress,
         },
@@ -282,19 +267,6 @@ export function RuleSettingsView({
             <p className="text-[11px] text-[#8b949e] mt-1">
               この指示文は、PR レビュー実行時に AI エージェントのプロンプトへ自動的に注入されます。
             </p>
-          </div>
-
-          <div>
-            <label className="text-xs text-[#8b949e] block mb-1">
-              対象ファイルパス (Globカンマ区切り)
-            </label>
-            <input
-              type="text"
-              value={ruleForm.paths}
-              onChange={(e) => setRuleForm({ ...ruleForm, paths: e.target.value })}
-              placeholder="例: **/auth/**, **/security/**, **/api/** (空欄で全ファイル)"
-              className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-white font-mono text-xs focus:outline-none focus:border-sky-500"
-            />
           </div>
 
           <div>
@@ -563,26 +535,14 @@ export function RuleSettingsView({
                       </p>
                     )}
 
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#8b949e] pt-1">
-                      {rule.trigger?.paths && rule.trigger.paths.length > 0 ? (
-                        <div className="flex items-center gap-1 font-mono text-[11px] text-teal-400/90">
-                          <FileCode className="w-3.5 h-3.5" />
-                          <span>パス: {rule.trigger.paths.join(', ')}</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1 text-[11px] text-[#8b949e]">
-                          <FileCode className="w-3.5 h-3.5" />
-                          <span>パス: 全ファイル対象</span>
-                        </div>
-                      )}
-
-                      {rule.concurrency?.cancelInProgress && (
+                    {rule.concurrency?.cancelInProgress && (
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#8b949e] pt-1">
                         <div className="flex items-center gap-1 text-[11px] text-[#8b949e]">
                           <Clock className="w-3 h-3" />
                           <span>新コミット時キャンセル</span>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Actions */}
