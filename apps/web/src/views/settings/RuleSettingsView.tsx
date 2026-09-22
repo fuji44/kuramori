@@ -7,7 +7,6 @@ import {
   ChevronDown,
   ChevronUp,
   Save,
-  X,
   FileCode,
   Tag,
   Cpu,
@@ -16,6 +15,7 @@ import {
   Clock,
   Sparkles,
   Sliders,
+  ArrowLeft,
 } from 'lucide-react';
 import { ReviewRule, EngineOverrideConfig, AppSettings } from '../../types.ts';
 import { Checkbox } from '../../components/Checkbox.tsx';
@@ -193,49 +193,41 @@ export function RuleSettingsView({
     setExpandedInstructionId((prev) => (prev === id ? null : id));
   };
 
-  return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-white tracking-tight">レビュールール設定</h2>
-          <p className="text-xs text-[#8b949e] mt-1">
-            PR 評価時に並列実行される独立した観点（セキュリティ、正確性、設計など）のルールを定義・管理します。
-          </p>
-        </div>
-        {!isCreatingRule && !editingRuleId && (
+  const isFormMode = isCreatingRule || editingRuleId !== null;
+
+  if (isFormMode) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex flex-col gap-3">
           <button
             type="button"
-            onClick={handleOpenCreateRule}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-medium transition-colors shadow-sm shrink-0 self-start sm:self-auto"
+            onClick={handleCancelForm}
+            className="inline-flex items-center gap-1.5 text-xs text-[#8b949e] hover:text-white transition-colors self-start cursor-pointer group"
           >
-            <Plus className="w-4 h-4" />
-            <span>新しいルールを追加</span>
+            <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+            <span>ルール一覧に戻る</span>
           </button>
-        )}
-      </div>
 
-      {/* Rule Form (Create or Edit) */}
-      {(isCreatingRule || editingRuleId) && (
+          <div className="flex items-center gap-2.5">
+            <Sparkles className="w-5 h-5 text-sky-400" />
+            <div>
+              <h2 className="text-xl font-bold text-white tracking-tight">
+                {editingRuleId ? 'レビュールールを編集' : '新規レビュールールを作成'}
+              </h2>
+              <p className="text-xs text-[#8b949e] mt-0.5">
+                {editingRuleId
+                  ? `「${ruleForm.name || 'ルール'}」の指示文、対象ファイル、実行エンジンや上書き設定を更新します。`
+                  : 'PR 評価時に並列実行される新しい観点のレビュールールを定義します。'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Rule Form */}
         <form
           onSubmit={handleSubmitRule}
           className="bg-[#161b22] border border-[#30363d] rounded-xl p-5 space-y-5 animate-in fade-in duration-150"
         >
-          <div className="flex items-center justify-between pb-3 border-b border-[#30363d]">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-sky-400" />
-              <h3 className="text-sm font-semibold text-white">
-                {editingRuleId ? 'レビュールールを編集' : '新規レビュールールを作成'}
-              </h3>
-            </div>
-            <button
-              type="button"
-              onClick={handleCancelForm}
-              className="p-1 rounded text-[#8b949e] hover:text-white hover:bg-[#21262d] transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-xs text-[#8b949e] block mb-1">ルール名 *</label>
@@ -477,7 +469,28 @@ export function RuleSettingsView({
             </div>
           </div>
         </form>
-      )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-white tracking-tight">レビュールール設定</h2>
+          <p className="text-xs text-[#8b949e] mt-1">
+            PR 評価時に並列実行される独立した観点（セキュリティ、正確性、設計など）のルールを定義・管理します。
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleOpenCreateRule}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-medium transition-colors shadow-sm shrink-0 self-start sm:self-auto"
+        >
+          <Plus className="w-4 h-4" />
+          <span>新しいルールを追加</span>
+        </button>
+      </div>
 
       {/* Rules List */}
       <div className="space-y-3">
