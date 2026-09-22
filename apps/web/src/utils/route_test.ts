@@ -45,12 +45,21 @@ Deno.test('route - parseRoute supports legacy query redirects', () => {
   }
 });
 
+Deno.test('route - parseRoute identifies reports list path', () => {
+  const route = parseRoute('/reports', '');
+  assertEquals(route.view, 'reports');
+
+  const trailingSlashRoute = parseRoute('/reports/', '');
+  assertEquals(trailingSlashRoute.view, 'reports');
+});
+
 Deno.test('route - buildRouteUrl formats paths accurately', () => {
   assertEquals(buildRouteUrl({ view: 'dashboard' }), '/');
   assertEquals(
     buildRouteUrl({ view: 'reviews', params: { status: 'unreviewed' } }),
     '/reviews?status=unreviewed'
   );
+  assertEquals(buildRouteUrl({ view: 'reports' }), '/reports');
   assertEquals(
     buildRouteUrl({ view: 'report', reportId: 'rep-abc' }),
     '/reports/rep-abc'

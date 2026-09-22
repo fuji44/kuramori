@@ -10,11 +10,13 @@ import { findMatchingPrElement, getPrAnchorId } from '../utils/anchor.ts';
 interface PrListViewProps {
   items: ReviewItem[];
   loading: boolean;
+  refreshing?: boolean;
   params: FilterUrlParams;
   onParamsChange: (newParams: FilterUrlParams) => void;
   onOpenLog: (e: React.MouseEvent, jobId: string, error?: string | null) => void;
   onRunReview: (e: React.MouseEvent, id: string) => void;
   onSelectReport: (reportId: string, prTitle: string) => void;
+  onRefresh?: () => void;
   onShowSuccess: (msg: string) => void;
   onShowError: (msg: string) => void;
 }
@@ -22,11 +24,13 @@ interface PrListViewProps {
 export function PrListView({
   items,
   loading,
+  refreshing,
   params,
   onParamsChange,
   onOpenLog,
   onRunReview,
   onSelectReport,
+  onRefresh,
   onShowSuccess,
   onShowError,
 }: PrListViewProps) {
@@ -182,6 +186,18 @@ export function PrListView({
           <Link2 className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">URLをコピー</span>
         </button>
+        {onRefresh && (
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={refreshing}
+            title="GitHubから最新のレビュー依頼PRを再取得"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#161b22] hover:bg-[#21262d] border border-[#30363d] hover:border-[#8b949e] rounded-lg text-xs text-[#8b949e] hover:text-white transition-colors shrink-0 disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-sky-400' : ''}`} />
+            <span className="hidden sm:inline">{refreshing ? '更新中...' : '再確認'}</span>
+          </button>
+        )}
       </div>
 
       {/* Filters Bar */}

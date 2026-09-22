@@ -16,6 +16,7 @@ interface DashboardViewProps {
   items: ReviewItem[];
   settings: AppSettings;
   onNavigateToReviews: (anchorId?: string) => void;
+  onNavigateToReports?: () => void;
   onSelectReport: (reportId: string, prTitle: string) => void;
 }
 
@@ -23,6 +24,7 @@ export function DashboardView({
   items,
   settings,
   onNavigateToReviews,
+  onNavigateToReports,
   onSelectReport,
 }: DashboardViewProps) {
   // Statistics calculations
@@ -98,7 +100,12 @@ export function DashboardView({
         </div>
 
         {/* レビュー完了 */}
-        <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-4">
+        <div
+          onClick={() => onNavigateToReports?.()}
+          className={`bg-[#161b22] border border-[#30363d] rounded-xl p-4 transition-colors ${
+            onNavigateToReports ? 'cursor-pointer hover:border-emerald-500/50' : ''
+          }`}
+        >
           <div className="flex items-center justify-between text-neutral-400 mb-2">
             <span className="text-xs font-medium">完了レポート</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
@@ -192,10 +199,10 @@ export function DashboardView({
             </h3>
             <button
               type="button"
-              onClick={() => onNavigateToReviews()}
-              className="text-[11px] text-sky-400 hover:text-sky-300 hover:underline"
+              onClick={() => (onNavigateToReports ? onNavigateToReports() : onNavigateToReviews())}
+              className="text-[11px] text-emerald-400 hover:text-emerald-300 hover:underline"
             >
-              PR一覧へ
+              すべて見る ({stats.completed})
             </button>
           </div>
 

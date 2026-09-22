@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
-  RefreshCw,
   GitPullRequest,
   AlertCircle,
   CheckCircle2,
   X,
   Settings,
   LayoutDashboard,
+  FileText,
 } from 'lucide-react';
 
 import { ReviewItem, AppSettings } from './types.ts';
@@ -14,6 +14,7 @@ import { useAppRoute, AppRoute, navigateTo } from './utils/route.ts';
 import { DashboardView } from './views/DashboardView.tsx';
 import { PrListView } from './views/PrListView.tsx';
 import { ReportDetailView } from './views/ReportDetailView.tsx';
+import { ReportListView } from './views/ReportListView.tsx';
 import { JobLogModal } from './components/JobLogModal.tsx';
 import { SettingsModal } from './components/SettingsModal.tsx';
 import { ToastContainer, ToastItem, ToastType } from './components/Toast.tsx';
@@ -206,36 +207,38 @@ export default function App() {
     }
   };
 
+  const unreviewedCount = items.filter(
+    (item) => item.latestJob?.status !== 'completed' && !item.isOwn
+  ).length;
+
+  const reportCount = items.filter((item) => Boolean(item.report?.id)).length;
+
   return (
     <div className="h-screen overflow-hidden flex flex-col bg-[#0d1117] text-[#c9d1d9]">
-      {/* Top Header */}
-      <header className="h-16 border-b border-[#30363d] bg-[#161b22] px-6 flex items-center justify-between sticky top-0 z-20 shrink-0">
-        <div className="flex items-center gap-6">
-          {/* Logo & Subtitle */}
+      {/* Optimized Top Header */}
+      <header className="h-14 border-b border-[#30363d] bg-[#161b22] px-4 sm:px-6 flex items-center justify-between sticky top-0 z-20 shrink-0">
+        <div className="flex items-center gap-4 sm:gap-6">
+          {/* Logo & Brand */}
           <div
             onClick={() => navigate({ view: 'dashboard' })}
-            className="flex items-center gap-3 cursor-pointer group"
+            className="flex items-center gap-2.5 cursor-pointer group"
+            title="ダッシュボードへ"
           >
-            <div className="p-2 bg-[#21262d] rounded-lg border border-[#30363d] group-hover:border-sky-500/50 text-sky-400 transition-colors">
-              <GitPullRequest className="w-5 h-5" />
+            <div className="p-1.5 bg-[#21262d] rounded-lg border border-[#30363d] group-hover:border-sky-500/50 text-sky-400 transition-colors">
+              <GitPullRequest className="w-4 h-4" />
             </div>
-            <div>
-              <h1 className="text-lg font-bold text-white flex items-center gap-2">
-                review-base
-                <span className="text-xs px-2 py-0.5 rounded-full bg-sky-950 text-sky-400 border border-sky-800 font-normal">
-                  MVP
-                </span>
-              </h1>
-              <p className="text-xs text-[#8b949e] flex items-center gap-1.5">
-                <span>Automated AI Review Dashboard</span>
-                <span>•</span>
-                <span className="text-sky-400/90 font-mono">Engine: {settings.reviewEngine}</span>
-              </p>
+            <div className="flex items-center gap-2">
+              <h1 className="text-base font-bold text-white tracking-tight">review-base</h1>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-sky-950 text-sky-400 border border-sky-800/80 font-mono">
+                MVP
+              </span>
             </div>
           </div>
 
-          {/* Navigation Links (Dashboard vs PRs) */}
-          <nav className="hidden sm:flex items-center gap-1 bg-[#0d1117] p-1 rounded-lg border border-[#30363d] text-xs">
+          <div className="h-4 w-px bg-[#30363d]" />
+
+          {/* Navigation Links (Dashboard vs PRs vs Reports) */}
+          <nav className="flex items-center gap-1 bg-[#0d1117] p-1 rounded-lg border border-[#30363d] text-xs">
             <button
               type="button"
               onClick={() => navigate({ view: 'dashboard' })}
@@ -259,30 +262,42 @@ export default function App() {
             >
               <GitPullRequest className="w-3.5 h-3.5" />
               <span>PR一覧</span>
+              {unreviewedCount > 0 && (
+                <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-sky-950 text-sky-400 border border-sky-800">
+                  {unreviewedCount}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate({ view: 'reports' })}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${
+                route.view === 'reports'
+                  ? 'bg-[#21262d] text-white font-medium shadow-sm'
+                  : 'text-[#8b949e] hover:text-[#c9d1d9]'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>レポート一覧</span>
+              {reportCount > 0 && (
+                <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-emerald-950 text-emerald-300 border border-emerald-800">
+                  {reportCount}
+                </span>
+              )}
             </button>
           </nav>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* GitHub Refresh Button */}
-          <button
-            type="button"
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] text-sm text-[#c9d1d9] transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-sky-400' : ''}`} />
-            <span className="hidden sm:inline">{refreshing ? '更新中...' : 'GitHubを再確認'}</span>
-          </button>
-
+        <div className="flex items-center gap-2">
           {/* Settings Button */}
           <button
             type="button"
             onClick={() => setIsSettingsOpen(true)}
-            className="p-2 rounded-md bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] text-[#c9d1d9] transition-colors"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] text-xs text-[#c9d1d9] transition-colors"
             title="設定を開く"
           >
-            <Settings className="w-4 h-4" />
+            <Settings className="w-3.5 h-3.5 text-[#8b949e]" />
+            <span className="hidden sm:inline">設定</span>
           </button>
         </div>
       </header>
@@ -300,6 +315,7 @@ export default function App() {
                 navigate({ view: 'reviews', params: {} });
               }
             }}
+            onNavigateToReports={() => navigate({ view: 'reports' })}
             onSelectReport={(reportId) => navigate({ view: 'report', reportId })}
           />
         )}
@@ -308,13 +324,29 @@ export default function App() {
           <PrListView
             items={items}
             loading={loading}
+            refreshing={refreshing}
             params={route.params}
             onParamsChange={(newParams) => navigate({ view: 'reviews', params: newParams }, true)}
             onOpenLog={openJobLog}
             onRunReview={handleRunReview}
             onSelectReport={(reportId) => navigate({ view: 'report', reportId })}
+            onRefresh={handleRefresh}
             onShowSuccess={showSuccess}
             onShowError={showError}
+          />
+        )}
+
+        {route.view === 'reports' && (
+          <ReportListView
+            items={items}
+            onSelectReport={(reportId, prTitle) => navigate({ view: 'report', reportId })}
+            onNavigateToReviews={(anchorId) => {
+              if (typeof anchorId === 'string' && anchorId.trim() !== '') {
+                navigateTo(`/reviews#${anchorId}`);
+              } else {
+                navigate({ view: 'reviews', params: {} });
+              }
+            }}
           />
         )}
 
