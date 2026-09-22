@@ -17,6 +17,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { ReviewRule } from '../../types.ts';
+import { Checkbox } from '../../components/Checkbox.tsx';
 
 interface RuleSettingsViewProps {
   rules: ReviewRule[];
@@ -288,27 +289,19 @@ export function RuleSettingsView({
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-3 border-t border-[#30363d]">
             <div className="flex items-center gap-6">
-              <label className="flex items-center gap-2 cursor-pointer text-xs text-[#c9d1d9]">
-                <input
-                  type="checkbox"
-                  checked={ruleForm.enabled}
-                  onChange={(e) => setRuleForm({ ...ruleForm, enabled: e.target.checked })}
-                  className="rounded border-[#30363d] bg-[#0d1117] text-sky-500 focus:ring-sky-500"
-                />
-                <span>ルールを有効化</span>
-              </label>
+              <Checkbox
+                checked={ruleForm.enabled}
+                onChange={(checked) => setRuleForm({ ...ruleForm, enabled: checked })}
+                label="ルールを有効化"
+              />
 
-              <label className="flex items-center gap-2 cursor-pointer text-xs text-[#c9d1d9]">
-                <input
-                  type="checkbox"
-                  checked={ruleForm.cancelInProgress}
-                  onChange={(e) =>
-                    setRuleForm({ ...ruleForm, cancelInProgress: e.target.checked })
-                  }
-                  className="rounded border-[#30363d] bg-[#0d1117] text-sky-500 focus:ring-sky-500"
-                />
-                <span>新コミット時に進行中ジョブをキャンセル</span>
-              </label>
+              <Checkbox
+                checked={ruleForm.cancelInProgress}
+                onChange={(checked) =>
+                  setRuleForm({ ...ruleForm, cancelInProgress: checked })
+                }
+                label="新コミット時に進行中ジョブをキャンセル"
+              />
             </div>
 
             <div className="flex items-center gap-2 self-end sm:self-auto">

@@ -17,6 +17,8 @@ import {
   RefreshCw,
   ChevronDown,
   Check,
+  CheckSquare,
+  Square,
 } from 'lucide-react';
 import { ReviewItem, ReviewRule } from '../types.ts';
 import { getPrAnchorId } from '../utils/anchor.ts';
@@ -433,26 +435,34 @@ export function PrCard({
                     return (
                       <div
                         key={rule.id}
-                        className="flex items-center justify-between p-2 rounded-lg hover:bg-[#21262d] transition-colors border border-transparent hover:border-[#30363d]/50"
+                        onClick={() => {
+                          const next = new Set(selectedRuleIds);
+                          if (!isChecked) {
+                            next.add(rule.id);
+                          } else {
+                            next.delete(rule.id);
+                          }
+                          setSelectedRuleIds(next);
+                        }}
+                        className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all border ${
+                          isChecked
+                            ? 'bg-sky-950/30 border-sky-800/60'
+                            : 'border-transparent hover:bg-[#21262d] hover:border-[#30363d]/50'
+                        }`}
                       >
-                        <label className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={(e) => {
-                              const next = new Set(selectedRuleIds);
-                              if (e.target.checked) {
-                                next.add(rule.id);
-                              } else {
-                                next.delete(rule.id);
-                              }
-                              setSelectedRuleIds(next);
-                            }}
-                            className="rounded border-[#30363d] bg-[#0d1117] text-sky-500 focus:ring-sky-500 focus:ring-offset-0 shrink-0"
-                          />
+                        <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                          <div className="shrink-0 text-sky-400">
+                            {isChecked ? (
+                              <CheckSquare className="w-4 h-4" />
+                            ) : (
+                              <Square className="w-4 h-4 text-[#8b949e]" />
+                            )}
+                          </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="font-medium text-white truncate">{rule.name}</span>
+                              <span className={`font-medium truncate ${isChecked ? 'text-white' : 'text-[#c9d1d9]'}`}>
+                                {rule.name}
+                              </span>
                               <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#0d1117] text-sky-400 border border-sky-800/40">
                                 {rule.category}
                               </span>
@@ -461,7 +471,7 @@ export function PrCard({
                               <p className="text-[10.5px] text-[#8b949e] truncate">{rule.description}</p>
                             )}
                           </div>
-                        </label>
+                        </div>
 
                         {/* 個別即時実行ボタン */}
                         <button

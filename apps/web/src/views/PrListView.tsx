@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { RefreshCw, CheckCircle2, Filter, Link2 } from 'lucide-react';
+import { RefreshCw, CheckCircle2, Filter, Link2, CheckSquare, Square } from 'lucide-react';
 import { ReviewItem, ReviewRule } from '../types.ts';
 import { SearchQueryBar } from '../components/SearchQueryBar.tsx';
 import { PrCard } from '../components/PrCard.tsx';
@@ -252,20 +252,31 @@ export function PrListView({
           )}
 
           {/* 自分のPRを含むトグル */}
-          <label className="flex items-center gap-1.5 bg-[#161b22] border border-[#30363d] hover:border-[#8b949e] rounded-lg px-2.5 py-1 text-xs text-[#8b949e] hover:text-[#c9d1d9] cursor-pointer select-none transition-colors">
-            <input
-              type="checkbox"
-              checked={includeOwn}
-              onChange={(e) => setParam('includeOwn', e.target.checked ? true : undefined)}
-              className="rounded border-[#30363d] bg-[#0d1117] text-[#00AFA8] focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5 cursor-pointer accent-[#00AFA8]"
-            />
-            <span className={includeOwn ? 'text-white font-medium' : ''}>自作PRを含む</span>
+          <button
+            type="button"
+            role="checkbox"
+            aria-checked={includeOwn}
+            onClick={() => setParam('includeOwn', !includeOwn ? true : undefined)}
+            className={`flex items-center gap-1.5 border rounded-lg px-2.5 py-1 text-xs cursor-pointer select-none transition-all ${
+              includeOwn
+                ? 'bg-sky-950/40 border-sky-800 text-white font-medium shadow-xs'
+                : 'bg-[#161b22] border-[#30363d] text-[#8b949e] hover:border-[#8b949e] hover:text-[#c9d1d9]'
+            }`}
+          >
+            <span className="shrink-0 text-sky-400">
+              {includeOwn ? (
+                <CheckSquare className="w-3.5 h-3.5" />
+              ) : (
+                <Square className="w-3.5 h-3.5 text-[#8b949e]" />
+              )}
+            </span>
+            <span>自作PRを含む</span>
             {ownPrCount > 0 && (
               <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-purple-950/60 text-purple-300 border border-purple-800/60">
                 {ownPrCount}
               </span>
             )}
-          </label>
+          </button>
         </div>
 
         <span className="text-xs text-[#8b949e]">

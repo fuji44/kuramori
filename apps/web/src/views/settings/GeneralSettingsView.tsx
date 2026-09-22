@@ -9,6 +9,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { AppSettings, ReviewRule } from '../../types.ts';
+import { Checkbox } from '../../components/Checkbox.tsx';
 
 interface GeneralSettingsViewProps {
   settings: AppSettings;
@@ -281,43 +282,25 @@ export function GeneralSettingsView({
           </div>
 
           <div className="space-y-3">
-            <label className="flex items-start gap-3 cursor-pointer p-3 bg-[#0d1117] border border-[#30363d] rounded-lg hover:border-[#8b949e] transition-colors">
-              <input
-                type="checkbox"
-                checked={formSettings.autoQueue}
-                onChange={(e) =>
-                  setFormSettings({ ...formSettings, autoQueue: e.target.checked })
-                }
-                className="mt-0.5 rounded border-[#30363d] bg-[#161b22] text-sky-500 focus:ring-sky-500"
-              />
-              <div>
-                <span className="text-sm font-medium text-white block">
-                  新着 PR 検出時に自動でレビューを実行する
-                </span>
-                <span className="text-xs text-[#8b949e] block mt-0.5">
-                  GitHub Poller が新規 PR やコミットプッシュを検知した際、トリガー条件に合致するルールを自動投入します。
-                </span>
-              </div>
-            </label>
+            <Checkbox
+              variant="card"
+              checked={formSettings.autoQueue}
+              onChange={(checked) =>
+                setFormSettings({ ...formSettings, autoQueue: checked })
+              }
+              label="新着 PR 検出時に自動でレビューを実行する"
+              description="GitHub Poller が新規 PR やコミットプッシュを検知した際、トリガー条件に合致するルールを自動投入します。"
+            />
 
-            <label className="flex items-start gap-3 cursor-pointer p-3 bg-[#0d1117] border border-[#30363d] rounded-lg hover:border-[#8b949e] transition-colors">
-              <input
-                type="checkbox"
-                checked={formSettings.autoQueueIncludeOwn}
-                onChange={(e) =>
-                  setFormSettings({ ...formSettings, autoQueueIncludeOwn: e.target.checked })
-                }
-                className="mt-0.5 rounded border-[#30363d] bg-[#161b22] text-sky-500 focus:ring-sky-500"
-              />
-              <div>
-                <span className="text-sm font-medium text-white block">
-                  自分が作成した PR も自動キューイングに含める
-                </span>
-                <span className="text-xs text-[#8b949e] block mt-0.5">
-                  チェックを外すと、認証ユーザー自身が作成した PR は自動レビュー対象から除外されます。
-                </span>
-              </div>
-            </label>
+            <Checkbox
+              variant="card"
+              checked={formSettings.autoQueueIncludeOwn}
+              onChange={(checked) =>
+                setFormSettings({ ...formSettings, autoQueueIncludeOwn: checked })
+              }
+              label="自分が作成した PR も自動キューイングに含める"
+              description="チェックを外すと、認証ユーザー自身が作成した PR は自動レビュー対象から除外されます。"
+            />
           </div>
         </div>
 

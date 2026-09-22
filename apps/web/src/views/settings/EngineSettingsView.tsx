@@ -13,6 +13,7 @@ import {
   Check,
 } from 'lucide-react';
 import { AppSettings, EngineSettingsMap } from '../../types.ts';
+import { Checkbox } from '../../components/Checkbox.tsx';
 
 interface EngineSettingsViewProps {
   settings: AppSettings;
@@ -492,35 +493,21 @@ export function EngineSettingsView({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-            <label className="flex items-start gap-2.5 p-3 rounded-lg bg-[#0d1117] border border-[#30363d] cursor-pointer hover:border-[#8b949e] transition-colors">
-              <input
-                type="checkbox"
-                checked={engines.antigravity.sandbox}
-                onChange={(e) => updateAntigravity({ sandbox: e.target.checked })}
-                className="mt-0.5 rounded border-[#30363d] bg-[#161b22] text-sky-500"
-              />
-              <div>
-                <span className="text-xs font-semibold text-white block">ターミナルサンドボックス (--sandbox)</span>
-                <span className="text-[11px] text-[#8b949e] block mt-0.5">
-                  エージェントのシェル操作を制限されたセキュアなサンドボックス内で実行します。
-                </span>
-              </div>
-            </label>
+            <Checkbox
+              variant="card"
+              checked={engines.antigravity.sandbox}
+              onChange={(checked) => updateAntigravity({ sandbox: checked })}
+              label="ターミナルサンドボックス (--sandbox)"
+              description="エージェントのシェル操作を制限されたセキュアなサンドボックス内で実行します。"
+            />
 
-            <label className="flex items-start gap-2.5 p-3 rounded-lg bg-[#0d1117] border border-[#30363d] cursor-pointer hover:border-[#8b949e] transition-colors">
-              <input
-                type="checkbox"
-                checked={engines.antigravity.disableSlashCommands}
-                onChange={(e) => updateAntigravity({ disableSlashCommands: e.target.checked })}
-                className="mt-0.5 rounded border-[#30363d] bg-[#161b22] text-sky-500"
-              />
-              <div>
-                <span className="text-xs font-semibold text-white block">スキルの展開を抑止 (--disable-slash-commands)</span>
-                <span className="text-[11px] text-[#8b949e] block mt-0.5">
-                  プロンプト内のスラッシュコマンドや意図しないスキルの展開を無効化します。
-                </span>
-              </div>
-            </label>
+            <Checkbox
+              variant="card"
+              checked={engines.antigravity.disableSlashCommands}
+              onChange={(checked) => updateAntigravity({ disableSlashCommands: checked })}
+              label="スキルの展開を抑止 (--disable-slash-commands)"
+              description="プロンプト内のスラッシュコマンドや意図しないスキルの展開を無効化します。"
+            />
           </div>
 
           <div>
@@ -702,20 +689,13 @@ export function EngineSettingsView({
           </div>
 
           <div className="pt-1">
-            <label className="flex items-start gap-2.5 p-3 rounded-lg bg-[#0d1117] border border-[#30363d] cursor-pointer hover:border-[#8b949e] transition-colors">
-              <input
-                type="checkbox"
-                checked={engines.claudeCode.bare}
-                onChange={(e) => updateClaudeCode({ bare: e.target.checked })}
-                className="mt-0.5 rounded border-[#30363d] bg-[#161b22] text-sky-500"
-              />
-              <div>
-                <span className="text-xs font-semibold text-white block">軽量モード (--bare)</span>
-                <span className="text-[11px] text-[#8b949e] block mt-0.5">
-                  フックやプラグイン同期をスキップし、最小限のオーバーヘッドでレビューを実行します。
-                </span>
-              </div>
-            </label>
+            <Checkbox
+              variant="card"
+              checked={engines.claudeCode.bare}
+              onChange={(checked) => updateClaudeCode({ bare: checked })}
+              label="軽量モード (--bare)"
+              description="フックやプラグイン同期をスキップし、最小限のオーバーヘッドでレビューを実行します。"
+            />
           </div>
 
           <div>
