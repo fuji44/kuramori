@@ -44,15 +44,13 @@ export function Checkbox({
         onKeyDown={handleKeyDown}
         className={`p-3 rounded-lg border transition-all flex items-start gap-2.5 select-none ${
           disabled
-            ? 'opacity-50 cursor-not-allowed'
-            : 'cursor-pointer'
-        } ${
-          checked
-            ? 'bg-sky-950/30 border-sky-800/80 text-white shadow-xs'
-            : 'bg-[#0d1117] border-[#30363d] text-[#8b949e] hover:border-[#8b949e]/60'
+            ? 'opacity-40 cursor-not-allowed bg-[#0d1117]/50 border-[#21262d] text-[#6e7681]'
+            : checked
+            ? 'bg-sky-950/30 border-sky-800/80 text-white shadow-xs cursor-pointer'
+            : 'bg-[#0d1117] border-[#30363d] text-[#8b949e] hover:border-[#8b949e]/60 cursor-pointer'
         } ${className}`}
       >
-        <div className="mt-0.5 shrink-0 text-sky-400">
+        <div className={`mt-0.5 shrink-0 ${disabled ? 'text-[#6e7681]' : 'text-sky-400'}`}>
           {checked ? (
             <CheckSquare className="w-4 h-4" />
           ) : (
@@ -61,12 +59,16 @@ export function Checkbox({
         </div>
         <div className="min-w-0 flex-1">
           {label && (
-            <div className={`text-xs font-semibold ${checked ? 'text-white' : 'text-[#c9d1d9]'}`}>
+            <div className={`text-xs font-semibold ${
+              disabled ? 'text-[#8b949e]' : checked ? 'text-white' : 'text-[#c9d1d9]'
+            }`}>
               {label}
             </div>
           )}
           {description && (
-            <div className="text-[11px] text-[#8b949e] mt-0.5 leading-relaxed">
+            <div className={`text-[11px] mt-0.5 leading-relaxed ${
+              disabled ? 'text-[#6e7681]' : 'text-[#8b949e]'
+            }`}>
               {description}
             </div>
           )}
@@ -85,13 +87,13 @@ export function Checkbox({
       onKeyDown={handleKeyDown}
       className={`inline-flex items-center gap-2 text-xs select-none transition-colors ${
         disabled
-          ? 'opacity-50 cursor-not-allowed'
+          ? 'opacity-40 cursor-not-allowed text-[#6e7681]'
           : 'cursor-pointer hover:text-white'
       } ${
-        checked ? 'text-white font-medium' : 'text-[#c9d1d9]'
+        !disabled && (checked ? 'text-white font-medium' : 'text-[#c9d1d9]')
       } ${className}`}
     >
-      <span className="shrink-0 text-sky-400">
+      <span className={`shrink-0 ${disabled ? 'text-[#6e7681]' : 'text-sky-400'}`}>
         {checked ? (
           <CheckSquare className="w-4 h-4" />
         ) : (

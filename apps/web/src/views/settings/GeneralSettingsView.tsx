@@ -292,15 +292,26 @@ export function GeneralSettingsView({
               description="GitHub Poller が新規 PR やコミットプッシュを検知した際、トリガー条件に合致するルールを自動投入します。"
             />
 
-            <Checkbox
-              variant="card"
-              checked={formSettings.autoQueueIncludeOwn}
-              onChange={(checked) =>
-                setFormSettings({ ...formSettings, autoQueueIncludeOwn: checked })
-              }
-              label="自分が作成した PR も自動キューイングに含める"
-              description="チェックを外すと、認証ユーザー自身が作成した PR は自動レビュー対象から除外されます。"
-            />
+            <div
+              className={`transition-all duration-200 ml-4 pl-3 border-l-2 ${
+                formSettings.autoQueue ? 'border-sky-800/50' : 'border-[#30363d]/50'
+              }`}
+            >
+              <Checkbox
+                variant="card"
+                disabled={!formSettings.autoQueue}
+                checked={formSettings.autoQueueIncludeOwn}
+                onChange={(checked) =>
+                  setFormSettings({ ...formSettings, autoQueueIncludeOwn: checked })
+                }
+                label="自分が作成した PR も自動キューイングに含める"
+                description={
+                  !formSettings.autoQueue
+                    ? '自動レビューが無効なため、この設定は現在適用されません。'
+                    : 'チェックを外すと、認証ユーザー自身が作成した PR は自動レビュー対象から除外されます。'
+                }
+              />
+            </div>
           </div>
         </div>
 
