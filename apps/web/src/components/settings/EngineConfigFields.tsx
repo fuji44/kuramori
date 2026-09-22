@@ -32,8 +32,8 @@ export function AntigravityFields({
     values.outputFormat && values.outputFormat !== 'text',
     Boolean(values.jsonSchema?.trim()),
     Boolean(values.printTimeout?.trim()),
-    values.sandbox !== undefined,
-    values.disableSlashCommands !== undefined,
+    isOverride ? values.sandbox !== undefined : Boolean(values.sandbox),
+    isOverride ? values.disableSlashCommands !== undefined : Boolean(values.disableSlashCommands),
     Boolean(values.customArgs?.trim()),
   ].filter(Boolean).length;
 
@@ -61,10 +61,28 @@ export function AntigravityFields({
               min={10}
               max={3600}
               step={30}
-              value={values.timeoutSeconds ?? 900}
-              onChange={(e) =>
-                onChange({ timeoutSeconds: parseInt(e.target.value, 10) || 900 })
-              }
+              value={values.timeoutSeconds !== undefined ? values.timeoutSeconds : ''}
+              onChange={(e) => {
+                const raw = e.target.value;
+                if (raw === '') {
+                  onChange({ timeoutSeconds: '' as any });
+                } else {
+                  const num = parseInt(raw, 10);
+                  if (!isNaN(num)) {
+                    onChange({ timeoutSeconds: num });
+                  }
+                }
+              }}
+              onBlur={() => {
+                if (
+                  values.timeoutSeconds === '' ||
+                  values.timeoutSeconds === undefined ||
+                  isNaN(Number(values.timeoutSeconds)) ||
+                  Number(values.timeoutSeconds) <= 0
+                ) {
+                  onChange({ timeoutSeconds: 900 });
+                }
+              }}
               className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
             />
           </div>
@@ -127,12 +145,17 @@ export function AntigravityFields({
               min={10}
               max={3600}
               step={30}
-              value={values.timeoutSeconds ?? ''}
+              value={values.timeoutSeconds !== undefined ? values.timeoutSeconds : ''}
               onChange={(e) => {
-                const val = e.target.value.trim();
-                onChange({
-                  timeoutSeconds: val === '' ? undefined : parseInt(val, 10) || undefined,
-                });
+                const raw = e.target.value;
+                if (raw === '') {
+                  onChange({ timeoutSeconds: undefined });
+                } else {
+                  const num = parseInt(raw, 10);
+                  if (!isNaN(num)) {
+                    onChange({ timeoutSeconds: num });
+                  }
+                }
               }}
               placeholder="例: 900 (未指定時は継承)"
               className="w-full bg-[#161b22] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
@@ -389,7 +412,7 @@ export function ClaudeCodeFields({
     values.outputFormat && values.outputFormat !== 'text',
     Boolean(values.jsonSchema?.trim()),
     Boolean(values.allowedTools?.trim()),
-    values.bare !== undefined,
+    isOverride ? values.bare !== undefined : Boolean(values.bare),
     Boolean(values.customArgs?.trim()),
   ].filter(Boolean).length;
 
@@ -417,10 +440,28 @@ export function ClaudeCodeFields({
               min={10}
               max={3600}
               step={30}
-              value={values.timeoutSeconds ?? 900}
-              onChange={(e) =>
-                onChange({ timeoutSeconds: parseInt(e.target.value, 10) || 900 })
-              }
+              value={values.timeoutSeconds !== undefined ? values.timeoutSeconds : ''}
+              onChange={(e) => {
+                const raw = e.target.value;
+                if (raw === '') {
+                  onChange({ timeoutSeconds: '' as any });
+                } else {
+                  const num = parseInt(raw, 10);
+                  if (!isNaN(num)) {
+                    onChange({ timeoutSeconds: num });
+                  }
+                }
+              }}
+              onBlur={() => {
+                if (
+                  values.timeoutSeconds === '' ||
+                  values.timeoutSeconds === undefined ||
+                  isNaN(Number(values.timeoutSeconds)) ||
+                  Number(values.timeoutSeconds) <= 0
+                ) {
+                  onChange({ timeoutSeconds: 900 });
+                }
+              }}
               className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
             />
           </div>
@@ -492,12 +533,17 @@ export function ClaudeCodeFields({
               min={10}
               max={3600}
               step={30}
-              value={values.timeoutSeconds ?? ''}
+              value={values.timeoutSeconds !== undefined ? values.timeoutSeconds : ''}
               onChange={(e) => {
-                const val = e.target.value.trim();
-                onChange({
-                  timeoutSeconds: val === '' ? undefined : parseInt(val, 10) || undefined,
-                });
+                const raw = e.target.value;
+                if (raw === '') {
+                  onChange({ timeoutSeconds: undefined });
+                } else {
+                  const num = parseInt(raw, 10);
+                  if (!isNaN(num)) {
+                    onChange({ timeoutSeconds: num });
+                  }
+                }
               }}
               placeholder="例: 900 (未指定時は継承)"
               className="w-full bg-[#161b22] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
@@ -713,12 +759,25 @@ export function MockFields({ values, onChange, isOverride = false }: MockFieldsP
           min={0}
           max={60000}
           step={100}
-          value={values.delayMs ?? (isOverride ? '' : 500)}
+          value={values.delayMs !== undefined ? values.delayMs : ''}
           onChange={(e) => {
-            const val = e.target.value.trim();
-            onChange({
-              delayMs: val === '' ? (isOverride ? undefined : 500) : parseInt(val, 10) || 0,
-            });
+            const raw = e.target.value;
+            if (raw === '') {
+              onChange({ delayMs: (isOverride ? undefined : ('' as any)) });
+            } else {
+              const num = parseInt(raw, 10);
+              if (!isNaN(num)) {
+                onChange({ delayMs: num });
+              }
+            }
+          }}
+          onBlur={() => {
+            if (
+              !isOverride &&
+              (values.delayMs === '' || values.delayMs === undefined || isNaN(Number(values.delayMs)))
+            ) {
+              onChange({ delayMs: 500 });
+            }
           }}
           placeholder={
             isOverride

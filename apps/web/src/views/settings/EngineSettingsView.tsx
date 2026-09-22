@@ -161,7 +161,26 @@ export function EngineSettingsView({
     e.preventDefault();
     setSaving(true);
     try {
-      await onSaveSettings(formSettings);
+      const normalizedSettings: AppSettings = {
+        ...formSettings,
+        engineSettings: {
+          antigravity: {
+            ...engines.antigravity,
+            timeoutSeconds: Number(engines.antigravity.timeoutSeconds) || 900,
+          },
+          claudeCode: {
+            ...engines.claudeCode,
+            timeoutSeconds: Number(engines.claudeCode.timeoutSeconds) || 900,
+          },
+          mock: {
+            ...engines.mock,
+            delayMs:
+              Number(engines.mock.delayMs) >= 0 ? Number(engines.mock.delayMs) : 500,
+          },
+        },
+      };
+
+      await onSaveSettings(normalizedSettings);
       onShowSuccess('レビューエンジンの設定を保存しました');
     } catch {
       onShowError('設定の保存に失敗しました');
