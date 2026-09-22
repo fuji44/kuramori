@@ -28,16 +28,18 @@ export function AntigravityFields({
   const isAdvancedOpen = showAdvanced !== undefined ? showAdvanced : internalShowAdvanced;
   const toggleAdvanced = onToggleAdvanced ?? (() => setInternalShowAdvanced((prev) => !prev));
 
-  const advancedCount = [
-    Boolean(values.systemPrompt?.trim()),
-    values.inputFormat && values.inputFormat !== 'text',
-    values.outputFormat && values.outputFormat !== 'text',
-    Boolean(values.jsonSchema?.trim()),
-    Boolean(values.printTimeout?.trim()),
-    isOverride ? values.sandbox !== undefined : Boolean(values.sandbox),
-    isOverride ? values.disableSlashCommands !== undefined : Boolean(values.disableSlashCommands),
-    Boolean(values.customArgs?.trim()),
-  ].filter(Boolean).length;
+  const advancedCount = disabled
+    ? 0
+    : [
+        Boolean(values.systemPrompt?.trim()),
+        values.inputFormat && values.inputFormat !== 'text',
+        values.outputFormat && values.outputFormat !== 'text',
+        Boolean(values.jsonSchema?.trim()),
+        Boolean(values.printTimeout?.trim()),
+        isOverride ? values.sandbox !== undefined : Boolean(values.sandbox),
+        isOverride ? values.disableSlashCommands !== undefined : Boolean(values.disableSlashCommands),
+        Boolean(values.customArgs?.trim()),
+      ].filter(Boolean).length;
 
   const inputClass = `w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-[#090d13]`;
   const textareaClass = `w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded p-2.5 text-xs text-white focus:outline-none focus:border-sky-500 leading-relaxed resize-y font-mono disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-[#090d13]`;
@@ -429,15 +431,17 @@ export function ClaudeCodeFields({
   const isAdvancedOpen = showAdvanced !== undefined ? showAdvanced : internalShowAdvanced;
   const toggleAdvanced = onToggleAdvanced ?? (() => setInternalShowAdvanced((prev) => !prev));
 
-  const advancedCount = [
-    Boolean(values.systemPrompt?.trim()),
-    values.inputFormat && values.inputFormat !== 'text',
-    values.outputFormat && values.outputFormat !== 'text',
-    Boolean(values.jsonSchema?.trim()),
-    Boolean(values.allowedTools?.trim()),
-    isOverride ? values.bare !== undefined : Boolean(values.bare),
-    Boolean(values.customArgs?.trim()),
-  ].filter(Boolean).length;
+  const advancedCount = disabled
+    ? 0
+    : [
+        Boolean(values.systemPrompt?.trim()),
+        values.inputFormat && values.inputFormat !== 'text',
+        values.outputFormat && values.outputFormat !== 'text',
+        Boolean(values.jsonSchema?.trim()),
+        Boolean(values.allowedTools?.trim()),
+        isOverride ? values.bare !== undefined : Boolean(values.bare),
+        Boolean(values.customArgs?.trim()),
+      ].filter(Boolean).length;
 
   const inputClass = `w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-[#090d13]`;
   const textareaClass = `w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded p-2.5 text-xs text-white focus:outline-none focus:border-sky-500 leading-relaxed resize-y font-mono disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-[#090d13]`;
