@@ -422,12 +422,19 @@ export class ReviewQueue {
         continue;
       }
 
-      const defaultEngine = settings.defaultEngineProfileId || settings.defaultBackendId || settings.reviewEngine || 'antigravity';
+      const availableProfiles = settings.engineProfiles?.filter((profile) => profile.enabled !== false) ?? [];
+      const defaultProfile = availableProfiles.find(
+        (profile) => profile.id === settings.defaultEngineProfileId,
+      ) ?? availableProfiles.find((profile) => profile.isDefault) ?? availableProfiles[0];
+      const defaultEngine = defaultProfile?.id
+        ?? settings.defaultBackendId
+        ?? settings.reviewEngine
+        ?? 'antigravity';
       const ruleProfile = settings.engineProfiles?.find((profile) => profile.id === rule.engine);
-      const selectedProfile = settings.engineProfiles?.find((profile) => profile.id === engineProfileIdParam);
+      const selectedProfile = availableProfiles.find((profile) => profile.id === engineProfileIdParam);
       const resolvedEngine = selectedProfile
         ? selectedProfile.id
-        : rule.engine === 'default' || !ruleProfile
+        : rule.engine === 'default' || !ruleProfile || ruleProfile.enabled === false
         ? defaultEngine
         : rule.engine;
 

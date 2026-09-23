@@ -148,6 +148,7 @@ export interface BaseEngineProfileMeta {
   name: string;
   description?: string;
   isDefault?: boolean;
+  enabled?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

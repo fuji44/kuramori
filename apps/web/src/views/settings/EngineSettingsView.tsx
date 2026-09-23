@@ -15,6 +15,7 @@ import {
   Edit2,
   ArrowLeft,
   CheckCircle2,
+  Power,
   Save,
 } from 'lucide-react';
 import {
@@ -371,6 +372,7 @@ export function EngineSettingsView({
     try {
       const now = new Date().toISOString();
       const id = editingProfileId ?? `profile-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      const existingProfile = profiles.find((profile) => profile.id === id);
 
       let savedProfile: EngineProfile;
 
@@ -380,6 +382,7 @@ export function EngineSettingsView({
           name: formName.trim(),
           description: formDescription.trim() || undefined,
           isDefault: formIsDefault,
+          enabled: existingProfile?.enabled ?? true,
           engineType: 'claude-code',
           config: {
             ...formClaudeConfig,
@@ -395,6 +398,7 @@ export function EngineSettingsView({
           name: formName.trim(),
           description: formDescription.trim() || undefined,
           isDefault: formIsDefault,
+          enabled: existingProfile?.enabled ?? true,
           engineType: 'antigravity',
           config: {
             ...formAgyConfig,
@@ -409,6 +413,7 @@ export function EngineSettingsView({
           name: formName.trim(),
           description: formDescription.trim() || undefined,
           isDefault: formIsDefault,
+          enabled: existingProfile?.enabled ?? true,
           engineType: 'mock',
           config: {
             delayMs: Number(formMockConfig.delayMs) >= 0 ? Number(formMockConfig.delayMs) : 500,
@@ -469,22 +474,34 @@ export function EngineSettingsView({
     }
     const target = profiles.find((p) => p.id === profileId);
     if (!target) return;
+    const isCurrentDefault = target.isDefault || formSettings.defaultEngineProfileId === profileId;
 
     let nextProfiles = profiles.filter((p) => p.id !== profileId);
     let nextDefaultId = formSettings.defaultEngineProfileId;
 
-    if (target.isDefault && nextProfiles.length > 0) {
-      nextProfiles = nextProfiles.map((p, idx) => ({
+    if (isCurrentDefault && nextProfiles.length > 0) {
+      const nextDefaultProfile = nextProfiles.find((profile) => profile.enabled !== false);
+      if (!nextDefaultProfile) {
+        onShowError('有効な実行プロファイルを少なくとも1つ残してください');
+        return;
+      }
+      nextProfiles = nextProfiles.map((p) => ({
         ...p,
-        isDefault: idx === 0,
+        isDefault: p.id === nextDefaultProfile.id,
       }));
-      nextDefaultId = nextProfiles[0].id;
+      nextDefaultId = nextDefaultProfile.id;
     }
 
     const updatedSettings: AppSettings = {
       ...formSettings,
       engineProfiles: nextProfiles,
       defaultEngineProfileId: nextDefaultId,
+      ...(isCurrentDefault
+        ? {
+            defaultBackendId: nextProfiles.find((profile) => profile.id === nextDefaultId)?.engineType,
+            reviewEngine: nextProfiles.find((profile) => profile.id === nextDefaultId)?.engineType,
+          }
+        : {}),
     };
 
     setFormSettings(updatedSettings);
@@ -500,6 +517,7 @@ export function EngineSettingsView({
       id: newId,
       name: `${profile.name} (Copy)`,
       isDefault: false,
+      enabled: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -517,7 +535,7 @@ export function EngineSettingsView({
 
   const handleSetDefaultProfile = async (profileId: string) => {
     const target = profiles.find((p) => p.id === profileId);
-    if (!target) return;
+    if (!target || target.enabled === false) return;
 
     const nextProfiles = profiles.map((p) => ({
       ...p,
@@ -535,6 +553,48 @@ export function EngineSettingsView({
     setFormSettings(updatedSettings);
     await onSaveSettings(updatedSettings);
     onShowSuccess(`「${target.name}」をシステム既定の実行プロファイルに設定しました`);
+  };
+
+  const handleToggleProfileEnabled = async (profileId: string) => {
+    const target = profiles.find((profile) => profile.id === profileId);
+    if (!target) return;
+
+    const enabled = target.enabled === false;
+    let nextProfiles = profiles.map((profile) =>
+      profile.id === profileId ? { ...profile, enabled } : profile
+    );
+    const isCurrentDefault = target.isDefault || formSettings.defaultEngineProfileId === profileId;
+    let nextSettings: AppSettings = {
+      ...formSettings,
+      engineProfiles: nextProfiles,
+    };
+
+    if (!enabled) {
+      const nextDefaultProfile = profiles.find(
+        (profile) => profile.id !== profileId && profile.enabled !== false,
+      );
+      if (!nextDefaultProfile) {
+        onShowError('有効な実行プロファイルを少なくとも1つ残してください');
+        return;
+      }
+      if (isCurrentDefault) {
+        nextProfiles = nextProfiles.map((profile) => ({
+          ...profile,
+          isDefault: profile.id === nextDefaultProfile.id,
+        }));
+        nextSettings = {
+          ...nextSettings,
+          engineProfiles: nextProfiles,
+          defaultEngineProfileId: nextDefaultProfile.id,
+          defaultBackendId: nextDefaultProfile.engineType,
+          reviewEngine: nextDefaultProfile.engineType,
+        };
+      }
+    }
+
+    setFormSettings(nextSettings);
+    await onSaveSettings(nextSettings);
+    onShowSuccess(`実行プロファイル「${target.name}」を${enabled ? '有効' : '無効'}にしました`);
   };
 
   const handleTest = async (
@@ -867,6 +927,7 @@ export function EngineSettingsView({
         ) : (
           profiles.map((p) => {
           const isDef = Boolean(p.isDefault);
+          const isEnabled = p.enabled !== false;
           const model = p.engineType === 'mock' ? 'N/A' : (p.config as any).model;
           const isThisTesting = testingProfileId === p.id;
           const result = testResults[p.id];
@@ -875,6 +936,7 @@ export function EngineSettingsView({
             <SettingCard
               key={p.id}
               isDefault={isDef}
+              disabled={!isEnabled}
               title={p.name}
               badges={
                 <>
@@ -897,6 +959,7 @@ export function EngineSettingsView({
                       既定
                     </SettingBadge>
                   )}
+                  {!isEnabled && <SettingBadge variant="muted">無効</SettingBadge>}
                 </>
               }
               description={p.description}
@@ -915,26 +978,35 @@ export function EngineSettingsView({
                   </div>
                 </>
               }
-              actions={
+                actions={
                 <>
-                  {/* 状態・トグル系グループ */}
-                  <div className="flex items-center gap-1.5">
-                    {/* テスト実行ボタン */}
-                    <EngineTestButton
-                      isTesting={isThisTesting}
-                      onTest={(mode) => handleTest(p.id, p.engineType, p.config, mode)}
-                    />
+                  {/* テスト実行ボタン */}
+                  <EngineTestButton
+                    isTesting={isThisTesting}
+                    onTest={(mode) => handleTest(p.id, p.engineType, p.config, mode)}
+                  />
 
+                  {/* 状態・トグル系グループ */}
+                  <SettingButtonGroup>
                     {/* 既定トグルボタン */}
                     <SettingActionButton
                       active={isDef}
-                      disabled={isDef}
+                      disabled={isDef || !isEnabled}
                       onClick={() => handleSetDefaultProfile(p.id)}
                       title={isDef ? 'システム既定の実行プロファイルです' : 'この実行プロファイルをシステム既定にする'}
                     >
                       <CheckCircle2 className={`w-3.5 h-3.5 ${isDef ? 'fill-emerald-400/20' : ''}`} />
                     </SettingActionButton>
-                  </div>
+
+                    <SettingActionButton
+                      active={isEnabled}
+                      onClick={() => handleToggleProfileEnabled(p.id)}
+                      title={isEnabled ? '実行プロファイルを無効にする' : '実行プロファイルを有効にする'}
+                      aria-label={isEnabled ? '実行プロファイルを無効にする' : '実行プロファイルを有効にする'}
+                    >
+                      <Power className="w-3.5 h-3.5" />
+                    </SettingActionButton>
+                  </SettingButtonGroup>
 
                   {/* 管理操作系グループ */}
                   {confirmDeleteProfileId === p.id ? (

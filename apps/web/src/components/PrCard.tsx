@@ -27,7 +27,6 @@ interface PrCardProps {
   item: ReviewItem;
   rules?: ReviewRule[];
   defaultRuleIds?: string[];
-  enabledEngines?: string[];
   engineProfiles?: EngineProfile[];
   isSelected?: boolean;
   isHighlighted?: boolean;
@@ -42,7 +41,6 @@ export function PrCard({
   item,
   rules = [],
   defaultRuleIds,
-  enabledEngines,
   engineProfiles = [],
   isSelected = false,
   isHighlighted = false,
@@ -64,6 +62,15 @@ export function PrCard({
       setSelectedRuleIds(new Set(rules.filter((r) => r.enabled).map((r) => r.id)));
     }
   }, [rules, defaultRuleIds]);
+
+  useEffect(() => {
+    if (
+      selectedEngine !== 'default' &&
+      !engineProfiles.some((profile) => profile.id === selectedEngine && profile.enabled !== false)
+    ) {
+      setSelectedEngine('default');
+    }
+  }, [engineProfiles, selectedEngine]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -440,9 +447,9 @@ export function PrCard({
                   className="bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-sky-500 min-w-0 flex-1 truncate"
                 >
                   <option value="default">各ルールの設定に従う</option>
-                  {engineProfiles.map((profile) => (
+                  {engineProfiles.filter((profile) => profile.enabled !== false).map((profile) => (
                     <option key={profile.id} value={profile.id}>
-                      {profile.name} ({profile.engineType}){enabledEngines && !enabledEngines.includes(profile.engineType) ? ' (無効化中)' : ''}
+                      {profile.name}
                     </option>
                   ))}
                 </select>

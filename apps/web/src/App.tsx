@@ -504,7 +504,6 @@ export default function App() {
             items={items}
             rules={rules}
             defaultRuleIds={settings.defaultRuleIds}
-            enabledEngines={settings.enabledEngines}
             engineProfiles={settings.engineProfiles}
             loading={loading}
             refreshing={refreshing}

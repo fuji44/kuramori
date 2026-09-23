@@ -18,7 +18,6 @@ interface PrListViewProps {
   onOpenLog: (e: React.MouseEvent, jobId: string, error?: string | null) => void;
   onRunReview: (e: React.MouseEvent, id: string, ruleIds?: string[], engine?: string) => void;
   onSelectReport: (reportId: string, prTitle: string) => void;
-  enabledEngines?: string[];
   engineProfiles?: EngineProfile[];
   onRefresh?: () => void;
   onShowSuccess: (msg: string) => void;
@@ -36,7 +35,6 @@ export function PrListView({
   onOpenLog,
   onRunReview,
   onSelectReport,
-  enabledEngines,
   engineProfiles,
   onRefresh,
   onShowSuccess,
@@ -310,7 +308,6 @@ export function PrListView({
                 item={item}
                 rules={rules}
                 defaultRuleIds={defaultRuleIds}
-                enabledEngines={enabledEngines}
                 engineProfiles={engineProfiles}
                 isHighlighted={highlightedAnchor === anchorId}
                 onOpenLog={onOpenLog}

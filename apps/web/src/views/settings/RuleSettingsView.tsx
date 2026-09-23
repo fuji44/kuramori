@@ -181,6 +181,12 @@ export function RuleSettingsView({
   };
 
   const isFormMode = isCreatingRule || editingRuleId !== null;
+  const defaultEngineProfile = settings?.engineProfiles?.find(
+    (profile) => profile.id === settings.defaultEngineProfileId,
+  ) ?? settings?.engineProfiles?.find((profile) => profile.isDefault);
+  const disabledSelectedProfile = settings?.engineProfiles?.find(
+    (profile) => profile.id === ruleForm.engine && profile.enabled === false,
+  );
 
   if (isFormMode) {
     return (
@@ -265,18 +271,21 @@ export function RuleSettingsView({
               onChange={(e) => setRuleForm({ ...ruleForm, engine: e.target.value })}
               className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500"
             >
-              <option value="default">システム既定の実行プロファイルに従う</option>
+              <option value="default">
+                システム既定（{defaultEngineProfile?.name ?? '未設定'}）
+              </option>
 
-              {settings?.engineProfiles && settings.engineProfiles.length > 0 && (
-                <optgroup label="実行プロファイル">
-                  {settings.engineProfiles.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({p.engineType}){p.isDefault ? ' ★既定' : ''}{settings.enabledEngines && !settings.enabledEngines.includes(p.engineType) ? ' (無効化中)' : ''}
-                    </option>
-                  ))}
-                </optgroup>
+              {disabledSelectedProfile && (
+                <option value={disabledSelectedProfile.id} disabled>
+                  {disabledSelectedProfile.name}（無効）
+                </option>
               )}
 
+              {settings?.engineProfiles?.filter((profile) => profile.enabled !== false).map((profile) => (
+                <option key={profile.id} value={profile.id}>
+                  {profile.name}
+                </option>
+              ))}
             </select>
           </div>
 
