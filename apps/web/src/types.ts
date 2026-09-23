@@ -123,6 +123,7 @@ export interface AppSettings {
   defaultRuleIds: string[];
   defaultRuleId?: string;
   defaultBackendId: string;
+  enabledEngines?: string[];
   globalMaxConcurrency: number;
   backendMaxConcurrency: {
     antigravity: number;

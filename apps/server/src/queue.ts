@@ -38,6 +38,7 @@ const DEFAULT_APP_SETTINGS: AppSettings = {
   defaultRuleIds: ['preset-correctness'],
   defaultRuleId: 'preset-correctness',
   defaultBackendId: 'antigravity',
+  enabledEngines: ['antigravity', 'claude-code', 'mock'],
   globalMaxConcurrency: 2,
   backendMaxConcurrency: { antigravity: 2, claudeCode: 1, mock: 5 },
   engineSettings: {
@@ -213,7 +214,7 @@ export class ReviewQueue {
     return jobIds.length > 0 ? jobIds[0] : '';
   }
 
-  async enqueueRules(requestId: string, ruleIdsParam?: string | string[]): Promise<string[]> {
+  async enqueueRules(requestId: string, ruleIdsParam?: string | string[], engineOverrideParam?: string): Promise<string[]> {
     const requests = await this.db
       .select()
       .from(reviewRequestsTable)
@@ -388,7 +389,9 @@ export class ReviewQueue {
       }
 
       // ルールの engine 解決 ('default' の場合は settings.defaultBackendId)
-      let resolvedEngine = rule.engine;
+      let resolvedEngine = (engineOverrideParam && engineOverrideParam !== 'default')
+        ? engineOverrideParam
+        : rule.engine;
       if (!resolvedEngine || resolvedEngine === 'default') {
         resolvedEngine = settings.defaultBackendId || settings.reviewEngine || 'antigravity';
       }

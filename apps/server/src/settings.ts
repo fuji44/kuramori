@@ -26,6 +26,7 @@ export interface AppSettings {
   defaultRuleIds: string[];
   defaultRuleId?: string;
   defaultBackendId: string;
+  enabledEngines: string[];
   globalMaxConcurrency: number;
   backendMaxConcurrency: {
     antigravity: number;
@@ -44,6 +45,7 @@ export class SettingsService {
   private readonly defaultClaudeBin: string;
   private readonly defaultRuleIds: string[];
   private readonly defaultBackendId: string;
+  private readonly defaultEnabledEngines: string[];
   private readonly defaultGlobalMaxConcurrency: number;
   private readonly defaultBackendMaxConcurrency: {
     antigravity: number;
@@ -79,6 +81,7 @@ export class SettingsService {
     this.defaultClaudeBin = Deno.env.get('CLAUDE_BIN') ?? 'claude';
     this.defaultRuleIds = ['preset-correctness'];
     this.defaultBackendId = 'antigravity';
+    this.defaultEnabledEngines = ['antigravity', 'claude-code', 'mock'];
     this.defaultGlobalMaxConcurrency = 2;
     this.defaultBackendMaxConcurrency = {
       antigravity: 2,
@@ -162,6 +165,19 @@ export class SettingsService {
 
     const defaultBackendId = map.get('default_backend_id') ?? this.defaultBackendId;
 
+    let enabledEngines = this.defaultEnabledEngines;
+    const enabledEnginesVal = map.get('enabled_engines');
+    if (enabledEnginesVal !== undefined) {
+      try {
+        const parsed = JSON.parse(enabledEnginesVal);
+        if (Array.isArray(parsed)) {
+          enabledEngines = parsed;
+        }
+      } catch {
+        // Fallback to default
+      }
+    }
+
     const globalMaxConcurrencyVal = map.get('global_max_concurrency');
     const parsedGlobal = globalMaxConcurrencyVal !== undefined ? Number.parseInt(globalMaxConcurrencyVal, 10) : NaN;
     const globalMaxConcurrency = !Number.isNaN(parsedGlobal) && parsedGlobal > 0
@@ -231,6 +247,7 @@ export class SettingsService {
       defaultRuleIds,
       defaultRuleId: defaultRuleIds[0] ?? legacyRuleId,
       defaultBackendId,
+      enabledEngines,
       globalMaxConcurrency,
       backendMaxConcurrency,
       engineSettings,
@@ -282,6 +299,9 @@ export class SettingsService {
     }
     if (updates.defaultBackendId !== undefined) {
       await upsert('default_backend_id', updates.defaultBackendId);
+    }
+    if (updates.enabledEngines !== undefined) {
+      await upsert('enabled_engines', JSON.stringify(updates.enabledEngines));
     }
     if (updates.globalMaxConcurrency !== undefined) {
       await upsert('global_max_concurrency', updates.globalMaxConcurrency.toString());

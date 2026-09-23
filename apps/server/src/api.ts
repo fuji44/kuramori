@@ -95,6 +95,7 @@ export function createApi(deps: ApiDependencies) {
   app.post('/api/reviews/:id/run', async (c) => {
     const id = decodeURIComponent(c.req.param('id'));
     let ruleIds: string[] | undefined;
+    let engine: string | undefined;
     try {
       const body = await c.req.json();
       if (body.ruleIds && Array.isArray(body.ruleIds)) {
@@ -102,11 +103,14 @@ export function createApi(deps: ApiDependencies) {
       } else if (body.ruleId && typeof body.ruleId === 'string') {
         ruleIds = [body.ruleId];
       }
+      if (typeof body.engine === 'string' && body.engine.trim()) {
+        engine = body.engine.trim();
+      }
     } catch {
       // Body is optional
     }
 
-    const jobIds = await deps.queue.enqueueRules(id, ruleIds);
+    const jobIds = await deps.queue.enqueueRules(id, ruleIds, engine);
     return c.json({ success: true, jobIds, jobId: jobIds[0] ?? '' });
   });
 
@@ -560,6 +564,125 @@ export function createApi(deps: ApiDependencies) {
       return c.json(updated);
     } catch {
       return c.json({ error: 'Invalid JSON payload' }, 400);
+    }
+  });
+
+  // Engine connection and execution test endpoint
+  app.post('/api/engines/:engine/test', async (c) => {
+    const engine = c.req.param('engine');
+    let body: any = {};
+    try {
+      body = await c.req.json();
+    } catch {
+      // Body is optional
+    }
+
+    const mode = body?.mode === 'execution' ? 'execution' : 'version';
+
+    if (engine === 'mock') {
+      if (mode === 'execution') {
+        const settings = await deps.settingsService.getAllSettings();
+        const delay = settings.engineSettings?.mock?.delayMs ?? 500;
+        await new Promise((r) => setTimeout(r, Math.min(delay, 1500)));
+        return c.json({
+          success: true,
+          mode: 'execution',
+          version: 'mock-engine 1.0.0',
+          message: 'Mockエンジンの実行検証（推論テスト）に成功しました。',
+          output: 'OK (Mock engine simulation passed)',
+        });
+      }
+      return c.json({
+        success: true,
+        mode: 'version',
+        version: 'mock-engine 1.0.0',
+        message: 'Mockエンジンは正常に利用可能です。',
+      });
+    }
+
+    if (engine !== 'antigravity' && engine !== 'claude-code') {
+      return c.json({ error: `Unknown engine: ${engine}` }, 400);
+    }
+
+    const settings = await deps.settingsService.getAllSettings();
+    let binPath = '';
+    let model = '';
+    let effort = '';
+    if (engine === 'antigravity') {
+      binPath = body?.binPath || settings.engineSettings?.antigravity?.binPath || settings.agyBin || 'agy';
+      model = body?.model || settings.engineSettings?.antigravity?.model || '';
+      effort = body?.effort || settings.engineSettings?.antigravity?.effort || '';
+    } else {
+      binPath = body?.binPath || settings.engineSettings?.claudeCode?.binPath || settings.claudeBin || 'claude';
+      model = body?.model || settings.engineSettings?.claudeCode?.model || '';
+      effort = body?.effort || settings.engineSettings?.claudeCode?.effort || '';
+    }
+
+    const isExecution = mode === 'execution';
+    const timeoutMs = isExecution ? 30000 : 5000;
+
+    const args = isExecution
+      ? ['-p', 'Respond with "review-base test OK"', '--dangerously-skip-permissions']
+      : ['--version'];
+
+    if (isExecution) {
+      if (model) {
+        args.push('--model', model);
+      }
+      if (effort) {
+        args.push('--effort', effort);
+      }
+    }
+
+    try {
+      const cmd = new Deno.Command(binPath, {
+        args,
+        stdin: 'null',
+        stdout: 'piped',
+        stderr: 'piped',
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      const output = await cmd.output();
+      const stdout = new TextDecoder().decode(output.stdout).trim();
+      const stderr = new TextDecoder().decode(output.stderr).trim();
+
+      if (output.success) {
+        return c.json({
+          success: true,
+          mode,
+          version: !isExecution ? (stdout || 'Version output empty') : undefined,
+          output: isExecution ? (stdout || 'OK') : undefined,
+          message: isExecution
+            ? `${engine} の実行検証（推論テスト）に成功しました。`
+            : `${engine} CLI の接続テストに成功しました。`,
+        });
+      } else {
+        return c.json({
+          success: false,
+          mode,
+          error: stderr || stdout || `CLI command exited with status ${output.code}`,
+        });
+      }
+    } catch (err: any) {
+      if (err.name === 'TimeoutError') {
+        return c.json({
+          success: false,
+          mode,
+          error: `${isExecution ? '推論実行テスト' : '接続テスト'}がタイムアウトしました (${timeoutMs / 1000}秒超過): ${binPath}`,
+        });
+      }
+      if (err instanceof Deno.errors.NotFound) {
+        return c.json({
+          success: false,
+          mode,
+          error: `指定されたバイナリが見つかりません: ${binPath}`,
+        });
+      }
+      return c.json({
+        success: false,
+        mode,
+        error: `実行エラー: ${err.message || String(err)}`,
+      });
     }
   });
 

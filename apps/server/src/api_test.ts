@@ -383,6 +383,56 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
     const resGetDeletedTrigger = await api.request('/api/triggers/test-trigger');
     assertEquals(resGetDeletedTrigger.status, 404);
 
+    // 15. Test engine test endpoint
+    const resMockTest = await api.request('/api/engines/mock/test', { method: 'POST' });
+    assertEquals(resMockTest.status, 200);
+    const mockTestData = await resMockTest.json();
+    assertEquals(mockTestData.success, true);
+    assertEquals(typeof mockTestData.version, 'string');
+
+    const resMockExecTest = await api.request('/api/engines/mock/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'execution' }),
+    });
+    assertEquals(resMockExecTest.status, 200);
+    const mockExecTestData = await resMockExecTest.json();
+    assertEquals(mockExecTestData.success, true);
+    assertEquals(mockExecTestData.mode, 'execution');
+    assertEquals(typeof mockExecTestData.output, 'string');
+
+    const resInvalidEngine = await api.request('/api/engines/unknown/test', { method: 'POST' });
+    assertEquals(resInvalidEngine.status, 400);
+
+    const resAgyTestNotFound = await api.request('/api/engines/antigravity/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ binPath: '/non/existent/agy/path', mode: 'execution', effort: 'high' }),
+    });
+    assertEquals(resAgyTestNotFound.status, 200);
+    const agyTestData = await resAgyTestNotFound.json();
+    assertEquals(agyTestData.success, false);
+    assertEquals(agyTestData.mode, 'execution');
+    assertEquals(typeof agyTestData.error, 'string');
+
+    // 16. Test enabledEngines in settings
+    const resSettingsBefore = await api.request('/api/settings');
+    assertEquals(resSettingsBefore.status, 200);
+    const settingsBeforeData = await resSettingsBefore.json();
+    assertEquals(Array.isArray(settingsBeforeData.enabledEngines), true);
+    assertEquals(settingsBeforeData.enabledEngines.includes('antigravity'), true);
+
+    const resUpdateSettingsEngines = await api.request('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        enabledEngines: ['antigravity', 'mock'],
+      }),
+    });
+    assertEquals(resUpdateSettingsEngines.status, 200);
+    const updatedSettingsData = await resUpdateSettingsEngines.json();
+    assertEquals(updatedSettingsData.enabledEngines, ['antigravity', 'mock']);
+
     client.close();
   } finally {
     await Deno.remove(tempDir, { recursive: true });
