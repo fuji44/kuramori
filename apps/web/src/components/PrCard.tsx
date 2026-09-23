@@ -20,7 +20,7 @@ import {
   CheckSquare,
   Square,
 } from 'lucide-react';
-import { ReviewItem, ReviewRule } from '../types.ts';
+import { EngineProfile, ReviewItem, ReviewRule } from '../types.ts';
 import { getPrAnchorId } from '../utils/anchor.ts';
 
 interface PrCardProps {
@@ -28,6 +28,7 @@ interface PrCardProps {
   rules?: ReviewRule[];
   defaultRuleIds?: string[];
   enabledEngines?: string[];
+  engineProfiles?: EngineProfile[];
   isSelected?: boolean;
   isHighlighted?: boolean;
   onOpenLog: (e: React.MouseEvent, jobId: string, error?: string | null) => void;
@@ -42,6 +43,7 @@ export function PrCard({
   rules = [],
   defaultRuleIds,
   enabledEngines,
+  engineProfiles = [],
   isSelected = false,
   isHighlighted = false,
   onOpenLog,
@@ -429,24 +431,20 @@ export function PrCard({
                 </div>
               </div>
 
-              {/* 実行エンジン選択 */}
+              {/* 実行プロファイル選択 */}
               <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#30363d]">
-                <label className="text-xs text-[#8b949e] font-medium shrink-0">実行エンジン:</label>
+                <label className="text-xs text-[#8b949e] font-medium shrink-0">実行プロファイル:</label>
                 <select
                   value={selectedEngine}
                   onChange={(e) => setSelectedEngine(e.target.value)}
                   className="bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-sky-500 min-w-0 flex-1 truncate"
                 >
-                  <option value="default">default (各ルールの設定に従う)</option>
-                  <option value="antigravity">
-                    antigravity{enabledEngines && !enabledEngines.includes('antigravity') ? ' (無効化中)' : ''}
-                  </option>
-                  <option value="claude-code">
-                    claude-code{enabledEngines && !enabledEngines.includes('claude-code') ? ' (無効化中)' : ''}
-                  </option>
-                  <option value="mock">
-                    mock{enabledEngines && !enabledEngines.includes('mock') ? ' (無効化中)' : ''}
-                  </option>
+                  <option value="default">各ルールの設定に従う</option>
+                  {engineProfiles.map((profile) => (
+                    <option key={profile.id} value={profile.id}>
+                      {profile.name} ({profile.engineType}){enabledEngines && !enabledEngines.includes(profile.engineType) ? ' (無効化中)' : ''}
+                    </option>
+                  ))}
                 </select>
               </div>
 

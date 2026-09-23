@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { RefreshCw, CheckCircle2, Filter, Link2, CheckSquare, Square } from 'lucide-react';
-import { ReviewItem, ReviewRule } from '../types.ts';
+import { EngineProfile, ReviewItem, ReviewRule } from '../types.ts';
 import { SearchQueryBar } from '../components/SearchQueryBar.tsx';
 import { PrCard } from '../components/PrCard.tsx';
 import { filterByGitHubQuery } from '../utils/query-parser.ts';
@@ -19,6 +19,7 @@ interface PrListViewProps {
   onRunReview: (e: React.MouseEvent, id: string, ruleIds?: string[], engine?: string) => void;
   onSelectReport: (reportId: string, prTitle: string) => void;
   enabledEngines?: string[];
+  engineProfiles?: EngineProfile[];
   onRefresh?: () => void;
   onShowSuccess: (msg: string) => void;
   onShowError: (msg: string) => void;
@@ -36,6 +37,7 @@ export function PrListView({
   onRunReview,
   onSelectReport,
   enabledEngines,
+  engineProfiles,
   onRefresh,
   onShowSuccess,
   onShowError,
@@ -309,6 +311,7 @@ export function PrListView({
                 rules={rules}
                 defaultRuleIds={defaultRuleIds}
                 enabledEngines={enabledEngines}
+                engineProfiles={engineProfiles}
                 isHighlighted={highlightedAnchor === anchorId}
                 onOpenLog={onOpenLog}
                 onRunReview={onRunReview}

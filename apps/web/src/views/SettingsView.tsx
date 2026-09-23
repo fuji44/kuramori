@@ -88,7 +88,7 @@ export function SettingsView({
           >
             <div className="flex items-center gap-2.5">
               <Cpu className="w-4 h-4 text-sky-400" />
-              <span>エンジン</span>
+              <span>実行プロファイル</span>
             </div>
             <span className="ml-2 px-1.5 py-0.2 rounded-full bg-[#0d1117] text-sky-400 text-[10px] font-mono border border-sky-900/60">
               {settings.engineProfiles && settings.engineProfiles.length > 0
@@ -160,7 +160,6 @@ export function SettingsView({
             rules={rules}
             settings={settings}
             defaultRuleIds={settings.defaultRuleIds || (settings.defaultRuleId ? [settings.defaultRuleId] : [])}
-            defaultBackendId={settings.defaultBackendId || settings.reviewEngine || 'antigravity'}
             onCreateRule={onCreateRule}
             onUpdateRule={onUpdateRule}
             onDeleteRule={onDeleteRule}
@@ -174,6 +173,7 @@ export function SettingsView({
           <TriggerSettingsView
             triggers={triggers}
             rules={rules}
+            settings={settings}
             knownRepositories={knownRepositories}
             onCreateTrigger={onCreateTrigger}
             onUpdateTrigger={onUpdateTrigger}

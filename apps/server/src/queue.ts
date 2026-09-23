@@ -24,7 +24,6 @@ import {
   type ReviewRule,
   type ReviewTrigger,
   type RuleResultFinding,
-  resolveEngineConfig,
 } from '@review-base/core';
 import type { SettingsService, AppSettings } from './settings.ts';
 import { aggregateRuleResults } from './aggregator.ts';
@@ -117,8 +116,7 @@ export class ReviewQueue {
 
   private resolveEngineInstance(
     engineName: string,
-    settings: AppSettings,
-    rule?: ReviewRule
+    settings: AppSettings
   ): ReviewEngine {
     if (this.defaultEngine) {
       return this.defaultEngine;
@@ -130,7 +128,7 @@ export class ReviewQueue {
         return new MockReviewEngine({ delayMs: matchedProfile.config.delayMs });
       }
       if (matchedProfile.engineType === 'claude-code') {
-        const cfg = resolveEngineConfig(matchedProfile.config, rule?.engineOverride);
+        const cfg = matchedProfile.config;
         return new ClaudeCodeEngine({
           claudeBinaryPath: cfg.binPath || settings.claudeBin,
           model: cfg.model,
@@ -150,7 +148,7 @@ export class ReviewQueue {
         });
       }
       if (matchedProfile.engineType === 'antigravity') {
-        const cfg = resolveEngineConfig(matchedProfile.config, rule?.engineOverride);
+        const cfg = matchedProfile.config;
         return new AntigravityEngine({
           agyBinaryPath: cfg.binPath || settings.agyBin,
           model: cfg.model,
@@ -185,7 +183,7 @@ export class ReviewQueue {
         jsonSchema: '',
         customArgs: '',
       };
-      const cfg = resolveEngineConfig(baseCfg, rule?.engineOverride);
+      const cfg = baseCfg;
       return new ClaudeCodeEngine({
         claudeBinaryPath: cfg.binPath || settings.claudeBin,
         model: cfg.model,
@@ -219,7 +217,7 @@ export class ReviewQueue {
       jsonSchema: '',
       customArgs: '',
     };
-    const cfg = resolveEngineConfig(baseCfg, rule?.engineOverride);
+    const cfg = baseCfg;
     return new AntigravityEngine({
       agyBinaryPath: cfg.binPath || settings.agyBin,
       model: cfg.model,
@@ -263,7 +261,7 @@ export class ReviewQueue {
     return jobIds.length > 0 ? jobIds[0] : '';
   }
 
-  async enqueueRules(requestId: string, ruleIdsParam?: string | string[], engineOverrideParam?: string): Promise<string[]> {
+  async enqueueRules(requestId: string, ruleIdsParam?: string | string[], engineProfileIdParam?: string): Promise<string[]> {
     const requests = await this.db
       .select()
       .from(reviewRequestsTable)
@@ -308,14 +306,6 @@ export class ReviewQueue {
       } catch {
         // ignore
       }
-      let engineOverride = undefined;
-      if (r.engineOverrideJson) {
-        try {
-          engineOverride = JSON.parse(r.engineOverrideJson);
-        } catch {
-          // ignore
-        }
-      }
       return {
         id: r.id,
         name: r.name,
@@ -323,7 +313,6 @@ export class ReviewQueue {
         category: r.category,
         engine: r.engine,
         instructions: r.instructions,
-        engineOverride,
         trigger,
         enabled: Boolean(r.enabled),
         createdAt: r.createdAt,
@@ -437,13 +426,14 @@ export class ReviewQueue {
         continue;
       }
 
-      // ルールの engine 解決 ('default' の場合は settings.defaultBackendId)
-      let resolvedEngine = (engineOverrideParam && engineOverrideParam !== 'default')
-        ? engineOverrideParam
+      const defaultEngine = settings.defaultEngineProfileId || settings.defaultBackendId || settings.reviewEngine || 'antigravity';
+      const ruleProfile = settings.engineProfiles?.find((profile) => profile.id === rule.engine);
+      const selectedProfile = settings.engineProfiles?.find((profile) => profile.id === engineProfileIdParam);
+      const resolvedEngine = selectedProfile
+        ? selectedProfile.id
+        : rule.engine === 'default' || !ruleProfile
+        ? defaultEngine
         : rule.engine;
-      if (!resolvedEngine || resolvedEngine === 'default') {
-        resolvedEngine = settings.defaultBackendId || settings.reviewEngine || 'antigravity';
-      }
 
       const jobId = crypto.randomUUID();
       await this.db.insert(reviewJobsTable).values({
@@ -617,14 +607,6 @@ export class ReviewQueue {
           } catch {
             // ignore
           }
-          let engineOverride = undefined;
-          if (r.engineOverrideJson) {
-            try {
-              engineOverride = JSON.parse(r.engineOverrideJson);
-            } catch {
-              // ignore
-            }
-          }
           rule = {
             id: r.id,
             name: r.name,
@@ -632,7 +614,6 @@ export class ReviewQueue {
             category: r.category,
             engine: r.engine,
             instructions: r.instructions,
-            engineOverride,
             trigger,
             enabled: Boolean(r.enabled),
             createdAt: r.createdAt,
@@ -664,7 +645,7 @@ export class ReviewQueue {
         }
       }
 
-      const engineInstance = this.resolveEngineInstance(job.engine, settings, rule);
+      const engineInstance = this.resolveEngineInstance(job.engine, settings);
 
       const result = await engineInstance.execute({
         jobId,

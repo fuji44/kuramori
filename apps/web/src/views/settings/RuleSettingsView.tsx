@@ -1,29 +1,22 @@
 import React, { useState } from 'react';
 import {
   Shield,
-  Plus,
   Trash2,
   Edit2,
   ChevronDown,
   ChevronUp,
-  Save,
-  Tag,
   Cpu,
   Terminal,
   Box,
   CheckCircle2,
+  AlertCircle,
   Ban,
   Clock,
-  Sparkles,
-  Sliders,
-  ArrowLeft,
-  AlertCircle,
   Power,
   Copy,
 } from 'lucide-react';
-import { ReviewRule, EngineOverrideConfig, AppSettings } from '../../types.ts';
+import { ReviewRule, AppSettings } from '../../types.ts';
 import { Checkbox } from '../../components/Checkbox.tsx';
-import { EngineConfigFields } from '../../components/settings/EngineConfigFields.tsx';
 import {
   SettingCard,
   SettingBadge,
@@ -41,7 +34,6 @@ interface RuleSettingsViewProps {
   rules: ReviewRule[];
   settings?: AppSettings;
   defaultRuleIds?: string[];
-  defaultBackendId?: string;
   onCreateRule: (rule: Partial<ReviewRule>) => Promise<void>;
   onUpdateRule: (id: string, updates: Partial<ReviewRule>) => Promise<void>;
   onDeleteRule: (id: string) => Promise<void>;
@@ -54,7 +46,6 @@ export function RuleSettingsView({
   rules,
   settings,
   defaultRuleIds = [],
-  defaultBackendId = 'antigravity',
   onCreateRule,
   onUpdateRule,
   onDeleteRule,
@@ -78,7 +69,6 @@ export function RuleSettingsView({
     instructions: string;
     cancelInProgress: boolean;
     enabled: boolean;
-    engineOverride: EngineOverrideConfig;
   }>({
     name: '',
     description: '',
@@ -87,10 +77,8 @@ export function RuleSettingsView({
     instructions: '',
     cancelInProgress: true,
     enabled: true,
-    engineOverride: {},
   });
 
-  const [overrideEnabled, setOverrideEnabled] = useState(false);
 
   const handleOpenCreateRule = () => {
     setRuleForm({
@@ -101,33 +89,23 @@ export function RuleSettingsView({
       instructions: '',
       cancelInProgress: true,
       enabled: true,
-      engineOverride: {},
     });
-    setOverrideEnabled(false);
     setIsCreatingRule(true);
     setEditingRuleId(null);
     setConfirmDeleteId(null);
   };
 
   const handleOpenEditRule = (rule: ReviewRule) => {
-    const hasOverride = Boolean(
-      rule.engineOverride &&
-        Object.values(rule.engineOverride).some(
-          (v) => v !== undefined && v !== null && v !== ''
-        )
-    );
     setRuleForm({
       id: rule.id,
       name: rule.name,
       description: rule.description,
       category: rule.category,
-      engine: rule.engine,
+      engine: settings?.engineProfiles?.some((profile) => profile.id === rule.engine) ? rule.engine : 'default',
       instructions: rule.instructions,
       cancelInProgress: rule.concurrency?.cancelInProgress ?? true,
       enabled: rule.enabled,
-      engineOverride: rule.engineOverride ? { ...rule.engineOverride } : {},
     });
-    setOverrideEnabled(hasOverride);
     setEditingRuleId(rule.id);
     setIsCreatingRule(false);
     setConfirmDeleteId(null);
@@ -142,25 +120,12 @@ export function RuleSettingsView({
     e.preventDefault();
     setSaving(true);
     try {
-      const cleanOverride: EngineOverrideConfig = {};
-      if (overrideEnabled) {
-        for (const [key, value] of Object.entries(ruleForm.engineOverride)) {
-          if (value !== undefined && value !== null && value !== '') {
-            (cleanOverride as any)[key] = value;
-          }
-        }
-      }
-
       const rulePayload: Partial<ReviewRule> = {
         name: ruleForm.name.trim(),
         description: ruleForm.description.trim(),
         category: ruleForm.category,
         engine: ruleForm.engine,
         instructions: ruleForm.instructions.trim(),
-        engineOverride:
-          overrideEnabled && Object.keys(cleanOverride).length > 0
-            ? cleanOverride
-            : undefined,
         concurrency: {
           cancelInProgress: ruleForm.cancelInProgress,
         },
@@ -201,7 +166,6 @@ export function RuleSettingsView({
         category: rule.category,
         engine: rule.engine,
         instructions: rule.instructions,
-        engineOverride: rule.engineOverride ? { ...rule.engineOverride } : undefined,
         trigger: rule.trigger ? { ...rule.trigger } : undefined,
         concurrency: rule.concurrency ? { ...rule.concurrency } : undefined,
         enabled: rule.enabled,
@@ -228,7 +192,7 @@ export function RuleSettingsView({
           title={editingRuleId ? 'ルールを編集' : '新規ルールを作成'}
           description={
             editingRuleId
-              ? `「${ruleForm.name || 'ルール'}」の指示文、対象ファイル、実行エンジンや上書き設定を更新します。`
+              ? `「${ruleForm.name || 'ルール'}」の指示文、対象ファイル、実行プロファイルを更新します。`
               : 'PR 評価時に並列実行される新しい観点のルールを定義します。'
           }
         />
@@ -295,173 +259,26 @@ export function RuleSettingsView({
           </div>
 
           <div>
-            <label className="text-xs text-[#8b949e] block mb-1">実行エンジン / プロファイル</label>
+            <label className="text-xs text-[#8b949e] block mb-1">実行プロファイル</label>
             <select
               value={ruleForm.engine}
               onChange={(e) => setRuleForm({ ...ruleForm, engine: e.target.value })}
               className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500"
             >
-              <option value="default">default (システム既定エンジン/プロファイルに追従)</option>
+              <option value="default">システム既定の実行プロファイルに従う</option>
 
               {settings?.engineProfiles && settings.engineProfiles.length > 0 && (
-                <optgroup label="登録済みエンジンプロファイル">
+                <optgroup label="実行プロファイル">
                   {settings.engineProfiles.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} ({p.engineType}) {p.isDefault ? '★既定' : ''}
+                      {p.name} ({p.engineType}){p.isDefault ? ' ★既定' : ''}{settings.enabledEngines && !settings.enabledEngines.includes(p.engineType) ? ' (無効化中)' : ''}
                     </option>
                   ))}
                 </optgroup>
               )}
 
-              <optgroup label="基本エンジン (レガシー)">
-                <option value="antigravity">
-                  antigravity{settings?.enabledEngines && !settings.enabledEngines.includes('antigravity') ? ' (無効化中)' : ''}
-                </option>
-                <option value="claude-code">
-                  claude-code{settings?.enabledEngines && !settings.enabledEngines.includes('claude-code') ? ' (無効化中)' : ''}
-                </option>
-                <option value="mock">
-                  mock{settings?.enabledEngines && !settings.enabledEngines.includes('mock') ? ' (無効化中)' : ''}
-                </option>
-              </optgroup>
             </select>
-            {ruleForm.engine !== 'default' &&
-              !settings?.engineProfiles?.some((p) => p.id === ruleForm.engine) &&
-              settings?.enabledEngines &&
-              !settings.enabledEngines.includes(ruleForm.engine) && (
-                <p className="text-[11px] text-amber-400 mt-1 flex items-center gap-1">
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  <span>選択されたエンジンは現在エンジン設定で無効化されています。実行時にエラーとなる可能性があります。</span>
-                </p>
-              )}
           </div>
-
-          {/* Engine Override Section */}
-          {(() => {
-            const matchedProfile = settings?.engineProfiles?.find((p) => p.id === ruleForm.engine);
-            const effectiveEngine = matchedProfile
-              ? matchedProfile.engineType
-              : ruleForm.engine === 'default'
-              ? (defaultBackendId || 'antigravity')
-              : ruleForm.engine;
-
-            const globalConfig = (() => {
-              if (matchedProfile) {
-                return matchedProfile.config;
-              }
-              if (effectiveEngine === 'antigravity') {
-                return settings?.engineSettings?.antigravity ?? {
-                  binPath: settings?.agyBin || 'agy',
-                  model: 'gemini-3.1-pro',
-                  effort: 'high',
-                  timeoutSeconds: 900,
-                  printTimeout: '',
-                  sandbox: false,
-                  disableSlashCommands: false,
-                  inputFormat: 'text',
-                  outputFormat: 'text',
-                  jsonSchema: '',
-                  customArgs: '',
-                };
-              }
-              if (effectiveEngine === 'claude-code' || effectiveEngine === 'claudeCode') {
-                return settings?.engineSettings?.claudeCode ?? {
-                  binPath: settings?.claudeBin || 'claude',
-                  model: 'sonnet',
-                  effort: 'high',
-                  timeoutSeconds: 900,
-                  allowedTools: '',
-                  bare: false,
-                  inputFormat: 'text',
-                  outputFormat: 'text',
-                  jsonSchema: '',
-                  customArgs: '',
-                };
-              }
-              if (effectiveEngine === 'mock') {
-                return settings?.engineSettings?.mock ?? {
-                  delayMs: 1500,
-                };
-              }
-              return {};
-            })();
-
-            const overrideCount = Object.values(ruleForm.engineOverride).filter(
-              (v) => v !== undefined && v !== null && v !== ''
-            ).length;
-
-            return (
-              <div className="space-y-3 pt-1">
-                <Checkbox
-                  variant="card"
-                  checked={overrideEnabled}
-                  onChange={(checked) => setOverrideEnabled(checked)}
-                  label="エンジン設定を上書きする"
-                  description="このルール固有のモデル・推論レベル・タイムアウト・システムプロンプト等のパラメータを適用します。チェックを外すとエンジンの全体設定が適用されます。"
-                />
-
-                <div
-                  className={`transition-all duration-200 ml-4 pl-3 border-l-2 ${
-                    overrideEnabled ? 'border-sky-500' : 'border-[#30363d]/60'
-                  }`}
-                >
-                  <div className="space-y-4 p-4 rounded-lg bg-[#0d1117]/60 border border-[#30363d]">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <Sliders className="w-3.5 h-3.5 text-sky-400" />
-                        <span className="text-xs font-semibold text-white">
-                          {overrideEnabled ? 'ルール固有設定（編集中）' : '全体設定（適用中・読み取り専用）'}
-                        </span>
-                        {overrideEnabled && overrideCount > 0 && (
-                          <span className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-sky-950 text-sky-300 border border-sky-800/80">
-                            {overrideCount} 項目上書き中
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-[11px] font-mono px-2 py-0.5 rounded bg-sky-950 text-sky-400 border border-sky-800/60 shrink-0 self-start sm:self-auto">
-                        対象エンジン: {effectiveEngine}
-                      </div>
-                    </div>
-
-                    {!overrideEnabled && (
-                      <p className="text-[11px] text-[#8b949e]">
-                        現在はエンジンの全体設定が表示されています。設定を変更したい場合は、上の「エンジン設定を上書きする」にチェックを入れてください。
-                      </p>
-                    )}
-
-                    {overrideEnabled && (
-                      <p className="text-[11px] text-[#8b949e]">
-                        このルールを実行する際、エンジンの全体設定を包括的に上書き（完全置換）します。空欄の項目はエンジンの全体設定がそのまま適用されます。
-                      </p>
-                    )}
-
-                    {ruleForm.engine === 'default' && (
-                      <div className="flex items-center gap-2 p-2.5 rounded-lg bg-sky-950/40 border border-sky-800/60 text-xs text-sky-300">
-                        <Sparkles className="w-4 h-4 shrink-0 text-sky-400" />
-                        <span>
-                          実行エンジンが「既定 (default)」のため、現在のシステム既定エンジン（<strong>{effectiveEngine}</strong>）向けの設定が表示されています。
-                        </span>
-                      </div>
-                    )}
-
-                    <EngineConfigFields
-                      engine={effectiveEngine}
-                      values={overrideEnabled ? ruleForm.engineOverride : globalConfig}
-                      onChange={(updates) => {
-                        if (!overrideEnabled) return;
-                        setRuleForm((prev) => ({
-                          ...prev,
-                          engineOverride: { ...prev.engineOverride, ...updates },
-                        }));
-                      }}
-                      isOverride={true}
-                      disabled={!overrideEnabled}
-                    />
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
 
           <SettingFormFooter
             onCancel={handleCancelForm}
@@ -531,9 +348,10 @@ export function RuleSettingsView({
                     <SettingBadge variant="primary">{rule.category}</SettingBadge>
 
                     {(() => {
-                      const matchedProfile = settings?.engineProfiles?.find((p) => p.id === rule.engine);
-                      const label = matchedProfile ? matchedProfile.name : rule.engine;
-                      const engineType = matchedProfile ? matchedProfile.engineType : rule.engine;
+                      const matchedProfile = settings?.engineProfiles?.find((p) => p.id === rule.engine)
+                        ?? settings?.engineProfiles?.find((p) => p.id === settings?.defaultEngineProfileId);
+                      const label = matchedProfile?.name ?? rule.engine;
+                      const engineType = matchedProfile?.engineType ?? rule.engine;
                       return (
                         <SettingBadge
                           variant="neutral"
@@ -547,24 +365,19 @@ export function RuleSettingsView({
                             )
                           }
                         >
-                          engine: {label}
+                          実行プロファイル: {label}
                         </SettingBadge>
                       );
                     })()}
 
-                    {rule.engine !== 'default' &&
-                      settings?.enabledEngines &&
-                      !settings.enabledEngines.includes(rule.engine) && (
+                    {(() => {
+                      const profile = settings?.engineProfiles?.find((p) => p.id === rule.engine);
+                      return profile && settings?.enabledEngines && !settings.enabledEngines.includes(profile.engineType);
+                    })() && (
                         <SettingBadge variant="warning" icon={<AlertCircle className="w-3 h-3" />}>
-                          エンジン無効化中
+                          エンジン種別無効化中
                         </SettingBadge>
                       )}
-
-                    {rule.engineOverride && Object.keys(rule.engineOverride).length > 0 && (
-                      <SettingBadge variant="purple" icon={<Sliders className="w-3 h-3" />}>
-                        設定上書きあり
-                      </SettingBadge>
-                    )}
 
                     {isDefault && (
                       <SettingBadge variant="default" icon={<CheckCircle2 className="w-3 h-3" />}>
@@ -616,31 +429,12 @@ export function RuleSettingsView({
                       >
                         <Power className="w-3.5 h-3.5" />
                       </SettingActionButton>
-
-                      {/* 3. 指示文ドロワートグル */}
-                      <button
-                        type="button"
-                        onClick={() => toggleInstructions(rule.id)}
-                        className={`px-2.5 py-1.5 text-xs flex items-center gap-1 transition-colors cursor-pointer ${
-                          isExpanded
-                            ? 'bg-sky-950/60 text-sky-400'
-                            : 'text-[#8b949e] hover:text-white hover:bg-[#30363d]'
-                        }`}
-                        title="レビュー指示文の表示/非表示"
-                      >
-                        <span>指示文</span>
-                        {isExpanded ? (
-                          <ChevronUp className="w-3.5 h-3.5" />
-                        ) : (
-                          <ChevronDown className="w-3.5 h-3.5" />
-                        )}
-                      </button>
                     </SettingButtonGroup>
 
                     {/* 管理操作系グループ */}
                     {isConfirmingDelete ? (
                       <div className="flex items-center gap-1 bg-rose-950/60 border border-rose-800/80 rounded-lg p-1">
-                        <span className="text-[11px] text-rose-300 px-1">削除しますか?</span>
+                        <span className="text-[11px] text-rose-300 px-1">「{rule.name}」を削除しますか?</span>
                         <button
                           type="button"
                           onClick={() => handleDelete(rule.id, rule.name)}
@@ -676,17 +470,32 @@ export function RuleSettingsView({
                   </>
                 }
               >
-                {/* Collapsible Instructions Drawer */}
-                {isExpanded && (
-                  <div className="px-5 py-4 bg-[#0d1117] border-t border-[#30363d] space-y-2 animate-in fade-in duration-100">
-                    <span className="text-xs font-semibold text-[#8b949e] uppercase tracking-wider block">
-                      レビュー指示文 (Instructions)
-                    </span>
-                    <pre className="text-xs text-white/90 font-mono whitespace-pre-wrap leading-relaxed bg-[#161b22] p-3 rounded-lg border border-[#30363d]/60">
-                      {rule.instructions}
-                    </pre>
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={() => toggleInstructions(rule.id)}
+                  aria-expanded={isExpanded}
+                  aria-controls={`rule-instructions-${rule.id}`}
+                  className="w-full flex items-center justify-between gap-3 px-4 sm:px-5 py-2.5 border-t border-[#30363d]/60 text-left text-xs text-[#8b949e] hover:text-white hover:bg-[#21262d]/60 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-[-2px]"
+                >
+                  <span>{isExpanded ? 'レビュー指示文を隠す' : 'レビュー指示文を表示'}</span>
+                  {isExpanded ? (
+                    <ChevronUp className="w-3.5 h-3.5 shrink-0" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5 shrink-0" />
+                  )}
+                </button>
+                <div
+                  id={`rule-instructions-${rule.id}`}
+                  hidden={!isExpanded}
+                  className="px-5 py-4 bg-[#0d1117] border-t border-[#30363d] space-y-2"
+                >
+                  <span className="text-xs font-semibold text-[#8b949e] uppercase tracking-wider block">
+                    レビュー指示文 (Instructions)
+                  </span>
+                  <pre className="text-xs text-white/90 font-mono whitespace-pre-wrap leading-relaxed bg-[#161b22] p-3 rounded-lg border border-[#30363d]/60">
+                    {rule.instructions}
+                  </pre>
+                </div>
               </SettingCard>
             );
           })

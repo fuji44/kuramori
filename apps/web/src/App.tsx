@@ -224,7 +224,7 @@ export default function App() {
       }
       showSuccess(
         ruleIds && ruleIds.length > 0
-          ? `${ruleIds.length} 件のルールをキューに投入しました${engine && engine !== 'default' ? ` (エンジン: ${engine})` : ''}`
+          ? `${ruleIds.length} 件のルールをキューに投入しました${engine && engine !== 'default' ? ` (実行プロファイル: ${settings.engineProfiles?.find((profile) => profile.id === engine)?.name ?? engine})` : ''}`
           : 'AIレビューをキューに投入しました'
       );
       await fetchReviews();
@@ -505,6 +505,7 @@ export default function App() {
             rules={rules}
             defaultRuleIds={settings.defaultRuleIds}
             enabledEngines={settings.enabledEngines}
+            engineProfiles={settings.engineProfiles}
             loading={loading}
             refreshing={refreshing}
             params={route.params}
