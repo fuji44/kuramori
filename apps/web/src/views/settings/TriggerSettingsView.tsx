@@ -123,7 +123,7 @@ export function TriggerSettingsView({
   const handleSubmitTrigger = async (e: React.FormEvent) => {
     e.preventDefault();
     if (triggerForm.ruleIds.length === 0) {
-      onShowError('実行するレビュールールを少なくとも1つ選択してください');
+      onShowError('実行するルールを少なくとも1つ選択してください');
       return;
     }
 
@@ -196,7 +196,7 @@ export function TriggerSettingsView({
                 {editingTriggerId ? 'トリガー設定を編集' : '新規トリガーを作成'}
               </h2>
               <p className="text-xs text-[#8b949e] mt-0.5">
-                対象リポジトリと変更ファイルパスの組み合わせに対して、実行するレビュールールを紐づけます。
+                対象リポジトリと変更ファイルパスの組み合わせに対して、実行するルールを紐づけます。
               </p>
             </div>
           </div>
@@ -280,7 +280,7 @@ export function TriggerSettingsView({
             <div className="flex items-center justify-between pb-2 border-b border-[#30363d]">
               <div>
                 <label className="text-xs font-semibold text-white block">
-                  発動させるレビュールール (複数選択) *
+                  発動させるルール (複数選択) *
                 </label>
                 <p className="text-[11px] text-[#8b949e]">
                   この条件に合致した PR に対して自動投入されるルールを選択してください。
@@ -396,7 +396,7 @@ export function TriggerSettingsView({
           <div>
             <h2 className="text-xl font-bold text-white tracking-tight">トリガー</h2>
             <p className="text-xs text-[#8b949e] mt-0.5">
-              対象リポジトリやファイル変更パスの条件と、自動実行するレビュールールの紐づけを管理します。
+              対象リポジトリやファイル変更パスの条件と、自動実行するルールの紐づけを管理します。
             </p>
           </div>
         </div>

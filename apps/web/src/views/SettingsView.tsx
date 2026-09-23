@@ -23,6 +23,7 @@ interface SettingsViewProps {
   onCreateRule: (rule: Partial<ReviewRule>) => Promise<void>;
   onUpdateRule: (id: string, updates: Partial<ReviewRule>) => Promise<void>;
   onDeleteRule: (id: string) => Promise<void>;
+  onUpdateDefaultRuleIds?: (ids: string[]) => Promise<void>;
   onCreateTrigger?: (trigger: Partial<ReviewTrigger>) => Promise<void>;
   onUpdateTrigger?: (id: string, updates: Partial<ReviewTrigger>) => Promise<void>;
   onDeleteTrigger?: (id: string) => Promise<void>;
@@ -41,6 +42,7 @@ export function SettingsView({
   onCreateRule,
   onUpdateRule,
   onDeleteRule,
+  onUpdateDefaultRuleIds,
   onCreateTrigger = async () => {},
   onUpdateTrigger = async () => {},
   onDeleteTrigger = async () => {},
@@ -133,7 +135,6 @@ export function SettingsView({
         {subview === 'general' && (
           <GeneralSettingsView
             settings={settings}
-            rules={rules}
             onSaveSettings={onSaveSettings}
             onShowSuccess={onShowSuccess}
             onShowError={onShowError}
@@ -153,11 +154,12 @@ export function SettingsView({
           <RuleSettingsView
             rules={rules}
             settings={settings}
-            defaultRuleId={settings.defaultRuleIds?.[0] ?? settings.defaultRuleId}
+            defaultRuleIds={settings.defaultRuleIds || (settings.defaultRuleId ? [settings.defaultRuleId] : [])}
             defaultBackendId={settings.defaultBackendId || settings.reviewEngine || 'antigravity'}
             onCreateRule={onCreateRule}
             onUpdateRule={onUpdateRule}
             onDeleteRule={onDeleteRule}
+            onUpdateDefaultRuleIds={onUpdateDefaultRuleIds}
             onShowSuccess={onShowSuccess}
             onShowError={onShowError}
           />

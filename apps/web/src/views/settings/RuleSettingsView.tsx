@@ -15,6 +15,8 @@ import {
   Sparkles,
   Sliders,
   ArrowLeft,
+  Star,
+  AlertCircle,
 } from 'lucide-react';
 import { ReviewRule, EngineOverrideConfig, AppSettings } from '../../types.ts';
 import { Checkbox } from '../../components/Checkbox.tsx';
@@ -23,11 +25,12 @@ import { EngineConfigFields } from '../../components/settings/EngineConfigFields
 interface RuleSettingsViewProps {
   rules: ReviewRule[];
   settings?: AppSettings;
-  defaultRuleId?: string;
+  defaultRuleIds?: string[];
   defaultBackendId?: string;
   onCreateRule: (rule: Partial<ReviewRule>) => Promise<void>;
   onUpdateRule: (id: string, updates: Partial<ReviewRule>) => Promise<void>;
   onDeleteRule: (id: string) => Promise<void>;
+  onUpdateDefaultRuleIds?: (ids: string[]) => Promise<void>;
   onShowSuccess: (msg: string) => void;
   onShowError: (msg: string) => void;
 }
@@ -35,11 +38,12 @@ interface RuleSettingsViewProps {
 export function RuleSettingsView({
   rules,
   settings,
-  defaultRuleId,
+  defaultRuleIds = [],
   defaultBackendId = 'antigravity',
   onCreateRule,
   onUpdateRule,
   onDeleteRule,
+  onUpdateDefaultRuleIds,
   onShowSuccess,
   onShowError,
 }: RuleSettingsViewProps) {
@@ -197,12 +201,12 @@ export function RuleSettingsView({
             <Sparkles className="w-5 h-5 text-sky-400" />
             <div>
               <h2 className="text-xl font-bold text-white tracking-tight">
-                {editingRuleId ? 'レビュールールを編集' : '新規レビュールールを作成'}
+                {editingRuleId ? 'ルールを編集' : '新規ルールを作成'}
               </h2>
               <p className="text-xs text-[#8b949e] mt-0.5">
                 {editingRuleId
                   ? `「${ruleForm.name || 'ルール'}」の指示文、対象ファイル、実行エンジンや上書き設定を更新します。`
-                  : 'PR 評価時に並列実行される新しい観点のレビュールールを定義します。'}
+                  : 'PR 評価時に並列実行される新しい観点のルールを定義します。'}
               </p>
             </div>
           </div>
@@ -277,10 +281,22 @@ export function RuleSettingsView({
               className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500"
             >
               <option value="default">default (システム既定エンジンに追従)</option>
-              <option value="antigravity">antigravity</option>
-              <option value="claude-code">claude-code</option>
-              <option value="mock">mock</option>
+              <option value="antigravity">
+                antigravity{settings?.enabledEngines && !settings.enabledEngines.includes('antigravity') ? ' (無効化中)' : ''}
+              </option>
+              <option value="claude-code">
+                claude-code{settings?.enabledEngines && !settings.enabledEngines.includes('claude-code') ? ' (無効化中)' : ''}
+              </option>
+              <option value="mock">
+                mock{settings?.enabledEngines && !settings.enabledEngines.includes('mock') ? ' (無効化中)' : ''}
+              </option>
             </select>
+            {ruleForm.engine !== 'default' && settings?.enabledEngines && !settings.enabledEngines.includes(ruleForm.engine) && (
+              <p className="text-[11px] text-amber-400 mt-1 flex items-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5" />
+                <span>選択されたエンジンは現在エンジン設定で無効化されています。実行時にエラーとなる可能性があります。</span>
+              </p>
+            )}
           </div>
 
           {/* Engine Override Section */}
@@ -472,7 +488,7 @@ export function RuleSettingsView({
         {rules.length === 0 ? (
           <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-8 text-center text-[#8b949e]">
             <Shield className="w-8 h-8 mx-auto mb-2 text-[#8b949e]/60" />
-            <p className="text-sm">レビュールールがまだ登録されていません。</p>
+            <p className="text-sm">ルールがまだ登録されていません。</p>
             <button
               type="button"
               onClick={handleOpenCreateRule}
@@ -484,7 +500,7 @@ export function RuleSettingsView({
           </div>
         ) : (
           rules.map((rule) => {
-            const isDefault = rule.id === (defaultRuleId || 'preset-correctness');
+            const isDefault = defaultRuleIds.includes(rule.id);
             const isExpanded = expandedInstructionId === rule.id;
             const isConfirmingDelete = confirmDeleteId === rule.id;
 
@@ -510,6 +526,13 @@ export function RuleSettingsView({
                         engine: {rule.engine}
                       </span>
 
+                      {rule.engine !== 'default' && settings?.enabledEngines && !settings.enabledEngines.includes(rule.engine) && (
+                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 font-mono border border-amber-800/60 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          <span>エンジン無効化中</span>
+                        </span>
+                      )}
+
                       {rule.engineOverride && Object.keys(rule.engineOverride).length > 0 && (
                         <span className="text-[11px] px-2 py-0.5 rounded-full bg-purple-950 text-purple-300 font-mono border border-purple-800/60 flex items-center gap-1">
                           <Sliders className="w-3 h-3" />
@@ -519,8 +542,8 @@ export function RuleSettingsView({
 
                       {isDefault && (
                         <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800/80 font-semibold flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" />
-                          <span>既定ルール</span>
+                          <Star className="w-3 h-3 fill-current" />
+                          <span>既定</span>
                         </span>
                       )}
 
@@ -550,6 +573,25 @@ export function RuleSettingsView({
 
                   {/* Actions */}
                   <div className="flex items-center gap-2 self-end sm:self-start shrink-0">
+                    {onUpdateDefaultRuleIds && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = isDefault
+                            ? defaultRuleIds.filter((id) => id !== rule.id)
+                            : [...defaultRuleIds, rule.id];
+                          onUpdateDefaultRuleIds(next);
+                        }}
+                        className={`p-1.5 rounded-lg transition-colors ${
+                          isDefault
+                            ? 'bg-emerald-950/60 text-emerald-400 hover:bg-emerald-950/80'
+                            : 'bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-amber-400'
+                        }`}
+                        title={isDefault ? '既定ルールから外す' : '既定ルールに追加'}
+                      >
+                        <Star className={`w-3.5 h-3.5 ${isDefault ? 'fill-current' : ''}`} />
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => toggleInstructions(rule.id)}
