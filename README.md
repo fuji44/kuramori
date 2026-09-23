@@ -72,10 +72,10 @@ RTX 5080（16GB VRAM）等のローカル GPU 環境で `ornith-1.5:9b` など�
 詳細は [ローカルLLM連携ガイド](file:///home/fuji44/git/review-base/docs/local-llm-setup.md) をご覧ください。
 
 ```bash
-# 推論エンドポイントの接続確認
-deno task verify:local-llm --url http://localhost:4000 --model ornith-1.5:9b
+# 推論エンドポイントの接続確認（Ollama 直結）
+deno task verify:local-llm --url http://localhost:11434 --model ornith-1.5:9b
 
 # ローカル推論サーバーを指定してレビュー実行
-deno task runner --repo owner/repo --pr 1234 --engine claude-code --model ornith-1.5:9b --api-base-url http://localhost:4000
+deno task runner --repo owner/repo --pr 1234 --engine claude-code --model ornith-1.5:9b --api-base-url http://localhost:11434
 ```
 

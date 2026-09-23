@@ -10,16 +10,14 @@
 flowchart LR
     LocalModel["ローカルLLM<br>(ornith-1.5:9b / 6.6GB)"]
     Ollama["Ollama 推論サーバー<br>(http://localhost:11434)"]
-    LiteLLM["LiteLLM Proxy<br>(http://localhost:4000)"]
     Runner["review-base runner<br>(Claude Code ハーネス)"]
 
     LocalModel --- Ollama
-    Ollama -->|OpenAI 互換 API| LiteLLM
-    LiteLLM -->|Anthropic 互換 API| Runner
+    Ollama -->|ネイティブ Anthropic Messages API (/v1/messages)| Runner
 ```
 
 - **ハーネス層**: ワークツリー巡回や自律探索ループ、Gatekeeper 検収には既存の Claude Code ハーネスを利用。
-- **推論プロキシ層**: Ollama の OpenAI 互換 API を LiteLLM Proxy を介して Anthropic 形式へ中継。
+- **推論プロキシ不要（Ollama 直結）**: Ollama は標準で **Anthropic Messages API (`/v1/messages`)** をネイティブサポートしているため、中間プロキシ（LiteLLM 等）を挟むことなく、直接 `http://localhost:11434` を `ANTHROPIC_BASE_URL` に指定して接続可能。
 - **モデル**: 16GB VRAM 環境に最適な **`ornith-1.5:9b`**（6.6GB、256K コンテキスト長、自律エージェント特化モデル）を採用。
 
 ---
@@ -37,26 +35,19 @@ ollama pull ornith-1.5:9b
 > [!TIP]
 > 14B クラスの別モデルを試す場合は `ollama pull qwen2.5-coder:14b` または `ollama pull qwen3:14b` を利用可能。
 
-### ステップ 2: LiteLLM Proxy の起動
+### ステップ 2: 接続検証スクリプトの実行
 
-リポジトリ直下の `scripts/litellm_config.yaml` を指定して LiteLLM Proxy を起動する（ポート 4000）：
-
-```bash
-# uv / uvx を利用する場合（推奨）
-uvx litellm --config scripts/litellm_config.yaml --port 4000
-
-# または pip / python を利用する場合
-pip install 'litellm[proxy]'
-litellm --config scripts/litellm_config.yaml --port 4000
-```
-
-### ステップ 3: 接続検証スクリプトの実行
-
-`review-base` に同梱されている検証タスクを実行し、推論サーバーとの疎通を確認する：
+`review-base` に同梱されている検証タスクを実行し、Ollama との疎通（Anthropic Messages API）を確認する：
 
 ```bash
-deno task verify:local-llm --url http://localhost:4000 --model ornith-1.5:9b
+deno task verify:local-llm --url http://localhost:11434 --model ornith-1.5:9b
 ```
+
+正常に接続されると、テストプロンプトへの応答と実行コマンド例が出力される。
+
+> [!NOTE]
+> **OpenAI 互換専用サーバー（vLLM や llama-server 等）を使う場合のみ**:
+> Anthropic API を持たない推論サーバーを中継する場合は、同梱の `scripts/litellm_config.yaml` を使い `uvx litellm --config scripts/litellm_config.yaml --port 4000` でプロキシを起動して接続可能。
 
 正常に接続されると、テストプロンプトへの応答と実行コマンド例が出力される。
 
@@ -74,7 +65,7 @@ deno task runner \
   --pr <PR番号> \
   --engine claude-code \
   --model ornith-1.5:9b \
-  --api-base-url http://localhost:4000
+  --api-base-url http://localhost:11434
 ```
 
 VRAM の安全制限としてターン数を制限したい場合は `--max-turns` オプションを追加可能：
@@ -85,7 +76,7 @@ deno task runner \
   --pr <PR番号> \
   --engine claude-code \
   --model ornith-1.5:9b \
-  --api-base-url http://localhost:4000 \
+  --api-base-url http://localhost:11434 \
   --max-turns 15
 ```
 
@@ -95,5 +86,5 @@ deno task runner \
 2. **設定** ➔ **AI エンジン設定** ➔ **Claude Code** を開く。
 3. 以下の項目を設定：
    - **Model**: `ornith-1.5:9b`
-   - **API Base URL**: `http://localhost:4000`
+   - **API Base URL**: `http://localhost:11434`
 4. PR 一覧から「レビュー開始」を実行すると、ローカル推論基盤による自律探索レビューが実行される。
