@@ -9,13 +9,14 @@ import {
   Save,
   Tag,
   Cpu,
+  Terminal,
+  Box,
   CheckCircle2,
   Ban,
   Clock,
   Sparkles,
   Sliders,
   ArrowLeft,
-  Star,
   AlertCircle,
 } from 'lucide-react';
 import { ReviewRule, EngineOverrideConfig, AppSettings } from '../../types.ts';
@@ -546,11 +547,15 @@ export function RuleSettingsView({
                       {(() => {
                         const matchedProfile = settings?.engineProfiles?.find((p) => p.id === rule.engine);
                         const label = matchedProfile
-                          ? `${matchedProfile.name}`
+                          ? matchedProfile.name
                           : rule.engine;
+                        const engineType = matchedProfile ? matchedProfile.engineType : rule.engine;
                         return (
-                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#21262d] text-sky-300 font-mono border border-[#30363d]">
-                            engine: {label}
+                          <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-[#21262d] text-sky-300 font-mono border border-[#30363d]">
+                            {engineType === 'claude-code' && <Terminal className="w-3 h-3" />}
+                            {engineType === 'antigravity' && <Cpu className="w-3 h-3" />}
+                            {engineType === 'mock' && <Box className="w-3 h-3" />}
+                            <span>engine: {label}</span>
                           </span>
                         );
                       })()}
@@ -570,8 +575,8 @@ export function RuleSettingsView({
                       )}
 
                       {isDefault && (
-                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800/80 font-semibold flex items-center gap-1">
-                          <Star className="w-3 h-3 fill-current" />
+                        <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800/80 font-semibold">
+                          <CheckCircle2 className="w-3 h-3" />
                           <span>既定</span>
                         </span>
                       )}
@@ -611,14 +616,14 @@ export function RuleSettingsView({
                             : [...defaultRuleIds, rule.id];
                           onUpdateDefaultRuleIds(next);
                         }}
-                        className={`p-1.5 rounded-lg transition-colors ${
+                        className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
                           isDefault
-                            ? 'bg-emerald-950/60 text-emerald-400 hover:bg-emerald-950/80'
-                            : 'bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-amber-400'
+                            ? 'bg-emerald-950/60 text-emerald-400 border-emerald-800/80 hover:bg-emerald-900/60'
+                            : 'bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-emerald-400 border-[#30363d]'
                         }`}
                         title={isDefault ? '既定ルールから外す' : '既定ルールに追加'}
                       >
-                        <Star className={`w-3.5 h-3.5 ${isDefault ? 'fill-current' : ''}`} />
+                        <CheckCircle2 className={`w-3.5 h-3.5 ${isDefault ? 'fill-emerald-400/20' : ''}`} />
                       </button>
                     )}
                     <button

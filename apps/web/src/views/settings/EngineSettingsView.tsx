@@ -13,7 +13,6 @@ import {
   Plus,
   Trash2,
   Edit2,
-  Star,
   ArrowLeft,
   CheckCircle2,
   Save,
@@ -117,19 +116,13 @@ function EngineTestButton({ isTesting, onTest, disabled = false }: EngineTestBut
           type="button"
           disabled={disabled || isTesting}
           onClick={() => onTest('version')}
-          className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-[#21262d] hover:bg-[#30363d] text-[#c9d1d9] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed border-r border-[#30363d] cursor-pointer"
-          title="CLIバイナリの存在とバージョンを検証 (~1秒)"
+          className="p-1.5 bg-[#21262d] hover:bg-[#30363d] text-[#c9d1d9] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed border-r border-[#30363d] cursor-pointer flex items-center justify-center"
+          title="接続テスト (バージョン確認 ~1秒)"
         >
           {isTesting ? (
-            <>
-              <RefreshCw className="w-3.5 h-3.5 animate-spin text-sky-400" />
-              <span>テスト中...</span>
-            </>
+            <RefreshCw className="w-3.5 h-3.5 animate-spin text-sky-400" />
           ) : (
-            <>
-              <FlaskConical className="w-3.5 h-3.5 text-sky-400" />
-              <span>接続テスト</span>
-            </>
+            <FlaskConical className="w-3.5 h-3.5 text-sky-400" />
           )}
         </button>
 
@@ -137,7 +130,7 @@ function EngineTestButton({ isTesting, onTest, disabled = false }: EngineTestBut
           type="button"
           disabled={disabled || isTesting}
           onClick={() => setIsOpen((prev) => !prev)}
-          className="px-1.5 py-1 bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          className="px-1 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center"
           title="テスト方法を選択"
         >
           <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -920,22 +913,22 @@ export function EngineSettingsView({
                     <span className="font-semibold text-sm text-white truncate">
                       {p.name}
                     </span>
-                    <span className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded bg-[#21262d] text-sky-300 border border-[#30363d]">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-full bg-[#21262d] text-sky-300 border border-[#30363d]">
                       {p.engineType === 'claude-code' && <Terminal className="w-3 h-3" />}
                       {p.engineType === 'antigravity' && <Cpu className="w-3 h-3" />}
                       {p.engineType === 'mock' && <Box className="w-3 h-3" />}
                       <span>{p.engineType}</span>
                     </span>
                     {isDef && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">
-                        <Star className="w-2.5 h-2.5 fill-current" />
-                        <span>システム既定</span>
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800/80">
+                        <CheckCircle2 className="w-3 h-3" />
+                        <span>既定</span>
                       </span>
                     )}
                   </div>
 
                   {p.description && (
-                    <p className="text-xs text-[#8b949e] line-clamp-1">{p.description}</p>
+                    <p className="text-xs text-[#8b949e] leading-relaxed line-clamp-1">{p.description}</p>
                   )}
 
                   <div className="flex items-center gap-4 text-xs text-[#8b949e] font-mono pt-1 flex-wrap">
@@ -958,24 +951,30 @@ export function EngineSettingsView({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#21262d]">
-                  {/* テスト実行ボタン */}
+                {/* Actions (整列統一) */}
+                <div className="flex items-center gap-2 self-end sm:self-start shrink-0 pt-2 sm:pt-0">
+                  {/* 1. 既定トグルボタン (最左に固定) */}
+                  <button
+                    type="button"
+                    disabled={isDef}
+                    onClick={() => handleSetDefaultProfile(p.id)}
+                    className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                      isDef
+                        ? 'bg-emerald-950/60 text-emerald-400 border-emerald-800/80 cursor-default'
+                        : 'bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-emerald-400 border-[#30363d]'
+                    }`}
+                    title={isDef ? 'システム既定のプロファイルです' : 'このプロファイルをシステム既定にする'}
+                  >
+                    <CheckCircle2 className={`w-3.5 h-3.5 ${isDef ? 'fill-emerald-400/20' : ''}`} />
+                  </button>
+
+                  {/* 2. テスト実行ボタン */}
                   <EngineTestButton
                     isTesting={isThisTesting}
                     onTest={(mode) => handleTest(p.id, p.engineType, p.config, mode)}
                   />
 
-                  {!isDef && (
-                    <button
-                      type="button"
-                      onClick={() => handleSetDefaultProfile(p.id)}
-                      className="px-2.5 py-1 text-xs font-medium bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-white rounded-lg border border-[#30363d] transition-colors cursor-pointer"
-                      title="このプロファイルをシステム既定にする"
-                    >
-                      既定に設定
-                    </button>
-                  )}
-
+                  {/* 3. 編集ボタン */}
                   <button
                     type="button"
                     onClick={() => handleStartEdit(p)}
@@ -985,6 +984,7 @@ export function EngineSettingsView({
                     <Edit2 className="w-3.5 h-3.5" />
                   </button>
 
+                  {/* 4. 複製ボタン */}
                   <button
                     type="button"
                     onClick={() => handleDuplicateProfile(p)}
@@ -994,6 +994,7 @@ export function EngineSettingsView({
                     <Copy className="w-3.5 h-3.5" />
                   </button>
 
+                  {/* 5. 削除ボタン */}
                   <button
                     type="button"
                     disabled={profiles.length <= 1}
