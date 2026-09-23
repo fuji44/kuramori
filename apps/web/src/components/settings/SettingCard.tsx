@@ -139,3 +139,22 @@ export function SettingActionButton({
     </button>
   );
 }
+
+export interface SettingButtonGroupProps {
+  children: ReactNode;
+  className?: string;
+}
+
+/**
+ * 複数の SettingActionButton や関連ボタンを連結するボタングループ
+ */
+export function SettingButtonGroup({ children, className = '' }: SettingButtonGroupProps) {
+  return (
+    <div
+      className={`inline-flex items-center rounded-lg border border-[#30363d] bg-[#21262d] divide-x divide-[#30363d] overflow-hidden shadow-sm shrink-0 [&>button]:rounded-none [&>button]:border-0 [&>button]:shadow-none [&>div]:rounded-none [&>div]:border-0 ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
+

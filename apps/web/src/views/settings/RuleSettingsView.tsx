@@ -18,6 +18,7 @@ import {
   Sliders,
   ArrowLeft,
   AlertCircle,
+  Power,
 } from 'lucide-react';
 import { ReviewRule, EngineOverrideConfig, AppSettings } from '../../types.ts';
 import { Checkbox } from '../../components/Checkbox.tsx';
@@ -26,6 +27,7 @@ import {
   SettingCard,
   SettingBadge,
   SettingActionButton,
+  SettingButtonGroup,
 } from '../../components/settings/SettingCard.tsx';
 import {
   SettingViewHeader,
@@ -568,42 +570,54 @@ export function RuleSettingsView({
                 }
                 actions={
                   <>
-                    {/* 1. 既定トグルボタン (最左に固定) */}
-                    {onUpdateDefaultRuleIds && (
-                      <SettingActionButton
-                        active={isDefault}
-                        onClick={() => {
-                          const next = isDefault
-                            ? defaultRuleIds.filter((id) => id !== rule.id)
-                            : [...defaultRuleIds, rule.id];
-                          onUpdateDefaultRuleIds(next);
-                        }}
-                        title={isDefault ? '既定ルールから外す' : '既定ルールに追加'}
-                      >
-                        <CheckCircle2 className={`w-3.5 h-3.5 ${isDefault ? 'fill-emerald-400/20' : ''}`} />
-                      </SettingActionButton>
-                    )}
-
-                    {/* 2. 指示文ドロワートグル */}
-                    <button
-                      type="button"
-                      onClick={() => toggleInstructions(rule.id)}
-                      className="px-2.5 py-1.5 rounded-lg bg-[#21262d] hover:bg-[#30363d] text-xs text-[#c9d1d9] flex items-center gap-1 transition-colors border border-[#30363d] cursor-pointer"
-                    >
-                      <span>指示文</span>
-                      {isExpanded ? (
-                        <ChevronUp className="w-3.5 h-3.5" />
-                      ) : (
-                        <ChevronDown className="w-3.5 h-3.5" />
+                    {/* 状態・トグル系グループ */}
+                    <SettingButtonGroup>
+                      {/* 1. 既定トグル */}
+                      {onUpdateDefaultRuleIds && (
+                        <SettingActionButton
+                          active={isDefault}
+                          onClick={() => {
+                            const next = isDefault
+                              ? defaultRuleIds.filter((id) => id !== rule.id)
+                              : [...defaultRuleIds, rule.id];
+                            onUpdateDefaultRuleIds(next);
+                          }}
+                          title={isDefault ? '既定ルールから外す' : '既定ルールに追加'}
+                        >
+                          <CheckCircle2 className={`w-3.5 h-3.5 ${isDefault ? 'fill-emerald-400/20' : ''}`} />
+                        </SettingActionButton>
                       )}
-                    </button>
 
-                    {/* 3. 編集ボタン */}
-                    <SettingActionButton onClick={() => handleOpenEditRule(rule)} title="ルールを編集">
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </SettingActionButton>
+                      {/* 2. 有効/無効トグル */}
+                      <SettingActionButton
+                        active={rule.enabled}
+                        onClick={() => onUpdateRule(rule.id, { enabled: !rule.enabled })}
+                        title={rule.enabled ? 'ルールを無効化' : 'ルールを有効化'}
+                      >
+                        <Power className="w-3.5 h-3.5" />
+                      </SettingActionButton>
 
-                    {/* 4. 削除ボタン / 確認UI */}
+                      {/* 3. 指示文ドロワートグル */}
+                      <button
+                        type="button"
+                        onClick={() => toggleInstructions(rule.id)}
+                        className={`px-2.5 py-1.5 text-xs flex items-center gap-1 transition-colors cursor-pointer ${
+                          isExpanded
+                            ? 'bg-sky-950/60 text-sky-400'
+                            : 'text-[#8b949e] hover:text-white hover:bg-[#30363d]'
+                        }`}
+                        title="レビュー指示文の表示/非表示"
+                      >
+                        <span>指示文</span>
+                        {isExpanded ? (
+                          <ChevronUp className="w-3.5 h-3.5" />
+                        ) : (
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </SettingButtonGroup>
+
+                    {/* 管理操作系グループ */}
                     {isConfirmingDelete ? (
                       <div className="flex items-center gap-1 bg-rose-950/60 border border-rose-800/80 rounded-lg p-1">
                         <span className="text-[11px] text-rose-300 px-1">削除しますか?</span>
@@ -623,13 +637,18 @@ export function RuleSettingsView({
                         </button>
                       </div>
                     ) : (
-                      <SettingActionButton
-                        danger
-                        onClick={() => setConfirmDeleteId(rule.id)}
-                        title="ルールを削除"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </SettingActionButton>
+                      <SettingButtonGroup>
+                        <SettingActionButton onClick={() => handleOpenEditRule(rule)} title="ルールを編集">
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </SettingActionButton>
+                        <SettingActionButton
+                          danger
+                          onClick={() => setConfirmDeleteId(rule.id)}
+                          title="ルールを削除"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </SettingActionButton>
+                      </SettingButtonGroup>
                     )}
                   </>
                 }

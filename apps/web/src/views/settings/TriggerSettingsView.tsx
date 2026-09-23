@@ -14,6 +14,7 @@ import {
   CheckSquare,
   Square,
   Sparkles,
+  Power,
 } from 'lucide-react';
 import { ReviewTrigger, ReviewRule } from '../../types.ts';
 import { Checkbox } from '../../components/Checkbox.tsx';
@@ -21,6 +22,7 @@ import {
   SettingCard,
   SettingBadge,
   SettingActionButton,
+  SettingButtonGroup,
 } from '../../components/settings/SettingCard.tsx';
 import {
   SettingViewHeader,
@@ -440,13 +442,18 @@ export function TriggerSettingsView({
                 }
                 actions={
                   <>
-                    <SettingActionButton
-                      onClick={() => handleOpenEditTrigger(trigger)}
-                      title="トリガーを編集"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </SettingActionButton>
+                    {/* 状態・トグル系グループ */}
+                    <SettingButtonGroup>
+                      <SettingActionButton
+                        active={trigger.enabled}
+                        onClick={() => onUpdateTrigger(trigger.id, { enabled: !trigger.enabled })}
+                        title={trigger.enabled ? 'トリガーを無効化' : 'トリガーを有効化'}
+                      >
+                        <Power className="w-3.5 h-3.5" />
+                      </SettingActionButton>
+                    </SettingButtonGroup>
 
+                    {/* 管理操作系グループ */}
                     {isConfirmingDelete ? (
                       <div className="flex items-center gap-1 bg-rose-950/60 border border-rose-800/80 rounded-lg p-1">
                         <span className="text-[11px] text-rose-300 px-1">削除しますか?</span>
@@ -466,13 +473,21 @@ export function TriggerSettingsView({
                         </button>
                       </div>
                     ) : (
-                      <SettingActionButton
-                        danger
-                        onClick={() => setConfirmDeleteId(trigger.id)}
-                        title="トリガーを削除"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </SettingActionButton>
+                      <SettingButtonGroup>
+                        <SettingActionButton
+                          onClick={() => handleOpenEditTrigger(trigger)}
+                          title="トリガーを編集"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </SettingActionButton>
+                        <SettingActionButton
+                          danger
+                          onClick={() => setConfirmDeleteId(trigger.id)}
+                          title="トリガーを削除"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </SettingActionButton>
+                      </SettingButtonGroup>
                     )}
                   </>
                 }

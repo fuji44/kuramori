@@ -34,6 +34,7 @@ import {
   SettingCard,
   SettingBadge,
   SettingActionButton,
+  SettingButtonGroup,
 } from '../../components/settings/SettingCard.tsx';
 import {
   SettingViewHeader,
@@ -932,41 +933,47 @@ export function EngineSettingsView({
               }
               actions={
                 <>
-                  {/* 1. 既定トグルボタン (最左に固定) */}
-                  <SettingActionButton
-                    active={isDef}
-                    disabled={isDef}
-                    onClick={() => handleSetDefaultProfile(p.id)}
-                    title={isDef ? 'システム既定のプロファイルです' : 'このプロファイルをシステム既定にする'}
-                  >
-                    <CheckCircle2 className={`w-3.5 h-3.5 ${isDef ? 'fill-emerald-400/20' : ''}`} />
-                  </SettingActionButton>
+                  {/* 状態・トグル系グループ */}
+                  <div className="flex items-center gap-1.5">
+                    {/* 1. 既定トグルボタン (最左に固定) */}
+                    <SettingActionButton
+                      active={isDef}
+                      disabled={isDef}
+                      onClick={() => handleSetDefaultProfile(p.id)}
+                      title={isDef ? 'システム既定のプロファイルです' : 'このプロファイルをシステム既定にする'}
+                    >
+                      <CheckCircle2 className={`w-3.5 h-3.5 ${isDef ? 'fill-emerald-400/20' : ''}`} />
+                    </SettingActionButton>
 
-                  {/* 2. テスト実行ボタン */}
-                  <EngineTestButton
-                    isTesting={isThisTesting}
-                    onTest={(mode) => handleTest(p.id, p.engineType, p.config, mode)}
-                  />
+                    {/* 2. テスト実行ボタン */}
+                    <EngineTestButton
+                      isTesting={isThisTesting}
+                      onTest={(mode) => handleTest(p.id, p.engineType, p.config, mode)}
+                    />
+                  </div>
 
-                  {/* 3. 編集ボタン */}
-                  <SettingActionButton onClick={() => handleStartEdit(p)} title="プロファイルを編集">
-                    <Edit2 className="w-3.5 h-3.5" />
-                  </SettingActionButton>
+                  {/* 管理操作系グループ */}
+                  <SettingButtonGroup>
+                    {/* 3. 編集ボタン */}
+                    <SettingActionButton onClick={() => handleStartEdit(p)} title="プロファイルを編集">
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </SettingActionButton>
 
-                  {/* 4. 複製ボタン */}
-                  <SettingActionButton onClick={() => handleDuplicateProfile(p)} title="プロファイルを複製">
-                    <Copy className="w-3.5 h-3.5" />
-                  </SettingActionButton>
+                    {/* 4. 複製ボタン */}
+                    <SettingActionButton onClick={() => handleDuplicateProfile(p)} title="プロファイルを複製">
+                      <Copy className="w-3.5 h-3.5" />
+                    </SettingActionButton>
 
-                  {/* 5. 削除ボタン */}
-                  <SettingActionButton
-                    danger
-                    disabled={profiles.length <= 1}
-                    onClick={() => handleDeleteProfile(p.id)}
-                    title="プロファイルを削除"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </SettingActionButton>
+                    {/* 5. 削除ボタン */}
+                    <SettingActionButton
+                      danger
+                      disabled={profiles.length <= 1}
+                      onClick={() => handleDeleteProfile(p.id)}
+                      title="プロファイルを削除"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </SettingActionButton>
+                  </SettingButtonGroup>
                 </>
               }
             >
