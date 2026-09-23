@@ -17,6 +17,11 @@ import {
 } from 'lucide-react';
 import { ReviewTrigger, ReviewRule } from '../../types.ts';
 import { Checkbox } from '../../components/Checkbox.tsx';
+import {
+  SettingCard,
+  SettingBadge,
+  SettingActionButton,
+} from '../../components/settings/SettingCard.tsx';
 
 interface TriggerSettingsViewProps {
   triggers: ReviewTrigger[];
@@ -434,113 +439,100 @@ export function TriggerSettingsView({
             const boundRules = rules.filter((r) => trigger.ruleIds?.includes(r.id));
 
             return (
-              <div
+              <SettingCard
                 key={trigger.id}
-                className={`bg-[#161b22] border rounded-xl overflow-hidden transition-all ${
-                  trigger.enabled
-                    ? 'border-[#30363d] hover:border-[#8b949e]/50'
-                    : 'border-[#30363d]/50 opacity-75'
-                }`}
-              >
-                <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                  <div className="min-w-0 flex-1 space-y-2.5">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-base text-white">{trigger.name}</span>
-
-                      {!trigger.enabled && (
-                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-400 border border-neutral-700 flex items-center gap-1">
-                          <Ban className="w-3 h-3" />
-                          <span>無効</span>
-                        </span>
-                      )}
+                disabled={!trigger.enabled}
+                title={trigger.name}
+                badges={
+                  !trigger.enabled ? (
+                    <SettingBadge variant="muted" icon={<Ban className="w-3 h-3" />}>
+                      無効
+                    </SettingBadge>
+                  ) : undefined
+                }
+                metadata={
+                  <>
+                    <div className="flex items-center gap-1 font-mono text-[11px] text-sky-400">
+                      <FolderGit2 className="w-3.5 h-3.5" />
+                      <span>リポジトリ: {trigger.repository === '*' ? '* (全リポジトリ)' : trigger.repository}</span>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#8b949e]">
-                      <div className="flex items-center gap-1 font-mono text-[11px] text-sky-400">
-                        <FolderGit2 className="w-3.5 h-3.5" />
-                        <span>リポジトリ: {trigger.repository === '*' ? '* (全リポジトリ)' : trigger.repository}</span>
+                    {trigger.paths && trigger.paths.length > 0 ? (
+                      <div className="flex items-center gap-1 font-mono text-[11px] text-teal-400">
+                        <FileCode className="w-3.5 h-3.5" />
+                        <span>パス: {trigger.paths.join(', ')}</span>
                       </div>
-
-                      {trigger.paths && trigger.paths.length > 0 ? (
-                        <div className="flex items-center gap-1 font-mono text-[11px] text-teal-400">
-                          <FileCode className="w-3.5 h-3.5" />
-                          <span>パス: {trigger.paths.join(', ')}</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1 text-[11px] text-[#8b949e]">
-                          <FileCode className="w-3.5 h-3.5" />
-                          <span>パス: 全ファイル対象</span>
-                        </div>
-                      )}
-
-                      {trigger.pathsIgnore && trigger.pathsIgnore.length > 0 && (
-                        <div className="flex items-center gap-1 font-mono text-[11px] text-amber-400/80">
-                          <span>除外: {trigger.pathsIgnore.join(', ')}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Bound Rules */}
-                    <div className="pt-1">
-                      <div className="text-[11px] text-[#8b949e] mb-1 font-medium">発動ルール ({boundRules.length}件):</div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {boundRules.map((r) => (
-                          <span
-                            key={r.id}
-                            className="text-[11px] px-2 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-800/60 font-medium flex items-center gap-1"
-                          >
-                            <Shield className="w-3 h-3 text-sky-400" />
-                            <span>{r.name}</span>
-                          </span>
-                        ))}
-                        {boundRules.length === 0 && (
-                          <span className="text-xs text-amber-400/80">（紐づくルールがありません）</span>
-                        )}
+                    ) : (
+                      <div className="flex items-center gap-1 text-[11px] text-[#8b949e]">
+                        <FileCode className="w-3.5 h-3.5" />
+                        <span>パス: 全ファイル対象</span>
                       </div>
-                    </div>
-                  </div>
+                    )}
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 self-end sm:self-start shrink-0">
-                    <button
-                      type="button"
+                    {trigger.pathsIgnore && trigger.pathsIgnore.length > 0 && (
+                      <div className="flex items-center gap-1 font-mono text-[11px] text-amber-400/80">
+                        <span>除外: {trigger.pathsIgnore.join(', ')}</span>
+                      </div>
+                    )}
+                  </>
+                }
+                actions={
+                  <>
+                    <SettingActionButton
                       onClick={() => handleOpenEditTrigger(trigger)}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-[#c9d1d9] hover:text-white bg-[#21262d] hover:bg-[#30363d] transition-colors"
+                      title="トリガーを編集"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
-                      <span>編集</span>
-                    </button>
+                    </SettingActionButton>
 
                     {isConfirmingDelete ? (
-                      <div className="flex items-center gap-1.5 bg-red-950/40 border border-red-800/80 rounded-lg p-1">
+                      <div className="flex items-center gap-1 bg-rose-950/60 border border-rose-800/80 rounded-lg p-1">
+                        <span className="text-[11px] text-rose-300 px-1">削除しますか?</span>
                         <button
                           type="button"
                           onClick={() => handleDelete(trigger.id, trigger.name)}
-                          className="px-2 py-0.5 rounded text-xs font-medium bg-red-600 hover:bg-red-500 text-white transition-colors"
+                          className="px-2 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-medium transition-colors cursor-pointer"
                         >
-                          削除実行
+                          削除
                         </button>
                         <button
                           type="button"
                           onClick={() => setConfirmDeleteId(null)}
-                          className="px-2 py-0.5 rounded text-xs text-[#8b949e] hover:text-white transition-colors"
+                          className="px-1.5 py-0.5 rounded text-[#8b949e] hover:text-white text-[11px] cursor-pointer"
                         >
-                          取消
+                          戻る
                         </button>
                       </div>
                     ) : (
-                      <button
-                        type="button"
+                      <SettingActionButton
+                        danger
                         onClick={() => setConfirmDeleteId(trigger.id)}
-                        className="p-1.5 rounded-lg text-[#8b949e] hover:text-red-400 hover:bg-red-950/20 transition-colors"
                         title="トリガーを削除"
                       >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </SettingActionButton>
+                    )}
+                  </>
+                }
+              >
+                <div className="border-t border-[#30363d]/60 px-4 sm:px-5 py-3 bg-[#0d1117]/30">
+                  <div className="text-[11px] text-[#8b949e] mb-1.5 font-medium">発動ルール ({boundRules.length}件):</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {boundRules.map((r) => (
+                      <SettingBadge
+                        key={r.id}
+                        variant="primary"
+                        icon={<Shield className="w-3 h-3 text-sky-400" />}
+                      >
+                        {r.name}
+                      </SettingBadge>
+                    ))}
+                    {boundRules.length === 0 && (
+                      <span className="text-xs text-amber-400/80">（紐づくルールがありません）</span>
                     )}
                   </div>
                 </div>
-              </div>
+              </SettingCard>
             );
           })
         )}
