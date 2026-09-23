@@ -65,10 +65,10 @@ export function SettingsView({
           <button
             type="button"
             onClick={() => onNavigateSubview('general')}
-            className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors shrink-0 ${
+            className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors shrink-0 border ${
               subview === 'general'
-                ? 'bg-sky-950 text-white border border-sky-800/80 shadow-sm'
-                : 'text-[#8b949e] hover:text-white hover:bg-[#21262d]'
+                ? 'bg-sky-950 text-white border-sky-800/80 shadow-sm'
+                : 'border-transparent text-[#8b949e] hover:text-white hover:bg-[#21262d]'
             }`}
           >
             <div className="flex items-center gap-2.5">
@@ -80,10 +80,10 @@ export function SettingsView({
           <button
             type="button"
             onClick={() => onNavigateSubview('engines')}
-            className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors shrink-0 ${
+            className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors shrink-0 border ${
               subview === 'engines'
-                ? 'bg-sky-950 text-white border border-sky-800/80 shadow-sm'
-                : 'text-[#8b949e] hover:text-white hover:bg-[#21262d]'
+                ? 'bg-sky-950 text-white border-sky-800/80 shadow-sm'
+                : 'border-transparent text-[#8b949e] hover:text-white hover:bg-[#21262d]'
             }`}
           >
             <div className="flex items-center gap-2.5">
@@ -95,10 +95,10 @@ export function SettingsView({
           <button
             type="button"
             onClick={() => onNavigateSubview('rules')}
-            className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors shrink-0 ${
+            className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors shrink-0 border ${
               subview === 'rules'
-                ? 'bg-sky-950 text-white border border-sky-800/80 shadow-sm'
-                : 'text-[#8b949e] hover:text-white hover:bg-[#21262d]'
+                ? 'bg-sky-950 text-white border-sky-800/80 shadow-sm'
+                : 'border-transparent text-[#8b949e] hover:text-white hover:bg-[#21262d]'
             }`}
           >
             <div className="flex items-center gap-2.5">
@@ -113,10 +113,10 @@ export function SettingsView({
           <button
             type="button"
             onClick={() => onNavigateSubview('triggers')}
-            className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors shrink-0 ${
+            className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors shrink-0 border ${
               subview === 'triggers'
-                ? 'bg-sky-950 text-white border border-sky-800/80 shadow-sm'
-                : 'text-[#8b949e] hover:text-white hover:bg-[#21262d]'
+                ? 'bg-sky-950 text-white border-sky-800/80 shadow-sm'
+                : 'border-transparent text-[#8b949e] hover:text-white hover:bg-[#21262d]'
             }`}
           >
             <div className="flex items-center gap-2.5">
