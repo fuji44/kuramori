@@ -143,7 +143,8 @@ Options:
     console.log(`     ${responseText.trim()}`);
     console.log(`\n[SUCCESS] Local LLM endpoint is healthy and ready for review-runner!`);
     console.log(`\nTo run a review with this local setup:`);
-    console.log(`  deno task runner --repo owner/repo --pr 123 --engine claude-code --model ${model} --api-base-url ${baseUrl}`);
+    console.log(`  Set ANTHROPIC_BASE_URL and the required authentication environment variable, then run:`);
+    console.log(`  deno task runner --repo owner/repo --pr 123 --engine claude-code --model ${model}`);
   } catch (err) {
     console.error(`  [FAIL] Failed to execute inference test: ${err}`);
     Deno.exit(1);

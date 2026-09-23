@@ -447,8 +447,11 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
         model: 'ornith-1.5:9b',
         effort: 'high',
         timeoutSeconds: 900,
-        apiBaseUrl: 'http://localhost:11434',
-        authToken: '',
+        customEnv: {
+          ANTHROPIC_BASE_URL: { value: 'http://localhost:11434', secret: false },
+          ANTHROPIC_AUTH_TOKEN: { value: 'test-token-value', secret: true },
+          ANTHROPIC_API_KEY: { value: 'test-token-value', secret: true },
+        },
         maxTurns: 15,
       },
     };
@@ -464,7 +467,11 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
     const updatedProfilesData = await resUpdateProfiles.json();
     const foundProfile = updatedProfilesData.engineProfiles.find((p: any) => p.id === 'prof-local-ollama');
     assertEquals(foundProfile !== undefined, true);
-    assertEquals(foundProfile.config.apiBaseUrl, 'http://localhost:11434');
+    assertEquals(foundProfile.config.customEnv.ANTHROPIC_BASE_URL.value, 'http://localhost:11434');
+    assertEquals(foundProfile.config.customEnv.ANTHROPIC_AUTH_TOKEN.value, '');
+    assertEquals(foundProfile.config.customEnv.ANTHROPIC_AUTH_TOKEN.configured, true);
+    assertEquals(foundProfile.config.customEnv.ANTHROPIC_API_KEY.value, '');
+    assertEquals(foundProfile.config.customEnv.ANTHROPIC_API_KEY.configured, true);
 
     // Test profile test endpoint via mock engine profile
     const mockProfile = {
@@ -481,6 +488,12 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
         engineProfiles: [...updatedProfilesData.engineProfiles, mockProfile],
       }),
     });
+    const storedSettings = await settingsService.getAllSettings();
+    const storedProfile = storedSettings.engineProfiles.find((profile) => profile.id === 'prof-local-ollama');
+    const storedToken = storedProfile?.engineType === 'claude-code'
+      ? storedProfile.config.customEnv?.ANTHROPIC_AUTH_TOKEN
+      : undefined;
+    assertEquals(typeof storedToken === 'string' ? storedToken : storedToken?.value, 'test-token-value');
 
     const resProfileTest = await api.request('/api/engines/prof-test-mock/test', {
       method: 'POST',

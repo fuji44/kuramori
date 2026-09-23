@@ -10,6 +10,15 @@ import type { ReviewQueue } from './queue.ts';
 import type { SettingsService } from './settings.ts';
 import { compileD2ToSvg, generateStandaloneReviewHtml } from '@review-base/runner';
 
+interface ClaudeEnvironmentValue {
+  value: string;
+  secret: boolean;
+  configured?: boolean;
+}
+
+function isClaudeEnvironmentValue(entry: unknown): entry is ClaudeEnvironmentValue {
+  return typeof entry === 'object' && entry !== null && 'value' in entry && 'secret' in entry;
+}
 
 export interface ApiDependencies {
   db: AppDatabase;
@@ -17,6 +26,53 @@ export interface ApiDependencies {
   poller: GitHubPoller;
   queue: ReviewQueue;
   settingsService: SettingsService;
+}
+
+function mapClaudeEnvironment(settings: any, transform: (config: any, previous?: any) => any, previous?: any) {
+  const mapConfig = (config: any, oldConfig?: any) => {
+    if (!config) return config;
+    const customEnv = { ...(config.customEnv ?? {}) };
+    for (const [name, entry] of Object.entries(customEnv) as Array<[string, any]>) {
+      customEnv[name] = transform(entry, oldConfig?.customEnv?.[name]);
+    }
+    return { ...config, customEnv };
+  };
+  const result = { ...settings };
+  if (settings.engineSettings?.claudeCode) {
+    result.engineSettings = {
+      ...settings.engineSettings,
+      claudeCode: mapConfig(settings.engineSettings.claudeCode, previous?.engineSettings?.claudeCode),
+    };
+  }
+  if (Array.isArray(settings.engineProfiles)) {
+    result.engineProfiles = settings.engineProfiles.map((profile: any) => {
+      if (profile.engineType !== 'claude-code') return profile;
+      const oldProfile = previous?.engineProfiles?.find((candidate: any) => candidate.id === profile.id);
+      return {
+        ...profile,
+        config: mapConfig(profile.config, oldProfile?.config),
+      };
+    });
+  }
+  return result;
+}
+
+function maskSecretEnvironmentValues(settings: any) {
+  return mapClaudeEnvironment(settings, (entry) => {
+    if (typeof entry === 'string' || !entry.secret) return entry;
+    return { ...entry, value: '', configured: Boolean(entry.value || entry.configured) };
+  });
+}
+
+function restoreSecretEnvironmentValues(settings: any, previous: any) {
+  return mapClaudeEnvironment(settings, (entry, oldEntry) => {
+    if (typeof entry === 'string') return entry;
+    const value = entry.secret && entry.value === '' && entry.configured && oldEntry?.secret
+      ? oldEntry.value
+      : entry.value;
+    const { configured: _configured, ...persistedEntry } = entry;
+    return { ...persistedEntry, value };
+  }, previous);
 }
 
 export function createApi(deps: ApiDependencies) {
@@ -554,14 +610,16 @@ export function createApi(deps: ApiDependencies) {
   // Settings endpoints
   app.get('/api/settings', async (c) => {
     const settings = await deps.settingsService.getAllSettings();
-    return c.json(settings);
+    return c.json(maskSecretEnvironmentValues(settings));
   });
 
   app.post('/api/settings', async (c) => {
     try {
       const body = await c.req.json();
-      const updated = await deps.settingsService.updateSettings(body);
-      return c.json(updated);
+      const current = await deps.settingsService.getAllSettings();
+      const merged = restoreSecretEnvironmentValues(body, current);
+      const updated = await deps.settingsService.updateSettings(merged);
+      return c.json(maskSecretEnvironmentValues(updated));
     } catch {
       return c.json({ error: 'Invalid JSON payload' }, 400);
     }
@@ -580,7 +638,7 @@ export function createApi(deps: ApiDependencies) {
     const mode = body?.mode === 'execution' ? 'execution' : 'version';
 
     const settings = await deps.settingsService.getAllSettings();
-    const matchedProfile = settings.engineProfiles?.find((p) => p.id === engine);
+    const matchedProfile = settings.engineProfiles?.find((p) => p.id === (body?.profileId ?? engine));
 
     let effectiveEngine = engine;
     let profileConfig: any = null;
@@ -626,9 +684,6 @@ export function createApi(deps: ApiDependencies) {
       effort = body?.effort || profileConfig?.effort || settings.engineSettings?.claudeCode?.effort || '';
     }
 
-    const apiBaseUrl = body?.apiBaseUrl || profileConfig?.apiBaseUrl || (effectiveEngine === 'claude-code' ? settings.engineSettings?.claudeCode?.apiBaseUrl : undefined);
-    const authToken = body?.authToken || profileConfig?.authToken || (effectiveEngine === 'claude-code' ? settings.engineSettings?.claudeCode?.authToken : undefined);
-
     const isExecution = mode === 'execution';
     const timeoutMs = isExecution ? 45000 : 5000;
 
@@ -648,14 +703,22 @@ export function createApi(deps: ApiDependencies) {
     const env: Record<string, string> = {
       ...Deno.env.toObject(),
     };
-    if (apiBaseUrl) {
-      env['ANTHROPIC_BASE_URL'] = apiBaseUrl;
+    if (effectiveEngine === 'claude-code') {
+      const profileEnvironment = profileConfig?.customEnv ?? {};
+      const globalEnvironment = settings.engineSettings?.claudeCode?.customEnv ?? {};
+      for (const source of [globalEnvironment, profileEnvironment, body?.customEnv ?? {}]) {
+        for (const [name, entry] of Object.entries(source)) {
+          const fallback = profileEnvironment[name] ?? globalEnvironment[name];
+          env[name] = typeof entry === 'string'
+            ? entry
+            : isClaudeEnvironmentValue(entry)
+            ? entry.secret && entry.value === '' && entry.configured
+              ? typeof fallback === 'string' ? fallback : isClaudeEnvironmentValue(fallback) ? fallback.value : ''
+              : entry.value
+            : '';
+        }
+      }
     }
-    if (authToken) {
-      env['ANTHROPIC_AUTH_TOKEN'] = authToken;
-      env['ANTHROPIC_API_KEY'] = authToken;
-    }
-
     try {
       const cmd = new Deno.Command(binPath, {
         args,

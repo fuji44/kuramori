@@ -94,15 +94,16 @@ Deno.test('resolveEngineConfig - returns clone of baseConfig when override is un
 Deno.test('EngineProfile - discriminated union guarantees type-safe config access', () => {
   const claudeProfile = {
     id: 'prof-ollama-ornith',
-    name: 'Ollama (ornith-1.5:9b)',
+    name: 'Claude Code Profile',
     engineType: 'claude-code' as const,
     config: {
       binPath: 'claude',
       model: 'ornith-1.5:9b',
       effort: 'high',
       timeoutSeconds: 900,
-      apiBaseUrl: 'http://localhost:11434',
-      authToken: '',
+      customEnv: {
+        ANTHROPIC_BASE_URL: { value: 'http://localhost:11434', secret: false },
+      },
       maxTurns: 15,
       bare: false,
     },
@@ -135,7 +136,7 @@ Deno.test('EngineProfile - discriminated union guarantees type-safe config acces
   function getProfileSummary(profile: typeof claudeProfile | typeof agyProfile | typeof mockProfile): string {
     switch (profile.engineType) {
       case 'claude-code':
-        return `${profile.config.model} via ${profile.config.apiBaseUrl ?? 'Anthropic'}`;
+        return `${profile.config.model} with ${Object.keys(profile.config.customEnv ?? {}).length} custom environment variables`;
       case 'antigravity':
         return `${profile.config.model} (${profile.config.effort})`;
       case 'mock':
@@ -143,8 +144,7 @@ Deno.test('EngineProfile - discriminated union guarantees type-safe config acces
     }
   }
 
-  assertEquals(getProfileSummary(claudeProfile), 'ornith-1.5:9b via http://localhost:11434');
+  assertEquals(getProfileSummary(claudeProfile), 'ornith-1.5:9b with 1 custom environment variables');
   assertEquals(getProfileSummary(agyProfile), 'gemini-3.1-pro (high)');
   assertEquals(getProfileSummary(mockProfile), 'Mock delay: 300ms');
 });
-

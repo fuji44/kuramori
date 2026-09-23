@@ -229,13 +229,12 @@ export function EngineSettingsView({
 
   const [formClaudeConfig, setFormClaudeConfig] = useState<ClaudeCodeEngineConfig>({
     binPath: 'claude',
-    model: 'ornith-1.5:9b',
+    model: 'sonnet',
     effort: 'high',
     timeoutSeconds: 900,
     allowedTools: '',
     bare: false,
-    apiBaseUrl: 'http://localhost:11434',
-    authToken: '',
+    customEnv: {},
     maxTurns: 15,
   });
 
@@ -287,8 +286,7 @@ export function EngineSettingsView({
         timeoutSeconds: 900,
         allowedTools: '',
         bare: false,
-        apiBaseUrl: '',
-        authToken: '',
+        customEnv: {},
         maxTurns: 15,
       },
     },
@@ -320,13 +318,12 @@ export function EngineSettingsView({
     setFormEngineType('claude-code');
     setFormClaudeConfig({
       binPath: 'claude',
-      model: 'ornith-1.5:9b',
+      model: 'sonnet',
       effort: 'high',
       timeoutSeconds: 900,
       allowedTools: '',
       bare: false,
-      apiBaseUrl: 'http://localhost:11434',
-      authToken: '',
+      customEnv: {},
       maxTurns: 15,
     });
     setFormAgyConfig({
@@ -553,11 +550,11 @@ export function EngineSettingsView({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           mode,
+          profileId: targetId === 'current-form' ? editingProfileId : targetId,
           binPath: config.binPath,
           model: config.model,
           effort: config.effort,
-          apiBaseUrl: config.apiBaseUrl,
-          authToken: config.authToken,
+          customEnv: config.customEnv,
         }),
       });
       const data = await res.json();
@@ -607,13 +604,8 @@ export function EngineSettingsView({
       return parts.join(' ');
     }
     if (formEngineType === 'claude-code') {
-      const parts: string[] = [];
-      if (formClaudeConfig.apiBaseUrl?.trim()) {
-        parts.push(`ANTHROPIC_BASE_URL="${formClaudeConfig.apiBaseUrl.trim()}"`);
-      }
-      if (formClaudeConfig.authToken?.trim()) {
-        parts.push(`ANTHROPIC_AUTH_TOKEN="***"`);
-      }
+      const environmentNames = new Set(Object.keys(formClaudeConfig.customEnv ?? {}));
+      const parts = [...environmentNames].map((name) => `${name}="<value>"`);
       parts.push(formClaudeConfig.binPath || 'claude', '-p', '"<prompt>"', '--dangerously-skip-permissions');
       if (formClaudeConfig.model) parts.push('--model', formClaudeConfig.model);
       if (formClaudeConfig.effort) parts.push('--effort', formClaudeConfig.effort);
@@ -650,7 +642,7 @@ export function EngineSettingsView({
           description={
             editingProfileId
               ? `「${formName || '実行プロファイル'}」のモデル、接続先、推論パラメータを設定します。`
-              : 'Ollama ローカル推論やクラウド AI CLI の実行プロファイルを定義します。'
+              : 'Claude Code CLI や Antigravity の実行プロファイルを定義します。'
           }
         />
 
@@ -670,7 +662,7 @@ export function EngineSettingsView({
                   required
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  placeholder="例: Ollama (ornith-1.5:9b), Claude 3.7 Cloud, Fast Haiku"
+                  placeholder="例: Claude Sonnet / 高速レビュー"
                   className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500"
                 />
               </div>
@@ -683,7 +675,7 @@ export function EngineSettingsView({
                   type="text"
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
-                  placeholder="例: ローカル RTX 5080 で高速実行する Ollama の実行プロファイル"
+                  placeholder="例: 高速なレビューを行うプロファイル"
                   className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500"
                 />
               </div>
@@ -708,7 +700,7 @@ export function EngineSettingsView({
                     <Terminal className="w-5 h-5 text-sky-400 shrink-0" />
                     <div>
                       <div className="text-sm font-semibold">Claude Code</div>
-                      <div className="text-[11px] text-[#8b949e]">Ollama / Claude CLI</div>
+                      <div className="text-[11px] text-[#8b949e]">Claude Code CLI</div>
                     </div>
                   </button>
 
@@ -876,7 +868,6 @@ export function EngineSettingsView({
           profiles.map((p) => {
           const isDef = Boolean(p.isDefault);
           const model = p.engineType === 'mock' ? 'N/A' : (p.config as any).model;
-          const apiBaseUrl = p.engineType === 'claude-code' ? (p.config as any).apiBaseUrl : undefined;
           const isThisTesting = testingProfileId === p.id;
           const result = testResults[p.id];
 
@@ -914,11 +905,6 @@ export function EngineSettingsView({
                   <div>
                     モデル: <span className="text-[#c9d1d9]">{model || '未指定'}</span>
                   </div>
-                  {apiBaseUrl && (
-                    <div>
-                      Base URL: <span className="text-sky-300">{apiBaseUrl}</span>
-                    </div>
-                  )}
                   <div>
                     タイムアウト:{' '}
                     <span className="text-[#c9d1d9]">

@@ -118,12 +118,16 @@ export interface AntigravityEngineConfig extends BaseCliEngineConfig {
   disableSlashCommands: boolean;
 }
 
+export interface ClaudeCodeEnvironmentVariable {
+  value: string;
+  secret: boolean;
+  configured?: boolean;
+}
+
 export interface ClaudeCodeEngineConfig extends BaseCliEngineConfig {
   allowedTools?: string;
   bare: boolean;
-  apiBaseUrl?: string;
-  authToken?: string;
-  customEnv?: Record<string, string>;
+  customEnv?: Record<string, string | ClaudeCodeEnvironmentVariable>;
   maxTurns?: number;
 }
 
@@ -286,9 +290,7 @@ export interface ClaudeCodeOptions {
   outputFormat?: 'text' | 'json' | 'stream-json';
   jsonSchema?: string;
   customArgs?: string;
-  apiBaseUrl?: string;
-  authToken?: string;
-  customEnv?: Record<string, string>;
+  customEnv?: Record<string, string | ClaudeCodeEnvironmentVariable>;
   maxTurns?: number;
 }
 
@@ -310,4 +312,3 @@ export interface SystemAppSettings {
     mock: AgentBackendConfig<MockEngineOptions>;
   };
 }
-

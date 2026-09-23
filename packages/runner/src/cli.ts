@@ -16,8 +16,6 @@ async function main() {
       'engine',
       'cache-dir',
       'worktree-dir',
-      'api-base-url',
-      'auth-token',
       'model',
       'max-turns',
     ],
@@ -42,8 +40,6 @@ Options:
   -o, --output-dir <dir>      Output directory for review artifacts (default: ./data/reports/<pr>)
       --engine <name>         Engine to use (default: claude-code)
   -m, --model <name>          Model name (e.g. ornith-1.5:9b, claude-3-5-sonnet-20241022)
-      --api-base-url <url>    Custom API base URL (e.g. http://localhost:4000 for LiteLLM proxy)
-      --auth-token <token>    API auth token / key
       --max-turns <number>    Max agent turns limit
       --cache-dir <dir>       Bare git cache directory (default: ./data/cache)
       --worktree-dir <dir>    Temporary worktree directory (default: ./.worktrees)
@@ -81,8 +77,6 @@ Options:
     } else if (args.engine === 'claude-code' || args.engine === undefined) {
       engine = new ClaudeCodeEngine({
         model: args.model,
-        apiBaseUrl: args['api-base-url'],
-        authToken: args['auth-token'],
         maxTurns: args['max-turns'] ? parseInt(args['max-turns'], 10) : undefined,
       });
     } else if (args.engine === 'mock') {

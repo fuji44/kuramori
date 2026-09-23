@@ -13,9 +13,7 @@ export interface ClaudeCodeEngineOptions {
   outputFormat?: 'text' | 'json' | 'stream-json';
   jsonSchema?: string;
   customArgs?: string;
-  apiBaseUrl?: string;
-  authToken?: string;
-  customEnv?: Record<string, string>;
+  customEnv?: Record<string, string | { value: string; secret: boolean; configured?: boolean }>;
   maxTurns?: number;
 }
 
@@ -32,9 +30,7 @@ export class ClaudeCodeEngine implements ReviewEngine {
   private readonly outputFormat?: 'text' | 'json' | 'stream-json';
   private readonly jsonSchema?: string;
   private readonly customArgs?: string;
-  private readonly apiBaseUrl?: string;
-  private readonly authToken?: string;
-  private readonly customEnv?: Record<string, string>;
+  private readonly customEnv?: ClaudeCodeEngineOptions['customEnv'];
   private readonly maxTurns?: number;
 
   constructor(options?: ClaudeCodeEngineOptions) {
@@ -49,8 +45,6 @@ export class ClaudeCodeEngine implements ReviewEngine {
     this.outputFormat = options?.outputFormat;
     this.jsonSchema = options?.jsonSchema;
     this.customArgs = options?.customArgs;
-    this.apiBaseUrl = options?.apiBaseUrl;
-    this.authToken = options?.authToken;
     this.customEnv = options?.customEnv;
     this.maxTurns = options?.maxTurns;
   }
@@ -66,9 +60,6 @@ export class ClaudeCodeEngine implements ReviewEngine {
 
     await log(`Starting review execution for ${context.repository}#${context.number} with engine 'claude-code'`);
     await log(`Using claude binary: ${this.claudeBinaryPath}`);
-    if (this.apiBaseUrl) {
-      await log(`[Engine] Using custom API base URL: ${this.apiBaseUrl}`);
-    }
     await log(`Target worktree: ${context.worktreePath}`);
 
     try {
@@ -120,16 +111,10 @@ export class ClaudeCodeEngine implements ReviewEngine {
 
       const env: Record<string, string> = {
         ...Deno.env.toObject(),
-        ...(this.customEnv ?? {}),
       };
-      if (this.apiBaseUrl) {
-        env['ANTHROPIC_BASE_URL'] = this.apiBaseUrl;
+      for (const [name, entry] of Object.entries(this.customEnv ?? {})) {
+        env[name] = typeof entry === 'string' ? entry : entry.value;
       }
-      if (this.authToken) {
-        env['ANTHROPIC_AUTH_TOKEN'] = this.authToken;
-        env['ANTHROPIC_API_KEY'] = this.authToken;
-      }
-
       const cmd = new Deno.Command(this.claudeBinaryPath, {
         args,
         cwd: context.worktreePath,

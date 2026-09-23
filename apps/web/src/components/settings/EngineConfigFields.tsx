@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sliders, ChevronDown, ChevronUp } from 'lucide-react';
+import { Sliders, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
 import {
   AntigravityEngineConfig,
   ClaudeCodeEngineConfig,
@@ -419,6 +419,115 @@ export interface ClaudeCodeFieldsProps {
   onToggleAdvanced?: () => void;
 }
 
+function ClaudeCodeEnvironmentVariables({
+  values,
+  onChange,
+  disabled,
+}: {
+  values: Partial<ClaudeCodeEngineConfig>;
+  onChange: (updates: Partial<ClaudeCodeEngineConfig>) => void;
+  disabled: boolean;
+}) {
+  const environment: Record<string, { value: string; secret: boolean; configured?: boolean }> = Object.fromEntries(
+    Object.entries(values.customEnv ?? {}).map(([name, entry]) => [
+      name,
+      typeof entry === 'string' ? { value: entry, secret: false } : entry,
+    ]),
+  );
+  const updateVariable = (name: string, nextName: string, entry: { value: string; secret: boolean; configured?: boolean }) => {
+    const trimmedName = nextName.trim();
+    if (trimmedName !== name && Object.prototype.hasOwnProperty.call(environment, trimmedName)) {
+      return;
+    }
+    const nextEnvironment = Object.fromEntries(
+      Object.entries(environment).flatMap(([currentName, currentEntry]) => {
+        if (currentName !== name) return [[currentName, currentEntry]];
+        return trimmedName ? [[trimmedName, entry]] : [];
+      }),
+    );
+    onChange({ customEnv: nextEnvironment });
+  };
+
+  const addVariable = () => {
+    let name = 'CUSTOM_ENV_VAR';
+    let suffix = 1;
+    while (Object.prototype.hasOwnProperty.call(environment, name)) {
+      name = `CUSTOM_ENV_VAR_${suffix}`;
+      suffix += 1;
+    }
+    onChange({ customEnv: { ...environment, [name]: { value: '', secret: false } } });
+  };
+
+  return (
+    <div className="space-y-2.5">
+      <div className="flex items-center justify-between gap-3">
+        <label className="text-xs text-[#8b949e]">環境変数</label>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={addVariable}
+          className="inline-flex items-center gap-1 rounded border border-[#30363d] px-2 py-1 text-[11px] text-sky-400 hover:bg-[#21262d] disabled:opacity-50"
+        >
+          <Plus className="h-3 w-3" />
+          追加
+        </button>
+      </div>
+
+      {Object.entries(environment).length === 0 ? (
+        <p className="text-[11px] text-[#8b949e]">実行時に Claude Code CLI へ渡す環境変数を設定します。</p>
+      ) : (
+        <div className="space-y-2">
+          {Object.entries(environment).map(([name, entry], index) => (
+            <div key={index} className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto_auto] gap-2">
+              <input
+                type="text"
+                disabled={disabled}
+                aria-label="環境変数名"
+                value={name}
+                onChange={(event) => updateVariable(name, event.target.value, entry)}
+                placeholder="変数名"
+                className="min-w-0 rounded border border-[#30363d] bg-[#0d1117] px-2.5 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-sky-500 disabled:opacity-50"
+              />
+              <input
+                type={entry.secret ? 'password' : 'text'}
+                disabled={disabled}
+                aria-label={`${name} の値${entry.secret ? '（機密情報）' : ''}`}
+                value={entry.value}
+                onChange={(event) => updateVariable(name, name, { ...entry, value: event.target.value })}
+                placeholder={entry.secret && entry.configured ? '設定済み（変更時のみ入力）' : '値'}
+                className="min-w-0 rounded border border-[#30363d] bg-[#0d1117] px-2.5 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-sky-500 disabled:opacity-50"
+              />
+              <label className="flex items-center gap-1 text-[10px] text-[#8b949e]">
+                <input
+                  type="checkbox"
+                  disabled={disabled}
+                  checked={entry.secret}
+                  onChange={(event) => updateVariable(name, name, { ...entry, secret: event.target.checked })}
+                  aria-label={`${name} を機密情報として扱う`}
+                />
+                機密
+              </label>
+              <button
+                type="button"
+                disabled={disabled}
+                aria-label={`${name} を削除`}
+                onClick={() => updateVariable(name, '', { value: '', secret: false })}
+                className="rounded border border-[#30363d] px-2 text-[#8b949e] hover:border-rose-700 hover:text-rose-300 disabled:opacity-50"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <p className="text-[11px] text-amber-300/90">
+        機密に設定した値は画面と設定 API の応答で伏せて表示します。保存先では暗号化されません。
+      </p>
+    </div>
+  );
+}
+
 export function ClaudeCodeFields({
   values,
   onChange,
@@ -434,6 +543,7 @@ export function ClaudeCodeFields({
   const advancedCount = disabled
     ? 0
     : [
+        Object.keys(values.customEnv ?? {}).length > 0,
         Boolean(values.systemPrompt?.trim()),
         values.inputFormat && values.inputFormat !== 'text',
         values.outputFormat && values.outputFormat !== 'text',
@@ -534,9 +644,6 @@ export function ClaudeCodeFields({
             <option value="claude-sonnet-4-5" />
             <option value="claude-haiku-4-5" />
             <option value="claude-3-7-sonnet-20250219" />
-            <option value="ornith-1.5:9b" label="ローカル推奨 (Ollama / RTX 5080)" />
-            <option value="qwen2.5-coder:14b" label="ローカル標準 (Ollama)" />
-            <option value="qwen3:14b" label="ローカル (Ollama)" />
           </datalist>
         </div>
 
@@ -592,51 +699,6 @@ export function ClaudeCodeFields({
         )}
       </div>
 
-      {/* 2.5 接続設定 (API Base URL / 認証トークン) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label className="text-xs text-[#8b949e] block mb-1">
-            API Base URL (ANTHROPIC_BASE_URL)
-          </label>
-          <input
-            type="text"
-            disabled={disabled}
-            value={values.apiBaseUrl ?? ''}
-            onChange={(e) => onChange({ apiBaseUrl: e.target.value })}
-            placeholder={
-              isOverride
-                ? '例: http://localhost:11434 (未指定時は全体設定を継承)'
-                : '例: http://localhost:11434 (未指定時は公式 Anthropic API)'
-            }
-            className={inputClass}
-          />
-          <p className="text-[11px] text-[#8b949e] mt-1">
-            ローカルの Ollama（11434 ポート）や互換推論サーバーに直接接続する場合に指定します。
-          </p>
-        </div>
-
-        <div>
-          <label className="text-xs text-[#8b949e] block mb-1">
-            API 認証トークン / キー (任意)
-          </label>
-          <input
-            type="password"
-            disabled={disabled}
-            value={values.authToken ?? ''}
-            onChange={(e) => onChange({ authToken: e.target.value })}
-            placeholder={
-              isOverride
-                ? '例: sk-ant-... (未指定時は全体設定を継承)'
-                : '例: sk-ant-... (ローカル Ollama の場合は不要)'
-            }
-            className={inputClass}
-          />
-          <p className="text-[11px] text-[#8b949e] mt-1">
-            ANTHROPIC_AUTH_TOKEN として渡されます（ローカル Ollama の場合は空欄可）。
-          </p>
-        </div>
-      </div>
-
       {/* 3. 高度な設定トグルボタン */}
       <div className="pt-1">
         <button
@@ -668,6 +730,8 @@ export function ClaudeCodeFields({
       {/* 4. 高度な設定コンテンツ */}
       {isAdvancedOpen && (
         <div className="space-y-4 pt-1 pl-3 border-l-2 border-sky-800/40">
+          <ClaudeCodeEnvironmentVariables values={values} onChange={onChange} disabled={disabled} />
+
           <div>
             <label className="text-xs text-[#8b949e] block mb-1">
               システムプロンプト / インタラクション (--append-system-prompt)
