@@ -27,6 +27,12 @@ import {
   SettingBadge,
   SettingActionButton,
 } from '../../components/settings/SettingCard.tsx';
+import {
+  SettingViewHeader,
+  SettingFormHeader,
+  SettingEmptyState,
+  SettingFormFooter,
+} from '../../components/settings/SettingViewLayout.tsx';
 
 interface RuleSettingsViewProps {
   rules: ReviewRule[];
@@ -193,30 +199,17 @@ export function RuleSettingsView({
   if (isFormMode) {
     return (
       <div className="max-w-4xl mx-auto space-y-6">
-        <div className="flex flex-col gap-3">
-          <button
-            type="button"
-            onClick={handleCancelForm}
-            className="inline-flex items-center gap-1.5 text-xs text-[#8b949e] hover:text-white transition-colors self-start cursor-pointer group"
-          >
-            <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
-            <span>ルール一覧に戻る</span>
-          </button>
-
-          <div className="flex items-center gap-2.5">
-            <Sparkles className="w-5 h-5 text-sky-400" />
-            <div>
-              <h2 className="text-xl font-bold text-white tracking-tight">
-                {editingRuleId ? 'ルールを編集' : '新規ルールを作成'}
-              </h2>
-              <p className="text-xs text-[#8b949e] mt-0.5">
-                {editingRuleId
-                  ? `「${ruleForm.name || 'ルール'}」の指示文、対象ファイル、実行エンジンや上書き設定を更新します。`
-                  : 'PR 評価時に並列実行される新しい観点のルールを定義します。'}
-              </p>
-            </div>
-          </div>
-        </div>
+        <SettingFormHeader
+          icon={<Shield className="w-5 h-5" />}
+          backLabel="ルール一覧に戻る"
+          onBack={handleCancelForm}
+          title={editingRuleId ? 'ルールを編集' : '新規ルールを作成'}
+          description={
+            editingRuleId
+              ? `「${ruleForm.name || 'ルール'}」の指示文、対象ファイル、実行エンジンや上書き設定を更新します。`
+              : 'PR 評価時に並列実行される新しい観点のルールを定義します。'
+          }
+        />
 
         {/* Rule Form */}
         <form
@@ -448,41 +441,28 @@ export function RuleSettingsView({
             );
           })()}
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-3 border-t border-[#30363d]">
-            <div className="flex items-center gap-6">
-              <Checkbox
-                checked={ruleForm.enabled}
-                onChange={(checked) => setRuleForm({ ...ruleForm, enabled: checked })}
-                label="ルールを有効化"
-              />
+          <SettingFormFooter
+            onCancel={handleCancelForm}
+            submitLabel="ルールを保存"
+            saving={saving}
+            leftContent={
+              <div className="flex items-center gap-6">
+                <Checkbox
+                  checked={ruleForm.enabled}
+                  onChange={(checked) => setRuleForm({ ...ruleForm, enabled: checked })}
+                  label="ルールを有効化"
+                />
 
-              <Checkbox
-                checked={ruleForm.cancelInProgress}
-                onChange={(checked) =>
-                  setRuleForm({ ...ruleForm, cancelInProgress: checked })
-                }
-                label="新コミット時に進行中ジョブをキャンセル"
-              />
-            </div>
-
-            <div className="flex items-center gap-2 self-end sm:self-auto">
-              <button
-                type="button"
-                onClick={handleCancelForm}
-                className="px-4 py-2 rounded-lg text-xs font-medium text-[#8b949e] hover:text-white bg-[#21262d] hover:bg-[#30363d] transition-colors"
-              >
-                キャンセル
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium text-white bg-sky-600 hover:bg-sky-500 transition-colors shadow-sm disabled:opacity-50"
-              >
-                <Save className="w-3.5 h-3.5" />
-                <span>{saving ? '保存中...' : 'ルールを保存'}</span>
-              </button>
-            </div>
-          </div>
+                <Checkbox
+                  checked={ruleForm.cancelInProgress}
+                  onChange={(checked) =>
+                    setRuleForm({ ...ruleForm, cancelInProgress: checked })
+                  }
+                  label="新コミット時に進行中ジョブをキャンセル"
+                />
+              </div>
+            }
+          />
         </form>
       </div>
     );
@@ -490,41 +470,28 @@ export function RuleSettingsView({
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-2.5">
-          <Shield className="w-5 h-5 text-sky-400" />
-          <div>
-            <h2 className="text-xl font-bold text-white tracking-tight">ルール</h2>
-            <p className="text-xs text-[#8b949e] mt-0.5">
-              PR 評価時に並列実行される独立した観点（セキュリティ、正確性、設計など）のルールを管理します。
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={handleOpenCreateRule}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-medium transition-colors shadow-sm shrink-0 self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          <span>新しいルールを追加</span>
-        </button>
-      </div>
+      <SettingViewHeader
+        icon={<Shield className="w-5 h-5" />}
+        title="レビュールール"
+        description="PR 評価時に並列実行される独立した観点（セキュリティ、正確性、設計など）のルールを管理します。"
+        action={{
+          label: '新しいルールを追加',
+          onClick: handleOpenCreateRule,
+        }}
+      />
 
       {/* Rules List */}
       <div className="space-y-3">
         {rules.length === 0 ? (
-          <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-8 text-center text-[#8b949e]">
-            <Shield className="w-8 h-8 mx-auto mb-2 text-[#8b949e]/60" />
-            <p className="text-sm">ルールがまだ登録されていません。</p>
-            <button
-              type="button"
-              onClick={handleOpenCreateRule}
-              className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-medium"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>最初のルールを作成</span>
-            </button>
-          </div>
+          <SettingEmptyState
+            icon={<Shield className="w-8 h-8" />}
+            message="ルールがまだ登録されていません。"
+            description="レビュールールを追加して、PR 評価時の検証観点を設定してください。"
+            action={{
+              label: '最初のルールを作成',
+              onClick: handleOpenCreateRule,
+            }}
+          />
         ) : (
           rules.map((rule) => {
             const isDefault = defaultRuleIds.includes(rule.id);

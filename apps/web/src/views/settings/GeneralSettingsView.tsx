@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { AppSettings } from '../../types.ts';
 import { Checkbox } from '../../components/Checkbox.tsx';
+import { SettingViewHeader } from '../../components/settings/SettingViewLayout.tsx';
 
 interface GeneralSettingsViewProps {
   settings: AppSettings;
@@ -42,15 +43,11 @@ export function GeneralSettingsView({
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center gap-2.5">
-        <Sliders className="w-5 h-5 text-sky-400" />
-        <div>
-          <h2 className="text-xl font-bold text-white tracking-tight">全般</h2>
-          <p className="text-xs text-[#8b949e] mt-0.5">
-            デフォルト実行ルール、並列スロットル制限、新着 PR の自動キューイングなど、システム全体の動作を管理します。
-          </p>
-        </div>
-      </div>
+      <SettingViewHeader
+        icon={<Sliders className="w-5 h-5" />}
+        title="全般"
+        description="デフォルト実行ルール、並列スロットル制限、新着 PR の自動キューイングなど、システム全体の動作を管理します。"
+      />
 
       <form onSubmit={handleSubmit} className="space-y-6">
 

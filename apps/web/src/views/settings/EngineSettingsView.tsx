@@ -35,6 +35,12 @@ import {
   SettingBadge,
   SettingActionButton,
 } from '../../components/settings/SettingCard.tsx';
+import {
+  SettingViewHeader,
+  SettingFormHeader,
+  SettingEmptyState,
+  SettingFormFooter,
+} from '../../components/settings/SettingViewLayout.tsx';
 
 interface EngineSettingsViewProps {
   settings: AppSettings;
@@ -637,30 +643,17 @@ export function EngineSettingsView({
 
     return (
       <div className="max-w-4xl mx-auto space-y-6">
-        <div className="flex flex-col gap-3">
-          <button
-            type="button"
-            onClick={handleCancelForm}
-            className="inline-flex items-center gap-1.5 text-xs text-[#8b949e] hover:text-white transition-colors self-start cursor-pointer group"
-          >
-            <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
-            <span>エンジンプロファイル一覧に戻る</span>
-          </button>
-
-          <div className="flex items-center gap-2.5">
-            <Cpu className="w-5 h-5 text-sky-400" />
-            <div>
-              <h2 className="text-xl font-bold text-white tracking-tight">
-                {editingProfileId ? 'エンジンプロファイルを編集' : '新規エンジンプロファイルを作成'}
-              </h2>
-              <p className="text-xs text-[#8b949e] mt-0.5">
-                {editingProfileId
-                  ? `「${formName || 'プロファイル'}」のモデル、接続先、推論パラメータを設定します。`
-                  : 'Ollama ローカル推論やクラウド AI CLI の新しいプロファイルを定義します。'}
-              </p>
-            </div>
-          </div>
-        </div>
+        <SettingFormHeader
+          icon={<Cpu className="w-5 h-5" />}
+          backLabel="エンジンプロファイル一覧に戻る"
+          onBack={handleCancelForm}
+          title={editingProfileId ? 'エンジンプロファイルを編集' : '新規エンジンプロファイルを作成'}
+          description={
+            editingProfileId
+              ? `「${formName || 'プロファイル'}」のモデル、接続先、推論パラメータを設定します。`
+              : 'Ollama ローカル推論やクラウド AI CLI の新しいプロファイルを定義します。'
+          }
+        />
 
         <form
           onSubmit={handleSaveProfileForm}
@@ -847,23 +840,11 @@ export function EngineSettingsView({
           </div>
 
           {/* Form Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#30363d]">
-            <button
-              type="button"
-              onClick={handleCancelForm}
-              className="px-4 py-2 text-xs font-medium text-[#c9d1d9] bg-[#21262d] hover:bg-[#30363d] rounded-lg transition-colors cursor-pointer"
-            >
-              キャンセル
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex items-center gap-1.5 px-5 py-2 text-xs font-medium bg-sky-600 hover:bg-sky-500 text-white rounded-lg transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
-            >
-              <Save className="w-3.5 h-3.5" />
-              <span>{saving ? '保存中...' : 'プロファイルを保存'}</span>
-            </button>
-          </div>
+          <SettingFormFooter
+            onCancel={handleCancelForm}
+            submitLabel="プロファイルを保存"
+            saving={saving}
+          />
         </form>
       </div>
     );
@@ -873,30 +854,30 @@ export function EngineSettingsView({
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
-        <div className="flex items-center gap-2.5">
-          <Cpu className="w-5 h-5 text-sky-400" />
-          <div>
-            <h2 className="text-xl font-bold text-white tracking-tight">エンジンプロファイル</h2>
-            <p className="text-xs text-[#8b949e] mt-0.5">
-              AI レビュー実行エンジンのプロファイル（モデル、Ollama 接続先、動作パラメータ）を管理します。
-            </p>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={handleStartCreate}
-          className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-lg transition-colors self-start sm:self-auto shadow-sm cursor-pointer"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>新規プロファイルを作成</span>
-        </button>
-      </div>
+      <SettingViewHeader
+        icon={<Cpu className="w-5 h-5" />}
+        title="AI 実行エンジン"
+        description="レビューを実行する AI エージェント CLI / バックエンドのプロファイルを管理します。"
+        action={{
+          label: '新しいプロファイルを追加',
+          onClick: handleStartCreate,
+        }}
+      />
 
       {/* Profile List */}
-      <div className="grid grid-cols-1 gap-3">
-        {profiles.map((p) => {
+      <div className="space-y-3">
+        {profiles.length === 0 ? (
+          <SettingEmptyState
+            icon={<Cpu className="w-8 h-8" />}
+            message="エンジンプロファイルが登録されていません。"
+            description="プロファイルを追加して、AI レビュー実行エンジンを設定してください。"
+            action={{
+              label: '最初のプロファイルを作成',
+              onClick: handleStartCreate,
+            }}
+          />
+        ) : (
+          profiles.map((p) => {
           const isDef = Boolean(p.isDefault);
           const model = p.engineType === 'mock' ? 'N/A' : (p.config as any).model;
           const apiBaseUrl = p.engineType === 'claude-code' ? (p.config as any).apiBaseUrl : undefined;
@@ -1023,7 +1004,8 @@ export function EngineSettingsView({
               )}
             </SettingCard>
           );
-        })}
+        })
+      )}
       </div>
     </div>
   );
