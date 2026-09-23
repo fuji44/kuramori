@@ -108,8 +108,8 @@ export function formatViolationsForPrompt(violations: GatekeeperViolation[]): st
   );
 
   return [
-    "出力された review.json のスキーマ検証で以下のエラーが検出されました。",
-    "以下の指摘内容を修正し、完全な review.json を再出力してください：",
+    "出力されたレビュー結果の構造化 JSON スキーマ検証で以下のエラーが検出されました。",
+    "以下の指摘内容を修正し、スキーマに完全準拠した JSON を再出力してください：",
     "",
     ...lines,
   ].join("\n");

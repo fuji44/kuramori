@@ -52,15 +52,6 @@ export async function executePreFlight(
   const outputContextPath = join(context.outputDir, 'context.json');
 
   await Deno.writeTextFile(worktreeContextPath, contextJsonStr);
-  await Deno.writeTextFile(outputContextPath, contextJsonStr);
-
-  // 古い review.json が残っていれば削除（クリーンな状態から開始）
-  try {
-    await Deno.remove(join(context.outputDir, 'review.json'));
-  } catch {
-    // クリーンアップエラーは無視
-  }
-
   await log(`[Pre-flight] context.json written to worktree and output dir.`);
 }
 
@@ -75,7 +66,7 @@ export async function buildReviewPrompt(
   try {
     skillInstructions = await Deno.readTextFile(SKILL_MD_PATH);
   } catch {
-    skillInstructions = 'Perform deep PR review based on context.json and output review.json';
+    skillInstructions = 'Perform deep PR review based on context.json and output structured review JSON conforming to the schema';
   }
 
   const systemSection = systemPrompt?.trim()
@@ -92,7 +83,6 @@ ${context.rule.instructions}
   }
 
   const jsonSchema = JSON.stringify(getReviewReportJsonSchema(), null, 2);
-  const targetReviewJsonPath = join(context.outputDir, 'review.json');
 
   return `
 You are an autonomous senior code reviewer performing a deep review of Pull Request ${context.repository}#${context.number}.
@@ -107,68 +97,61 @@ ${jsonSchema}
 
 === EXECUTION TARGETS & CONSTRAINTS ===
 - Pre-flight context is available at: context.json (in current working directory)
-- Review Output File: You MUST write the final JSON report to "${targetReviewJsonPath}" AND/OR "review.json" in current directory.
-- Mode: Output ONLY valid JSON for review.json. Do NOT generate HTML. Do NOT push to git or GitHub.
-- CRITICAL: Do NOT spawn background tasks or exit with messages like "Waiting...". You must inspect files, perform your review synchronously, and WRITE review.json to disk BEFORE finishing your response.
+- Mode: Output ONLY valid JSON adhering strictly to the JSON Schema. Do NOT generate HTML. Do NOT push to git or GitHub.
+- CRITICAL: Do NOT spawn background tasks or exit with messages like "Waiting...". You must inspect files, perform your review synchronously, and return valid JSON output BEFORE finishing your response.
 
 Begin by reading context.json now.
 `;
 }
 
 /**
- * Post-flight: Gatekeeper による review.json の検収
+ * Post-flight: Gatekeeper による構造化レビュー結果の検収
  */
 export async function executePostFlight(
   context: ReviewExecutionContext,
   log: (msg: string) => Promise<void>,
   stdout?: string
 ): Promise<ReviewExecutionResult> {
-  await log(`[Post-flight] Gatekeeper auditing review.json...`);
-
-  const primaryJsonPath = join(context.outputDir, 'review.json');
-  const fallbackJsonPath = join(context.worktreePath, 'review.json');
+  await log(`[Post-flight] Gatekeeper auditing structured review output...`);
 
   let rawJsonText: string | null = null;
-  let finalJsonPath = primaryJsonPath;
+  const primaryJsonPath = join(context.outputDir, 'review.json');
 
-  try {
-    rawJsonText = await Deno.readTextFile(primaryJsonPath);
-  } catch {
+  // 1. 標準出力からの JSON 抽出を第1優先
+  if (stdout) {
+    const jsonMatch = stdout.match(/```json\s*([\s\S]*?)\s*```/) || stdout.match(/(\{[\s\S]*"verdict"[\s\S]*\})/);
+    if (jsonMatch) {
+      rawJsonText = jsonMatch[1].trim();
+      await log(`[Post-flight] Extracted structured review JSON from AI stdout.`);
+    }
+  }
+
+  // 2. ディスク上のファイル（下位互換性およびデバッグ用）をフォールバックとして探索
+  if (!rawJsonText) {
+    const fallbackJsonPath = join(context.worktreePath, 'review.json');
     try {
-      rawJsonText = await Deno.readTextFile(fallbackJsonPath);
-      await Deno.writeTextFile(primaryJsonPath, rawJsonText);
-      finalJsonPath = primaryJsonPath;
+      rawJsonText = await Deno.readTextFile(primaryJsonPath);
     } catch {
-      // ワークツリー配下に書き出されていないか探索
       try {
-        for await (const entry of Deno.readDir(context.worktreePath)) {
-          if (entry.name === 'review.json') {
-            const foundPath = join(context.worktreePath, entry.name);
-            rawJsonText = await Deno.readTextFile(foundPath);
-            await Deno.writeTextFile(primaryJsonPath, rawJsonText);
-            finalJsonPath = primaryJsonPath;
-            break;
-          }
-        }
+        rawJsonText = await Deno.readTextFile(fallbackJsonPath);
       } catch {
-        // ignore
+        try {
+          for await (const entry of Deno.readDir(context.worktreePath)) {
+            if (entry.name === 'review.json') {
+              const foundPath = join(context.worktreePath, entry.name);
+              rawJsonText = await Deno.readTextFile(foundPath);
+              break;
+            }
+          }
+        } catch {
+          // ignore
+        }
       }
     }
   }
 
-  // ファイルが見つからない場合、標準出力からの JSON 抽出を試みる
-  if (!rawJsonText && stdout) {
-    const jsonMatch = stdout.match(/```json\s*([\s\S]*?)\s*```/) || stdout.match(/(\{[\s\S]*"verdict"[\s\S]*\})/);
-    if (jsonMatch) {
-      rawJsonText = jsonMatch[1].trim();
-      await Deno.writeTextFile(primaryJsonPath, rawJsonText);
-      finalJsonPath = primaryJsonPath;
-      await log(`[Post-flight] Recovered review.json from AI stdout.`);
-    }
-  }
-
   if (!rawJsonText) {
-    const errorMsg = 'Gatekeeper audit failed: review.json was not generated by AI engine.';
+    const errorMsg = 'Gatekeeper audit failed: structured review output was not produced by AI engine.';
     await log(`[Post-flight ERROR] ${errorMsg}`);
     return {
       success: false,
@@ -180,7 +163,7 @@ export async function executePostFlight(
   try {
     parsed = JSON.parse(rawJsonText);
   } catch (err) {
-    const errorMsg = `Gatekeeper audit failed: review.json contains invalid JSON: ${err}`;
+    const errorMsg = `Gatekeeper audit failed: review output contains invalid JSON: ${err}`;
     await log(`[Post-flight ERROR] ${errorMsg}`);
     return {
       success: false,
@@ -233,8 +216,12 @@ export async function executePostFlight(
     }
   }
 
-  // 更新された reportData を保存
-  await Deno.writeTextFile(finalJsonPath, JSON.stringify(reportData, null, 2));
+  // 更新された reportData を保存（デバッグ・キャッシュ用）
+  try {
+    await Deno.writeTextFile(primaryJsonPath, JSON.stringify(reportData, null, 2));
+  } catch {
+    // 書き込み失敗してもメモリ上の結果があるため致命的エラーとしない
+  }
 
   // スタンドアロン HTML レポートの自動生成・保存
   const htmlReportPath = join(context.outputDir, 'report.html');
@@ -320,7 +307,7 @@ export async function executePostFlight(
     success: true,
     verdict: reportData.verdict,
     summary: briefText,
-    reportJsonPath: finalJsonPath,
+    reportJsonPath: primaryJsonPath,
     reportHtmlPath: htmlReportPath,
     reportData,
     ruleResult,
