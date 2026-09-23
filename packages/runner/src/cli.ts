@@ -8,13 +8,26 @@ import type { ReviewEngine } from '@review-base/core';
 
 async function main() {
   const args = parseArgs(Deno.args, {
-    string: ['repo', 'pr', 'head-sha', 'output-dir', 'engine', 'cache-dir', 'worktree-dir'],
+    string: [
+      'repo',
+      'pr',
+      'head-sha',
+      'output-dir',
+      'engine',
+      'cache-dir',
+      'worktree-dir',
+      'api-base-url',
+      'auth-token',
+      'model',
+      'max-turns',
+    ],
     boolean: ['help'],
     alias: {
       r: 'repo',
       p: 'pr',
       o: 'output-dir',
       h: 'help',
+      m: 'model',
     },
   });
 
@@ -23,14 +36,18 @@ async function main() {
 Usage: review-runner [options]
 
 Options:
-  -r, --repo <owner/repo>    GitHub repository (required)
-  -p, --pr <number>          Pull request number (required)
-      --head-sha <sha>       Target head SHA (optional)
-  -o, --output-dir <dir>     Output directory for review artifacts (default: ./data/reports/<pr>)
-      --engine <name>        Engine to use (default: claude-code)
-      --cache-dir <dir>      Bare git cache directory (default: ./data/cache)
-      --worktree-dir <dir>   Temporary worktree directory (default: ./.worktrees)
-  -h, --help                 Show this help message
+  -r, --repo <owner/repo>     GitHub repository (required)
+  -p, --pr <number>           Pull request number (required)
+      --head-sha <sha>        Target head SHA (optional)
+  -o, --output-dir <dir>      Output directory for review artifacts (default: ./data/reports/<pr>)
+      --engine <name>         Engine to use (default: claude-code)
+  -m, --model <name>          Model name (e.g. ornith-1.5:9b, claude-3-5-sonnet-20241022)
+      --api-base-url <url>    Custom API base URL (e.g. http://localhost:4000 for LiteLLM proxy)
+      --auth-token <token>    API auth token / key
+      --max-turns <number>    Max agent turns limit
+      --cache-dir <dir>       Bare git cache directory (default: ./data/cache)
+      --worktree-dir <dir>    Temporary worktree directory (default: ./.worktrees)
+  -h, --help                  Show this help message
 `);
     Deno.exit(args.help ? 0 : 1);
   }
@@ -57,10 +74,17 @@ Options:
     console.log(`Worktree ready at: ${session.worktreePath}`);
 
     let engine: ReviewEngine;
-    if (args.engine === 'antigravity' || args.engine === undefined) {
-      engine = new AntigravityEngine();
-    } else if (args.engine === 'claude-code') {
-      engine = new ClaudeCodeEngine();
+    if (args.engine === 'antigravity') {
+      engine = new AntigravityEngine({
+        model: args.model,
+      });
+    } else if (args.engine === 'claude-code' || args.engine === undefined) {
+      engine = new ClaudeCodeEngine({
+        model: args.model,
+        apiBaseUrl: args['api-base-url'],
+        authToken: args['auth-token'],
+        maxTurns: args['max-turns'] ? parseInt(args['max-turns'], 10) : undefined,
+      });
     } else if (args.engine === 'mock') {
       engine = new MockReviewEngine();
     } else {

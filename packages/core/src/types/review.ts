@@ -121,6 +121,10 @@ export interface AntigravityEngineConfig extends BaseCliEngineConfig {
 export interface ClaudeCodeEngineConfig extends BaseCliEngineConfig {
   allowedTools?: string;
   bare: boolean;
+  apiBaseUrl?: string;
+  authToken?: string;
+  customEnv?: Record<string, string>;
+  maxTurns?: number;
 }
 
 export interface MockEngineConfig {
@@ -250,6 +254,10 @@ export interface ClaudeCodeOptions {
   outputFormat?: 'text' | 'json' | 'stream-json';
   jsonSchema?: string;
   customArgs?: string;
+  apiBaseUrl?: string;
+  authToken?: string;
+  customEnv?: Record<string, string>;
+  maxTurns?: number;
 }
 
 export interface MockEngineOptions {

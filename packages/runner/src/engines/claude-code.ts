@@ -13,6 +13,10 @@ export interface ClaudeCodeEngineOptions {
   outputFormat?: 'text' | 'json' | 'stream-json';
   jsonSchema?: string;
   customArgs?: string;
+  apiBaseUrl?: string;
+  authToken?: string;
+  customEnv?: Record<string, string>;
+  maxTurns?: number;
 }
 
 export class ClaudeCodeEngine implements ReviewEngine {
@@ -28,6 +32,10 @@ export class ClaudeCodeEngine implements ReviewEngine {
   private readonly outputFormat?: 'text' | 'json' | 'stream-json';
   private readonly jsonSchema?: string;
   private readonly customArgs?: string;
+  private readonly apiBaseUrl?: string;
+  private readonly authToken?: string;
+  private readonly customEnv?: Record<string, string>;
+  private readonly maxTurns?: number;
 
   constructor(options?: ClaudeCodeEngineOptions) {
     this.claudeBinaryPath = options?.claudeBinaryPath ?? Deno.env.get('CLAUDE_BIN') ?? 'claude';
@@ -41,6 +49,10 @@ export class ClaudeCodeEngine implements ReviewEngine {
     this.outputFormat = options?.outputFormat;
     this.jsonSchema = options?.jsonSchema;
     this.customArgs = options?.customArgs;
+    this.apiBaseUrl = options?.apiBaseUrl;
+    this.authToken = options?.authToken;
+    this.customEnv = options?.customEnv;
+    this.maxTurns = options?.maxTurns;
   }
 
   async execute(context: ReviewExecutionContext): Promise<ReviewExecutionResult> {
@@ -54,6 +66,9 @@ export class ClaudeCodeEngine implements ReviewEngine {
 
     await log(`Starting review execution for ${context.repository}#${context.number} with engine 'claude-code'`);
     await log(`Using claude binary: ${this.claudeBinaryPath}`);
+    if (this.apiBaseUrl) {
+      await log(`[Engine] Using custom API base URL: ${this.apiBaseUrl}`);
+    }
     await log(`Target worktree: ${context.worktreePath}`);
 
     try {
@@ -95,9 +110,24 @@ export class ClaudeCodeEngine implements ReviewEngine {
       if (this.bare) {
         args.push('--bare');
       }
+      if (this.maxTurns !== undefined) {
+        args.push('--max-turns', String(this.maxTurns));
+      }
       if (this.customArgs) {
         const extra = this.customArgs.split(/\s+/).filter(Boolean);
         args.push(...extra);
+      }
+
+      const env: Record<string, string> = {
+        ...Deno.env.toObject(),
+        ...(this.customEnv ?? {}),
+      };
+      if (this.apiBaseUrl) {
+        env['ANTHROPIC_BASE_URL'] = this.apiBaseUrl;
+      }
+      if (this.authToken) {
+        env['ANTHROPIC_AUTH_TOKEN'] = this.authToken;
+        env['ANTHROPIC_API_KEY'] = this.authToken;
       }
 
       const cmd = new Deno.Command(this.claudeBinaryPath, {
@@ -106,7 +136,7 @@ export class ClaudeCodeEngine implements ReviewEngine {
         stdin: 'null',
         stdout: 'piped',
         stderr: 'piped',
-        env: Deno.env.toObject(),
+        env,
       });
 
       const child = cmd.spawn();

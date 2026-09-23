@@ -153,6 +153,10 @@ export class ReviewQueue {
         outputFormat: cfg.outputFormat,
         jsonSchema: cfg.jsonSchema,
         customArgs: cfg.customArgs,
+        apiBaseUrl: cfg.apiBaseUrl,
+        authToken: cfg.authToken,
+        customEnv: cfg.customEnv,
+        maxTurns: cfg.maxTurns,
       });
     }
     // default: antigravity
