@@ -19,6 +19,7 @@ import {
   ArrowLeft,
   AlertCircle,
   Power,
+  Copy,
 } from 'lucide-react';
 import { ReviewRule, EngineOverrideConfig, AppSettings } from '../../types.ts';
 import { Checkbox } from '../../components/Checkbox.tsx';
@@ -189,6 +190,25 @@ export function RuleSettingsView({
       setConfirmDeleteId(null);
     } catch {
       onShowError('ルールの削除に失敗しました');
+    }
+  };
+
+  const handleDuplicateRule = async (rule: ReviewRule) => {
+    try {
+      await onCreateRule({
+        name: `${rule.name} (Copy)`,
+        description: rule.description,
+        category: rule.category,
+        engine: rule.engine,
+        instructions: rule.instructions,
+        engineOverride: rule.engineOverride ? { ...rule.engineOverride } : undefined,
+        trigger: rule.trigger ? { ...rule.trigger } : undefined,
+        concurrency: rule.concurrency ? { ...rule.concurrency } : undefined,
+        enabled: rule.enabled,
+      });
+      onShowSuccess(`ルール「${rule.name} (Copy)」を作成しました`);
+    } catch {
+      onShowError('ルールの複製に失敗しました');
     }
   };
 
@@ -640,6 +660,9 @@ export function RuleSettingsView({
                       <SettingButtonGroup>
                         <SettingActionButton onClick={() => handleOpenEditRule(rule)} title="ルールを編集">
                           <Edit2 className="w-3.5 h-3.5" />
+                        </SettingActionButton>
+                        <SettingActionButton onClick={() => handleDuplicateRule(rule)} title="ルールを複製">
+                          <Copy className="w-3.5 h-3.5" />
                         </SettingActionButton>
                         <SettingActionButton
                           danger

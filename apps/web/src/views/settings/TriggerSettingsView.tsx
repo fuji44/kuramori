@@ -15,6 +15,7 @@ import {
   Square,
   Sparkles,
   Power,
+  Copy,
 } from 'lucide-react';
 import { ReviewTrigger, ReviewRule } from '../../types.ts';
 import { Checkbox } from '../../components/Checkbox.tsx';
@@ -184,6 +185,22 @@ export function TriggerSettingsView({
       setConfirmDeleteId(null);
     } catch {
       onShowError('トリガーの削除に失敗しました');
+    }
+  };
+
+  const handleDuplicateTrigger = async (trigger: ReviewTrigger) => {
+    try {
+      await onCreateTrigger({
+        name: `${trigger.name} (Copy)`,
+        repository: trigger.repository,
+        paths: trigger.paths ? [...trigger.paths] : undefined,
+        pathsIgnore: trigger.pathsIgnore ? [...trigger.pathsIgnore] : undefined,
+        ruleIds: trigger.ruleIds ? [...trigger.ruleIds] : [],
+        enabled: trigger.enabled,
+      });
+      onShowSuccess(`トリガー「${trigger.name} (Copy)」を作成しました`);
+    } catch {
+      onShowError('トリガーの複製に失敗しました');
     }
   };
 
@@ -479,6 +496,12 @@ export function TriggerSettingsView({
                           title="トリガーを編集"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
+                        </SettingActionButton>
+                        <SettingActionButton
+                          onClick={() => handleDuplicateTrigger(trigger)}
+                          title="トリガーを複製"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
                         </SettingActionButton>
                         <SettingActionButton
                           danger
