@@ -30,6 +30,11 @@ import {
   ClaudeCodeFields,
   MockFields,
 } from '../../components/settings/EngineConfigFields.tsx';
+import {
+  SettingCard,
+  SettingBadge,
+  SettingActionButton,
+} from '../../components/settings/SettingCard.tsx';
 
 interface EngineSettingsViewProps {
   settings: AppSettings;
@@ -899,74 +904,65 @@ export function EngineSettingsView({
           const result = testResults[p.id];
 
           return (
-            <div
+            <SettingCard
               key={p.id}
-              className={`p-4 rounded-xl border transition-all ${
-                isDef
-                  ? 'border-sky-500/60 bg-sky-950/20 shadow-sm'
-                  : 'border-[#30363d] bg-[#161b22] hover:border-[#8b949e]/60'
-              }`}
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="space-y-1.5 flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-sm text-white truncate">
-                      {p.name}
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-full bg-[#21262d] text-sky-300 border border-[#30363d]">
-                      {p.engineType === 'claude-code' && <Terminal className="w-3 h-3" />}
-                      {p.engineType === 'antigravity' && <Cpu className="w-3 h-3" />}
-                      {p.engineType === 'mock' && <Box className="w-3 h-3" />}
-                      <span>{p.engineType}</span>
-                    </span>
-                    {isDef && (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800/80">
-                        <CheckCircle2 className="w-3 h-3" />
-                        <span>既定</span>
-                      </span>
-                    )}
-                  </div>
-
-                  {p.description && (
-                    <p className="text-xs text-[#8b949e] leading-relaxed line-clamp-1">{p.description}</p>
+              isDefault={isDef}
+              title={p.name}
+              badges={
+                <>
+                  <SettingBadge
+                    variant="neutral"
+                    icon={
+                      p.engineType === 'claude-code' ? (
+                        <Terminal className="w-3 h-3" />
+                      ) : p.engineType === 'antigravity' ? (
+                        <Cpu className="w-3 h-3" />
+                      ) : (
+                        <Box className="w-3 h-3" />
+                      )
+                    }
+                  >
+                    {p.engineType}
+                  </SettingBadge>
+                  {isDef && (
+                    <SettingBadge variant="default" icon={<CheckCircle2 className="w-3 h-3" />}>
+                      既定
+                    </SettingBadge>
                   )}
-
-                  <div className="flex items-center gap-4 text-xs text-[#8b949e] font-mono pt-1 flex-wrap">
-                    <div>
-                      モデル: <span className="text-[#c9d1d9]">{model || '未指定'}</span>
-                    </div>
-                    {apiBaseUrl && (
-                      <div>
-                        Base URL: <span className="text-sky-300">{apiBaseUrl}</span>
-                      </div>
-                    )}
-                    <div>
-                      タイムアウト:{' '}
-                      <span className="text-[#c9d1d9]">
-                        {p.engineType === 'mock'
-                          ? `${(p.config as any).delayMs}ms`
-                          : `${(p.config as any).timeoutSeconds ?? 900}s`}
-                      </span>
-                    </div>
+                </>
+              }
+              description={p.description}
+              metadata={
+                <>
+                  <div>
+                    モデル: <span className="text-[#c9d1d9]">{model || '未指定'}</span>
                   </div>
-                </div>
-
-                {/* Actions (整列統一) */}
-                <div className="flex items-center gap-2 self-end sm:self-start shrink-0 pt-2 sm:pt-0">
+                  {apiBaseUrl && (
+                    <div>
+                      Base URL: <span className="text-sky-300">{apiBaseUrl}</span>
+                    </div>
+                  )}
+                  <div>
+                    タイムアウト:{' '}
+                    <span className="text-[#c9d1d9]">
+                      {p.engineType === 'mock'
+                        ? `${(p.config as any).delayMs}ms`
+                        : `${(p.config as any).timeoutSeconds ?? 900}s`}
+                    </span>
+                  </div>
+                </>
+              }
+              actions={
+                <>
                   {/* 1. 既定トグルボタン (最左に固定) */}
-                  <button
-                    type="button"
+                  <SettingActionButton
+                    active={isDef}
                     disabled={isDef}
                     onClick={() => handleSetDefaultProfile(p.id)}
-                    className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
-                      isDef
-                        ? 'bg-emerald-950/60 text-emerald-400 border-emerald-800/80 cursor-default'
-                        : 'bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-emerald-400 border-[#30363d]'
-                    }`}
                     title={isDef ? 'システム既定のプロファイルです' : 'このプロファイルをシステム既定にする'}
                   >
                     <CheckCircle2 className={`w-3.5 h-3.5 ${isDef ? 'fill-emerald-400/20' : ''}`} />
-                  </button>
+                  </SettingActionButton>
 
                   {/* 2. テスト実行ボタン */}
                   <EngineTestButton
@@ -975,66 +971,57 @@ export function EngineSettingsView({
                   />
 
                   {/* 3. 編集ボタン */}
-                  <button
-                    type="button"
-                    onClick={() => handleStartEdit(p)}
-                    className="p-1.5 text-[#8b949e] hover:text-white hover:bg-[#21262d] rounded-lg transition-colors border border-[#30363d] cursor-pointer"
-                    title="プロファイルを編集"
-                  >
+                  <SettingActionButton onClick={() => handleStartEdit(p)} title="プロファイルを編集">
                     <Edit2 className="w-3.5 h-3.5" />
-                  </button>
+                  </SettingActionButton>
 
                   {/* 4. 複製ボタン */}
-                  <button
-                    type="button"
-                    onClick={() => handleDuplicateProfile(p)}
-                    className="p-1.5 text-[#8b949e] hover:text-white hover:bg-[#21262d] rounded-lg transition-colors border border-[#30363d] cursor-pointer"
-                    title="プロファイルを複製"
-                  >
+                  <SettingActionButton onClick={() => handleDuplicateProfile(p)} title="プロファイルを複製">
                     <Copy className="w-3.5 h-3.5" />
-                  </button>
+                  </SettingActionButton>
 
                   {/* 5. 削除ボタン */}
-                  <button
-                    type="button"
+                  <SettingActionButton
+                    danger
                     disabled={profiles.length <= 1}
                     onClick={() => handleDeleteProfile(p.id)}
-                    className="p-1.5 text-[#8b949e] hover:text-red-400 hover:bg-red-950/30 rounded-lg transition-colors border border-[#30363d] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                     title="プロファイルを削除"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-
+                  </SettingActionButton>
+                </>
+              }
+            >
               {result && (
-                <div
-                  className={`mt-3 p-2.5 rounded-lg border text-xs flex items-start gap-2 ${
-                    result.success
-                      ? 'bg-emerald-950/20 border-emerald-800/40 text-emerald-300'
-                      : 'bg-red-950/20 border-red-800/40 text-red-300'
-                  }`}
-                >
-                  {result.success ? (
-                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400 mt-0.5" />
-                  ) : (
-                    <AlertCircle className="w-4 h-4 shrink-0 text-red-400 mt-0.5" />
-                  )}
-                  <div className="space-y-0.5 min-w-0">
-                    <div className="font-semibold">
-                      {result.success ? 'テスト成功' : 'テスト失敗'}
-                      {result.version && ` (${result.version})`}
-                    </div>
-                    <div className="text-[11px] text-[#8b949e]">{result.message || result.error}</div>
-                    {result.output && (
-                      <pre className="font-mono text-[10px] bg-black/40 p-2 rounded mt-1 whitespace-pre-wrap max-h-24 overflow-y-auto">
-                        {result.output}
-                      </pre>
+                <div className="px-4 pb-4 sm:px-5 sm:pb-5 pt-0">
+                  <div
+                    className={`p-2.5 rounded-lg border text-xs flex items-start gap-2 ${
+                      result.success
+                        ? 'bg-emerald-950/20 border-emerald-800/40 text-emerald-300'
+                        : 'bg-red-950/20 border-red-800/40 text-red-300'
+                    }`}
+                  >
+                    {result.success ? (
+                      <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400 mt-0.5" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 shrink-0 text-red-400 mt-0.5" />
                     )}
+                    <div className="space-y-0.5 min-w-0">
+                      <div className="font-semibold">
+                        {result.success ? 'テスト成功' : 'テスト失敗'}
+                        {result.version && ` (${result.version})`}
+                      </div>
+                      <div className="text-[11px] text-[#8b949e]">{result.message || result.error}</div>
+                      {result.output && (
+                        <pre className="font-mono text-[10px] bg-black/40 p-2 rounded mt-1 whitespace-pre-wrap max-h-24 overflow-y-auto">
+                          {result.output}
+                        </pre>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
-            </div>
+            </SettingCard>
           );
         })}
       </div>

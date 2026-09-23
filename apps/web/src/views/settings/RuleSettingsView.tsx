@@ -22,6 +22,11 @@ import {
 import { ReviewRule, EngineOverrideConfig, AppSettings } from '../../types.ts';
 import { Checkbox } from '../../components/Checkbox.tsx';
 import { EngineConfigFields } from '../../components/settings/EngineConfigFields.tsx';
+import {
+  SettingCard,
+  SettingBadge,
+  SettingActionButton,
+} from '../../components/settings/SettingCard.tsx';
 
 interface RuleSettingsViewProps {
   rules: ReviewRule[];
@@ -527,109 +532,96 @@ export function RuleSettingsView({
             const isConfirmingDelete = confirmDeleteId === rule.id;
 
             return (
-              <div
+              <SettingCard
                 key={rule.id}
-                className={`bg-[#161b22] border rounded-xl overflow-hidden transition-all ${
-                  rule.enabled
-                    ? 'border-[#30363d] hover:border-[#8b949e]/50'
-                    : 'border-[#30363d]/50 opacity-75'
-                }`}
-              >
-                <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-base text-white">{rule.name}</span>
+                isDefault={isDefault}
+                disabled={!rule.enabled}
+                title={rule.name}
+                badges={
+                  <>
+                    <SettingBadge variant="primary">{rule.category}</SettingBadge>
 
-                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-sky-950 text-sky-400 border border-sky-800/60 font-medium">
-                        {rule.category}
-                      </span>
+                    {(() => {
+                      const matchedProfile = settings?.engineProfiles?.find((p) => p.id === rule.engine);
+                      const label = matchedProfile ? matchedProfile.name : rule.engine;
+                      const engineType = matchedProfile ? matchedProfile.engineType : rule.engine;
+                      return (
+                        <SettingBadge
+                          variant="neutral"
+                          icon={
+                            engineType === 'claude-code' ? (
+                              <Terminal className="w-3 h-3" />
+                            ) : engineType === 'antigravity' ? (
+                              <Cpu className="w-3 h-3" />
+                            ) : (
+                              <Box className="w-3 h-3" />
+                            )
+                          }
+                        >
+                          engine: {label}
+                        </SettingBadge>
+                      );
+                    })()}
 
-                      {(() => {
-                        const matchedProfile = settings?.engineProfiles?.find((p) => p.id === rule.engine);
-                        const label = matchedProfile
-                          ? matchedProfile.name
-                          : rule.engine;
-                        const engineType = matchedProfile ? matchedProfile.engineType : rule.engine;
-                        return (
-                          <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-[#21262d] text-sky-300 font-mono border border-[#30363d]">
-                            {engineType === 'claude-code' && <Terminal className="w-3 h-3" />}
-                            {engineType === 'antigravity' && <Cpu className="w-3 h-3" />}
-                            {engineType === 'mock' && <Box className="w-3 h-3" />}
-                            <span>engine: {label}</span>
-                          </span>
-                        );
-                      })()}
-
-                      {rule.engine !== 'default' && settings?.enabledEngines && !settings.enabledEngines.includes(rule.engine) && (
-                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 font-mono border border-amber-800/60 flex items-center gap-1">
-                          <AlertCircle className="w-3 h-3" />
-                          <span>エンジン無効化中</span>
-                        </span>
+                    {rule.engine !== 'default' &&
+                      settings?.enabledEngines &&
+                      !settings.enabledEngines.includes(rule.engine) && (
+                        <SettingBadge variant="warning" icon={<AlertCircle className="w-3 h-3" />}>
+                          エンジン無効化中
+                        </SettingBadge>
                       )}
 
-                      {rule.engineOverride && Object.keys(rule.engineOverride).length > 0 && (
-                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-purple-950 text-purple-300 font-mono border border-purple-800/60 flex items-center gap-1">
-                          <Sliders className="w-3 h-3" />
-                          <span>設定上書きあり</span>
-                        </span>
-                      )}
+                    {rule.engineOverride && Object.keys(rule.engineOverride).length > 0 && (
+                      <SettingBadge variant="purple" icon={<Sliders className="w-3 h-3" />}>
+                        設定上書きあり
+                      </SettingBadge>
+                    )}
 
-                      {isDefault && (
-                        <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800/80 font-semibold">
-                          <CheckCircle2 className="w-3 h-3" />
-                          <span>既定</span>
-                        </span>
-                      )}
+                    {isDefault && (
+                      <SettingBadge variant="default" icon={<CheckCircle2 className="w-3 h-3" />}>
+                        既定
+                      </SettingBadge>
+                    )}
 
-                      {!rule.enabled && (
-                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-400 border border-neutral-700 flex items-center gap-1">
-                          <Ban className="w-3 h-3" />
-                          <span>無効</span>
-                        </span>
-                      )}
+                    {!rule.enabled && (
+                      <SettingBadge variant="muted" icon={<Ban className="w-3 h-3" />}>
+                        無効
+                      </SettingBadge>
+                    )}
+                  </>
+                }
+                description={rule.description}
+                metadata={
+                  rule.concurrency?.cancelInProgress ? (
+                    <div className="flex items-center gap-1 text-[11px] text-[#8b949e]">
+                      <Clock className="w-3 h-3" />
+                      <span>新コミット時キャンセル</span>
                     </div>
-
-                    {rule.description && (
-                      <p className="text-xs text-[#8b949e] leading-relaxed">
-                        {rule.description}
-                      </p>
-                    )}
-
-                    {rule.concurrency?.cancelInProgress && (
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#8b949e] pt-1">
-                        <div className="flex items-center gap-1 text-[11px] text-[#8b949e]">
-                          <Clock className="w-3 h-3" />
-                          <span>新コミット時キャンセル</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 self-end sm:self-start shrink-0">
+                  ) : undefined
+                }
+                actions={
+                  <>
+                    {/* 1. 既定トグルボタン (最左に固定) */}
                     {onUpdateDefaultRuleIds && (
-                      <button
-                        type="button"
+                      <SettingActionButton
+                        active={isDefault}
                         onClick={() => {
                           const next = isDefault
                             ? defaultRuleIds.filter((id) => id !== rule.id)
                             : [...defaultRuleIds, rule.id];
                           onUpdateDefaultRuleIds(next);
                         }}
-                        className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
-                          isDefault
-                            ? 'bg-emerald-950/60 text-emerald-400 border-emerald-800/80 hover:bg-emerald-900/60'
-                            : 'bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-emerald-400 border-[#30363d]'
-                        }`}
                         title={isDefault ? '既定ルールから外す' : '既定ルールに追加'}
                       >
                         <CheckCircle2 className={`w-3.5 h-3.5 ${isDefault ? 'fill-emerald-400/20' : ''}`} />
-                      </button>
+                      </SettingActionButton>
                     )}
+
+                    {/* 2. 指示文ドロワートグル */}
                     <button
                       type="button"
                       onClick={() => toggleInstructions(rule.id)}
-                      className="px-2.5 py-1.5 rounded-lg bg-[#21262d] hover:bg-[#30363d] text-xs text-[#c9d1d9] flex items-center gap-1 transition-colors"
+                      className="px-2.5 py-1.5 rounded-lg bg-[#21262d] hover:bg-[#30363d] text-xs text-[#c9d1d9] flex items-center gap-1 transition-colors border border-[#30363d] cursor-pointer"
                     >
                       <span>指示文</span>
                       {isExpanded ? (
@@ -639,46 +631,42 @@ export function RuleSettingsView({
                       )}
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={() => handleOpenEditRule(rule)}
-                      className="p-1.5 rounded-lg bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-white transition-colors"
-                      title="ルールを編集"
-                    >
+                    {/* 3. 編集ボタン */}
+                    <SettingActionButton onClick={() => handleOpenEditRule(rule)} title="ルールを編集">
                       <Edit2 className="w-3.5 h-3.5" />
-                    </button>
+                    </SettingActionButton>
 
+                    {/* 4. 削除ボタン / 確認UI */}
                     {isConfirmingDelete ? (
                       <div className="flex items-center gap-1 bg-rose-950/60 border border-rose-800/80 rounded-lg p-1">
                         <span className="text-[11px] text-rose-300 px-1">削除しますか?</span>
                         <button
                           type="button"
                           onClick={() => handleDelete(rule.id, rule.name)}
-                          className="px-2 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-medium transition-colors"
+                          className="px-2 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-medium transition-colors cursor-pointer"
                         >
                           削除
                         </button>
                         <button
                           type="button"
                           onClick={() => setConfirmDeleteId(null)}
-                          className="px-1.5 py-0.5 rounded text-[#8b949e] hover:text-white text-[11px]"
+                          className="px-1.5 py-0.5 rounded text-[#8b949e] hover:text-white text-[11px] cursor-pointer"
                         >
                           戻る
                         </button>
                       </div>
                     ) : (
-                      <button
-                        type="button"
+                      <SettingActionButton
+                        danger
                         onClick={() => setConfirmDeleteId(rule.id)}
-                        className="p-1.5 rounded-lg hover:bg-rose-950/40 text-[#8b949e] hover:text-rose-400 transition-colors"
                         title="ルールを削除"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      </SettingActionButton>
                     )}
-                  </div>
-                </div>
-
+                  </>
+                }
+              >
                 {/* Collapsible Instructions Drawer */}
                 {isExpanded && (
                   <div className="px-5 py-4 bg-[#0d1117] border-t border-[#30363d] space-y-2 animate-in fade-in duration-100">
@@ -690,7 +678,7 @@ export function RuleSettingsView({
                     </pre>
                   </div>
                 )}
-              </div>
+              </SettingCard>
             );
           })
         )}
