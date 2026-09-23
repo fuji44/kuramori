@@ -16,8 +16,9 @@ interface PrListViewProps {
   params: FilterUrlParams;
   onParamsChange: (newParams: FilterUrlParams) => void;
   onOpenLog: (e: React.MouseEvent, jobId: string, error?: string | null) => void;
-  onRunReview: (e: React.MouseEvent, id: string, ruleIds?: string[]) => void;
+  onRunReview: (e: React.MouseEvent, id: string, ruleIds?: string[], engine?: string) => void;
   onSelectReport: (reportId: string, prTitle: string) => void;
+  enabledEngines?: string[];
   onRefresh?: () => void;
   onShowSuccess: (msg: string) => void;
   onShowError: (msg: string) => void;
@@ -34,6 +35,7 @@ export function PrListView({
   onOpenLog,
   onRunReview,
   onSelectReport,
+  enabledEngines,
   onRefresh,
   onShowSuccess,
   onShowError,
@@ -306,6 +308,7 @@ export function PrListView({
                 item={item}
                 rules={rules}
                 defaultRuleIds={defaultRuleIds}
+                enabledEngines={enabledEngines}
                 isHighlighted={highlightedAnchor === anchorId}
                 onOpenLog={onOpenLog}
                 onRunReview={onRunReview}

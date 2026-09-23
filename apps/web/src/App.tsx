@@ -204,20 +204,27 @@ export default function App() {
     }
   };
 
-  const handleRunReview = async (e: React.MouseEvent, id: string, ruleIds?: string[]) => {
+  const handleRunReview = async (e: React.MouseEvent, id: string, ruleIds?: string[], engine?: string) => {
     e.stopPropagation();
     try {
+      const payload: Record<string, unknown> = {};
+      if (ruleIds && ruleIds.length > 0) {
+        payload.ruleIds = ruleIds;
+      }
+      if (engine && engine !== 'default') {
+        payload.engine = engine;
+      }
       const res = await fetch(`/api/reviews/${encodeURIComponent(id)}/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(ruleIds && ruleIds.length > 0 ? { ruleIds } : {}),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         throw new Error(`Run review failed: HTTP ${res.status}`);
       }
       showSuccess(
         ruleIds && ruleIds.length > 0
-          ? `${ruleIds.length} 件のレビュールールをキューに投入しました`
+          ? `${ruleIds.length} 件のルールをキューに投入しました${engine && engine !== 'default' ? ` (エンジン: ${engine})` : ''}`
           : 'AIレビューをキューに投入しました'
       );
       await fetchReviews();
@@ -244,6 +251,14 @@ export default function App() {
       console.error('Failed to save settings', err);
       throw err;
     }
+  };
+
+  const handleUpdateDefaultRuleIds = async (ids: string[]) => {
+    await handleSaveSettings({
+      ...settings,
+      defaultRuleIds: ids,
+      defaultRuleId: ids[0] ?? '',
+    });
   };
 
   const handleCreateRule = async (newRule: Partial<ReviewRule>) => {
@@ -489,6 +504,7 @@ export default function App() {
             items={items}
             rules={rules}
             defaultRuleIds={settings.defaultRuleIds}
+            enabledEngines={settings.enabledEngines}
             loading={loading}
             refreshing={refreshing}
             params={route.params}
@@ -544,6 +560,7 @@ export default function App() {
             onCreateRule={handleCreateRule}
             onUpdateRule={handleUpdateRule}
             onDeleteRule={handleDeleteRule}
+            onUpdateDefaultRuleIds={handleUpdateDefaultRuleIds}
             onCreateTrigger={handleCreateTrigger}
             onUpdateTrigger={handleUpdateTrigger}
             onDeleteTrigger={handleDeleteTrigger}

@@ -27,10 +27,11 @@ interface PrCardProps {
   item: ReviewItem;
   rules?: ReviewRule[];
   defaultRuleIds?: string[];
+  enabledEngines?: string[];
   isSelected?: boolean;
   isHighlighted?: boolean;
   onOpenLog: (e: React.MouseEvent, jobId: string, error?: string | null) => void;
-  onRunReview: (e: React.MouseEvent, id: string, ruleIds?: string[]) => void;
+  onRunReview: (e: React.MouseEvent, id: string, ruleIds?: string[], engine?: string) => void;
   onSelectReport: (reportId: string, prTitle: string) => void;
   onSelectCard?: (anchorId: string) => void;
   onCopyAnchor?: (anchorId: string) => void;
@@ -40,6 +41,7 @@ export function PrCard({
   item,
   rules = [],
   defaultRuleIds,
+  enabledEngines,
   isSelected = false,
   isHighlighted = false,
   onOpenLog,
@@ -50,13 +52,16 @@ export function PrCard({
 }: PrCardProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [selectedRuleIds, setSelectedRuleIds] = useState<Set<string>>(new Set());
+  const [selectedEngine, setSelectedEngine] = useState<string>('default');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (rules.length > 0) {
+    if (defaultRuleIds && defaultRuleIds.length > 0) {
+      setSelectedRuleIds(new Set(defaultRuleIds));
+    } else if (rules.length > 0) {
       setSelectedRuleIds(new Set(rules.filter((r) => r.enabled).map((r) => r.id)));
     }
-  }, [rules]);
+  }, [rules, defaultRuleIds]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -404,7 +409,7 @@ export function PrCard({
               className="absolute right-0 bottom-full mb-2 w-80 bg-[#1c2128] border border-[#30363d] rounded-xl shadow-2xl z-50 p-3 text-xs flex flex-col gap-2.5 animate-in fade-in zoom-in-95 duration-100"
             >
               <div className="flex items-center justify-between pb-2 border-b border-[#30363d]">
-                <span className="font-semibold text-white">レビュールール選択実行</span>
+                <span className="font-semibold text-white">ルール選択実行</span>
                 <div className="flex items-center gap-2 text-[11px]">
                   <button
                     type="button"
@@ -422,6 +427,27 @@ export function PrCard({
                     全解除
                   </button>
                 </div>
+              </div>
+
+              {/* 実行エンジン選択 */}
+              <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#30363d]">
+                <label className="text-xs text-[#8b949e] font-medium shrink-0">実行エンジン:</label>
+                <select
+                  value={selectedEngine}
+                  onChange={(e) => setSelectedEngine(e.target.value)}
+                  className="bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-sky-500 min-w-0 flex-1 truncate"
+                >
+                  <option value="default">default (各ルールの設定に従う)</option>
+                  <option value="antigravity">
+                    antigravity{enabledEngines && !enabledEngines.includes('antigravity') ? ' (無効化中)' : ''}
+                  </option>
+                  <option value="claude-code">
+                    claude-code{enabledEngines && !enabledEngines.includes('claude-code') ? ' (無効化中)' : ''}
+                  </option>
+                  <option value="mock">
+                    mock{enabledEngines && !enabledEngines.includes('mock') ? ' (無効化中)' : ''}
+                  </option>
+                </select>
               </div>
 
               {rules.length === 0 ? (
@@ -472,20 +498,6 @@ export function PrCard({
                             )}
                           </div>
                         </div>
-
-                        {/* 個別即時実行ボタン */}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setIsDropdownOpen(false);
-                            onRunReview(e, item.id, [rule.id]);
-                          }}
-                          className="ml-2 p-1 rounded hover:bg-[#30363d] text-sky-400 hover:text-sky-300 transition-colors shrink-0"
-                          title={`「${rule.name}」のみを実行`}
-                        >
-                          <Play className="w-3.5 h-3.5 fill-sky-400" />
-                        </button>
                       </div>
                     );
                   })}
@@ -502,7 +514,12 @@ export function PrCard({
                   onClick={(e) => {
                     e.stopPropagation();
                     setIsDropdownOpen(false);
-                    onRunReview(e, item.id, Array.from(selectedRuleIds));
+                    onRunReview(
+                      e,
+                      item.id,
+                      Array.from(selectedRuleIds),
+                      selectedEngine === 'default' ? undefined : selectedEngine
+                    );
                   }}
                   className="px-3 py-1 rounded bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium transition-colors"
                 >
