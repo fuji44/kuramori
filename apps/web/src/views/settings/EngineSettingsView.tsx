@@ -203,6 +203,7 @@ export function EngineSettingsView({
   const [formSettings, setFormSettings] = useState<AppSettings>(settings);
   const [isCreatingProfile, setIsCreatingProfile] = useState(false);
   const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
+  const [confirmDeleteProfileId, setConfirmDeleteProfileId] = useState<string | null>(null);
 
   const [saving, setSaving] = useState(false);
   const [testingProfileId, setTestingProfileId] = useState<string | null>(null);
@@ -365,7 +366,7 @@ export function EngineSettingsView({
   const handleSaveProfileForm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formName.trim()) {
-      onShowError('プロファイル名を入力してください');
+      onShowError('実行プロファイル名を入力してください');
       return;
     }
 
@@ -455,10 +456,10 @@ export function EngineSettingsView({
 
       setFormSettings(updatedSettings);
       await onSaveSettings(updatedSettings);
-      onShowSuccess(`プロファイル「${savedProfile.name}」を保存しました`);
+      onShowSuccess(`実行プロファイル「${savedProfile.name}」を保存しました`);
       handleCancelForm();
     } catch {
-      onShowError('プロファイルの保存に失敗しました');
+      onShowError('実行プロファイルの保存に失敗しました');
     } finally {
       setSaving(false);
     }
@@ -466,15 +467,11 @@ export function EngineSettingsView({
 
   const handleDeleteProfile = async (profileId: string) => {
     if (profiles.length <= 1) {
-      onShowError('少なくとも1つのプロファイルを保持する必要があります');
+      onShowError('実行プロファイルを少なくとも1つ登録してください');
       return;
     }
     const target = profiles.find((p) => p.id === profileId);
     if (!target) return;
-
-    if (!confirm(`プロファイル「${target.name}」を削除してもよろしいですか？`)) {
-      return;
-    }
 
     let nextProfiles = profiles.filter((p) => p.id !== profileId);
     let nextDefaultId = formSettings.defaultEngineProfileId;
@@ -495,7 +492,8 @@ export function EngineSettingsView({
 
     setFormSettings(updatedSettings);
     await onSaveSettings(updatedSettings);
-    onShowSuccess(`プロファイル「${target.name}」を削除しました`);
+    onShowSuccess(`実行プロファイル「${target.name}」を削除しました`);
+    setConfirmDeleteProfileId(null);
   };
 
   const handleDuplicateProfile = async (profile: EngineProfile) => {
@@ -517,7 +515,7 @@ export function EngineSettingsView({
 
     setFormSettings(updatedSettings);
     await onSaveSettings(updatedSettings);
-    onShowSuccess(`プロファイル「${duplicated.name}」を複製しました`);
+    onShowSuccess(`実行プロファイル「${duplicated.name}」を複製しました`);
   };
 
   const handleSetDefaultProfile = async (profileId: string) => {
@@ -539,7 +537,7 @@ export function EngineSettingsView({
 
     setFormSettings(updatedSettings);
     await onSaveSettings(updatedSettings);
-    onShowSuccess(`「${target.name}」をシステム既定プロファイルに設定しました`);
+    onShowSuccess(`「${target.name}」をシステム既定の実行プロファイルに設定しました`);
   };
 
   const handleTest = async (
@@ -646,13 +644,13 @@ export function EngineSettingsView({
       <div className="max-w-4xl mx-auto space-y-6">
         <SettingFormHeader
           icon={<Cpu className="w-5 h-5" />}
-          backLabel="エンジンプロファイル一覧に戻る"
+          backLabel="実行プロファイル一覧に戻る"
           onBack={handleCancelForm}
-          title={editingProfileId ? 'エンジンプロファイルを編集' : '新規エンジンプロファイルを作成'}
+          title={editingProfileId ? '実行プロファイルを編集' : '新規実行プロファイルを作成'}
           description={
             editingProfileId
-              ? `「${formName || 'プロファイル'}」のモデル、接続先、推論パラメータを設定します。`
-              : 'Ollama ローカル推論やクラウド AI CLI の新しいプロファイルを定義します。'
+              ? `「${formName || '実行プロファイル'}」のモデル、接続先、推論パラメータを設定します。`
+              : 'Ollama ローカル推論やクラウド AI CLI の実行プロファイルを定義します。'
           }
         />
 
@@ -665,7 +663,7 @@ export function EngineSettingsView({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-semibold text-[#8b949e] block mb-1">
-                  プロファイル名 *
+                  実行プロファイル名 *
                 </label>
                 <input
                   type="text"
@@ -685,7 +683,7 @@ export function EngineSettingsView({
                   type="text"
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
-                  placeholder="例: ローカル RTX 5080 で高速実行する Ollama 推論プロファイル"
+                  placeholder="例: ローカル RTX 5080 で高速実行する Ollama の実行プロファイル"
                   className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500"
                 />
               </div>
@@ -764,7 +762,7 @@ export function EngineSettingsView({
                   onChange={(e) => setFormIsDefault(e.target.checked)}
                   className="rounded bg-[#0d1117] border-[#30363d] text-sky-500 focus:ring-sky-500/30"
                 />
-                <span>システム既定のプロファイルとして使用する（レビュールールで default 指定時に適用）</span>
+                <span>システム既定の実行プロファイルとして使用する（レビュールールでシステム既定を選択した場合に適用）</span>
               </label>
             </div>
           </div>
@@ -834,7 +832,7 @@ export function EngineSettingsView({
           {/* Form Actions */}
           <SettingFormFooter
             onCancel={handleCancelForm}
-            submitLabel="プロファイルを保存"
+            submitLabel="実行プロファイルを保存"
             saving={saving}
             extraActions={
               <EngineTestButton
@@ -854,10 +852,10 @@ export function EngineSettingsView({
       {/* Header */}
       <SettingViewHeader
         icon={<Cpu className="w-5 h-5" />}
-        title="AI 実行エンジン"
-        description="レビューを実行する AI エージェント CLI / バックエンドのプロファイルを管理します。"
+        title="AI 実行プロファイル"
+        description="レビューで使う AI CLI やバックエンドの接続先・モデル・動作設定を管理します。"
         action={{
-          label: '新しいプロファイルを追加',
+          label: '実行プロファイルを追加',
           onClick: handleStartCreate,
         }}
       />
@@ -867,10 +865,10 @@ export function EngineSettingsView({
         {profiles.length === 0 ? (
           <SettingEmptyState
             icon={<Cpu className="w-8 h-8" />}
-            message="エンジンプロファイルが登録されていません。"
-            description="プロファイルを追加して、AI レビュー実行エンジンを設定してください。"
+            message="実行プロファイルが登録されていません。"
+            description="実行プロファイルを追加して、AI レビューの実行先を設定してください。"
             action={{
-              label: '最初のプロファイルを作成',
+              label: '実行プロファイルを作成',
               onClick: handleStartCreate,
             }}
           />
@@ -935,45 +933,60 @@ export function EngineSettingsView({
                 <>
                   {/* 状態・トグル系グループ */}
                   <div className="flex items-center gap-1.5">
-                    {/* 1. 既定トグルボタン (最左に固定) */}
-                    <SettingActionButton
-                      active={isDef}
-                      disabled={isDef}
-                      onClick={() => handleSetDefaultProfile(p.id)}
-                      title={isDef ? 'システム既定のプロファイルです' : 'このプロファイルをシステム既定にする'}
-                    >
-                      <CheckCircle2 className={`w-3.5 h-3.5 ${isDef ? 'fill-emerald-400/20' : ''}`} />
-                    </SettingActionButton>
-
-                    {/* 2. テスト実行ボタン */}
+                    {/* テスト実行ボタン */}
                     <EngineTestButton
                       isTesting={isThisTesting}
                       onTest={(mode) => handleTest(p.id, p.engineType, p.config, mode)}
                     />
+
+                    {/* 既定トグルボタン */}
+                    <SettingActionButton
+                      active={isDef}
+                      disabled={isDef}
+                      onClick={() => handleSetDefaultProfile(p.id)}
+                      title={isDef ? 'システム既定の実行プロファイルです' : 'この実行プロファイルをシステム既定にする'}
+                    >
+                      <CheckCircle2 className={`w-3.5 h-3.5 ${isDef ? 'fill-emerald-400/20' : ''}`} />
+                    </SettingActionButton>
                   </div>
 
                   {/* 管理操作系グループ */}
-                  <SettingButtonGroup>
-                    {/* 3. 編集ボタン */}
-                    <SettingActionButton onClick={() => handleStartEdit(p)} title="プロファイルを編集">
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </SettingActionButton>
-
-                    {/* 4. 複製ボタン */}
-                    <SettingActionButton onClick={() => handleDuplicateProfile(p)} title="プロファイルを複製">
-                      <Copy className="w-3.5 h-3.5" />
-                    </SettingActionButton>
-
-                    {/* 5. 削除ボタン */}
-                    <SettingActionButton
-                      danger
-                      disabled={profiles.length <= 1}
-                      onClick={() => handleDeleteProfile(p.id)}
-                      title="プロファイルを削除"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </SettingActionButton>
-                  </SettingButtonGroup>
+                  {confirmDeleteProfileId === p.id ? (
+                    <div className="flex items-center gap-1 bg-rose-950/60 border border-rose-800/80 rounded-lg p-1">
+                      <span className="text-[11px] text-rose-300 px-1">実行プロファイル「{p.name}」を削除しますか?</span>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteProfile(p.id)}
+                        className="px-2 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-medium transition-colors cursor-pointer"
+                      >
+                        削除
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteProfileId(null)}
+                        className="px-1.5 py-0.5 rounded text-[#8b949e] hover:text-white text-[11px] cursor-pointer"
+                      >
+                        戻る
+                      </button>
+                    </div>
+                  ) : (
+                    <SettingButtonGroup>
+                      <SettingActionButton onClick={() => handleStartEdit(p)} title="実行プロファイルを編集">
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </SettingActionButton>
+                      <SettingActionButton onClick={() => handleDuplicateProfile(p)} title="実行プロファイルを複製">
+                        <Copy className="w-3.5 h-3.5" />
+                      </SettingActionButton>
+                      <SettingActionButton
+                        danger
+                        disabled={profiles.length <= 1}
+                        onClick={() => setConfirmDeleteProfileId(p.id)}
+                        title="実行プロファイルを削除"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </SettingActionButton>
+                    </SettingButtonGroup>
+                  )}
                 </>
               }
             >

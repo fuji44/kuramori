@@ -128,10 +128,10 @@ export function DashboardView({
           <p className="text-[11px] text-neutral-500 mt-1">検知されたプロジェクト</p>
         </div>
 
-        {/* 稼働エンジン */}
+        {/* 稼働エンジン種別 */}
         <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-4">
           <div className="flex items-center justify-between text-neutral-400 mb-2">
-            <span className="text-xs font-medium">AIエンジン</span>
+            <span className="text-xs font-medium">エンジン種別</span>
             <Cpu className="w-4 h-4 text-purple-400" />
           </div>
           <div className="text-base font-bold text-purple-300 font-mono truncate">

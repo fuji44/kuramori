@@ -17,7 +17,7 @@ import {
   Power,
   Copy,
 } from 'lucide-react';
-import { ReviewTrigger, ReviewRule } from '../../types.ts';
+import { AppSettings, ReviewTrigger, ReviewRule } from '../../types.ts';
 import { Checkbox } from '../../components/Checkbox.tsx';
 import {
   SettingCard,
@@ -35,6 +35,7 @@ import {
 interface TriggerSettingsViewProps {
   triggers: ReviewTrigger[];
   rules: ReviewRule[];
+  settings: AppSettings;
   knownRepositories: string[];
   onCreateTrigger: (trigger: Partial<ReviewTrigger>) => Promise<void>;
   onUpdateTrigger: (id: string, updates: Partial<ReviewTrigger>) => Promise<void>;
@@ -46,6 +47,7 @@ interface TriggerSettingsViewProps {
 export function TriggerSettingsView({
   triggers,
   rules,
+  settings,
   knownRepositories,
   onCreateTrigger,
   onUpdateTrigger,
@@ -350,7 +352,7 @@ export function TriggerSettingsView({
                           {rule.category}
                         </span>
                         <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#21262d] text-[#8b949e] font-mono">
-                          engine: {rule.engine}
+                          実行プロファイル: {settings.engineProfiles?.find((profile) => profile.id === rule.engine)?.name ?? 'システム既定'}
                         </span>
                         {!rule.enabled && (
                           <span className="text-[10px] px-1.5 py-0.2 rounded bg-neutral-800 text-neutral-400">
@@ -473,7 +475,7 @@ export function TriggerSettingsView({
                     {/* 管理操作系グループ */}
                     {isConfirmingDelete ? (
                       <div className="flex items-center gap-1 bg-rose-950/60 border border-rose-800/80 rounded-lg p-1">
-                        <span className="text-[11px] text-rose-300 px-1">削除しますか?</span>
+                        <span className="text-[11px] text-rose-300 px-1">「{trigger.name}」を削除しますか?</span>
                         <button
                           type="button"
                           onClick={() => handleDelete(trigger.id, trigger.name)}
