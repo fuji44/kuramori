@@ -132,6 +132,7 @@ export interface SettingFormFooterProps {
   saving?: boolean;
   disabled?: boolean;
   leftContent?: ReactNode;
+  extraActions?: ReactNode;
 }
 
 /**
@@ -144,11 +145,13 @@ export function SettingFormFooter({
   saving = false,
   disabled = false,
   leftContent,
+  extraActions,
 }: SettingFormFooterProps) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-[#30363d]">
       <div>{leftContent}</div>
       <div className="flex items-center gap-2 self-end sm:self-auto">
+        {extraActions}
         <button
           type="button"
           onClick={onCancel}

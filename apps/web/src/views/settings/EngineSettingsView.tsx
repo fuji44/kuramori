@@ -770,50 +770,12 @@ export function EngineSettingsView({
 
           {/* 動作パラメータ設定 */}
           <div className="border-t border-[#30363d] pt-5 space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-[#30363d]/60">
-              <div className="flex items-center gap-2">
-                <Terminal className="w-4 h-4 text-sky-400" />
-                <h4 className="text-xs font-semibold text-white uppercase tracking-wider">
-                  動作パラメータ設定 ({formEngineType})
-                </h4>
-              </div>
-
-              {/* フォーム内でのテスト実行 */}
-              <div className="flex items-center gap-2">
-                <EngineTestButton
-                  isTesting={testingProfileId === 'current-form'}
-                  onTest={(mode) => handleTest('current-form', formEngineType, currentConfig, mode)}
-                />
-              </div>
+            <div className="flex items-center gap-2 pb-2 border-b border-[#30363d]/60">
+              <Terminal className="w-4 h-4 text-sky-400" />
+              <h4 className="text-xs font-semibold text-white uppercase tracking-wider">
+                動作パラメータ設定 ({formEngineType})
+              </h4>
             </div>
-
-            {currentTestResult && (
-              <div
-                className={`p-3 rounded-lg border text-xs flex items-start gap-2.5 ${
-                  currentTestResult.success
-                    ? 'bg-emerald-950/30 border-emerald-800/50 text-emerald-300'
-                    : 'bg-red-950/30 border-red-800/50 text-red-300'
-                }`}
-              >
-                {currentTestResult.success ? (
-                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400 mt-0.5" />
-                ) : (
-                  <AlertCircle className="w-4 h-4 shrink-0 text-red-400 mt-0.5" />
-                )}
-                <div className="space-y-1 min-w-0">
-                  <div className="font-semibold">
-                    {currentTestResult.success ? 'テスト成功' : 'テスト失敗'}
-                    {currentTestResult.version && ` (${currentTestResult.version})`}
-                  </div>
-                  <div>{currentTestResult.message || currentTestResult.error}</div>
-                  {currentTestResult.output && (
-                    <pre className="font-mono text-[11px] bg-black/40 p-2 rounded mt-1 whitespace-pre-wrap max-h-32 overflow-y-auto">
-                      {currentTestResult.output}
-                    </pre>
-                  )}
-                </div>
-              </div>
-            )}
 
             {formEngineType === 'claude-code' && (
               <ClaudeCodeFields
@@ -839,11 +801,46 @@ export function EngineSettingsView({
             <CommandPreview command={previewCommand} />
           </div>
 
+          {/* テスト実行結果 */}
+          {currentTestResult && (
+            <div
+              className={`p-3 rounded-lg border text-xs flex items-start gap-2.5 ${
+                currentTestResult.success
+                  ? 'bg-emerald-950/30 border-emerald-800/50 text-emerald-300'
+                  : 'bg-red-950/30 border-red-800/50 text-red-300'
+              }`}
+            >
+              {currentTestResult.success ? (
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400 mt-0.5" />
+              ) : (
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-400 mt-0.5" />
+              )}
+              <div className="space-y-1 min-w-0">
+                <div className="font-semibold">
+                  {currentTestResult.success ? 'テスト成功' : 'テスト失敗'}
+                  {currentTestResult.version && ` (${currentTestResult.version})`}
+                </div>
+                <div>{currentTestResult.message || currentTestResult.error}</div>
+                {currentTestResult.output && (
+                  <pre className="font-mono text-[11px] bg-black/40 p-2 rounded mt-1 whitespace-pre-wrap max-h-32 overflow-y-auto">
+                    {currentTestResult.output}
+                  </pre>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Form Actions */}
           <SettingFormFooter
             onCancel={handleCancelForm}
             submitLabel="プロファイルを保存"
             saving={saving}
+            extraActions={
+              <EngineTestButton
+                isTesting={testingProfileId === 'current-form'}
+                onTest={(mode) => handleTest('current-form', formEngineType, currentConfig, mode)}
+              />
+            }
           />
         </form>
       </div>
