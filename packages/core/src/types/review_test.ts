@@ -90,3 +90,61 @@ Deno.test('resolveEngineConfig - returns clone of baseConfig when override is un
   const resolvedNull = resolveEngineConfig(baseConfig, null);
   assertEquals(resolvedNull, baseConfig);
 });
+
+Deno.test('EngineProfile - discriminated union guarantees type-safe config access', () => {
+  const claudeProfile = {
+    id: 'prof-ollama-ornith',
+    name: 'Ollama (ornith-1.5:9b)',
+    engineType: 'claude-code' as const,
+    config: {
+      binPath: 'claude',
+      model: 'ornith-1.5:9b',
+      effort: 'high',
+      timeoutSeconds: 900,
+      apiBaseUrl: 'http://localhost:11434',
+      authToken: '',
+      maxTurns: 15,
+      bare: false,
+    },
+  };
+
+  const agyProfile = {
+    id: 'prof-agy',
+    name: 'Antigravity Default',
+    engineType: 'antigravity' as const,
+    config: {
+      binPath: 'agy',
+      model: 'gemini-3.1-pro',
+      effort: 'high',
+      timeoutSeconds: 900,
+      printTimeout: '',
+      sandbox: false,
+      disableSlashCommands: false,
+    },
+  };
+
+  const mockProfile = {
+    id: 'prof-mock',
+    name: 'Mock Engine',
+    engineType: 'mock' as const,
+    config: {
+      delayMs: 300,
+    },
+  };
+
+  function getProfileSummary(profile: typeof claudeProfile | typeof agyProfile | typeof mockProfile): string {
+    switch (profile.engineType) {
+      case 'claude-code':
+        return `${profile.config.model} via ${profile.config.apiBaseUrl ?? 'Anthropic'}`;
+      case 'antigravity':
+        return `${profile.config.model} (${profile.config.effort})`;
+      case 'mock':
+        return `Mock delay: ${profile.config.delayMs}ms`;
+    }
+  }
+
+  assertEquals(getProfileSummary(claudeProfile), 'ornith-1.5:9b via http://localhost:11434');
+  assertEquals(getProfileSummary(agyProfile), 'gemini-3.1-pro (high)');
+  assertEquals(getProfileSummary(mockProfile), 'Mock delay: 300ms');
+});
+

@@ -89,6 +89,37 @@ export interface EngineSettingsMap {
   mock: MockEngineConfig;
 }
 
+export type EngineType = 'claude-code' | 'antigravity' | 'mock';
+
+export interface BaseEngineProfileMeta {
+  id: string;
+  name: string;
+  description?: string;
+  isDefault?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ClaudeCodeEngineProfile extends BaseEngineProfileMeta {
+  engineType: 'claude-code';
+  config: ClaudeCodeEngineConfig;
+}
+
+export interface AntigravityEngineProfile extends BaseEngineProfileMeta {
+  engineType: 'antigravity';
+  config: AntigravityEngineConfig;
+}
+
+export interface MockEngineProfile extends BaseEngineProfileMeta {
+  engineType: 'mock';
+  config: MockEngineConfig;
+}
+
+export type EngineProfile =
+  | ClaudeCodeEngineProfile
+  | AntigravityEngineProfile
+  | MockEngineProfile;
+
 export type EngineOverrideConfig = Partial<AntigravityEngineConfig & ClaudeCodeEngineConfig & MockEngineConfig>;
 
 export interface ReviewTrigger {
@@ -127,6 +158,7 @@ export interface AppSettings {
   defaultRuleIds: string[];
   defaultRuleId?: string;
   defaultBackendId: string;
+  defaultEngineProfileId?: string;
   enabledEngines?: string[];
   globalMaxConcurrency: number;
   backendMaxConcurrency: {
@@ -135,5 +167,6 @@ export interface AppSettings {
     mock: number;
   };
   engineSettings: EngineSettingsMap;
+  engineProfiles?: EngineProfile[];
 }
 

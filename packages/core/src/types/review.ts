@@ -137,6 +137,38 @@ export interface EngineSettingsMap {
   mock: MockEngineConfig;
 }
 
+export type EngineType = 'claude-code' | 'antigravity' | 'mock';
+
+export interface BaseEngineProfileMeta {
+  id: string;
+  name: string;
+  description?: string;
+  isDefault?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ClaudeCodeEngineProfile extends BaseEngineProfileMeta {
+  engineType: 'claude-code';
+  config: ClaudeCodeEngineConfig;
+}
+
+export interface AntigravityEngineProfile extends BaseEngineProfileMeta {
+  engineType: 'antigravity';
+  config: AntigravityEngineConfig;
+}
+
+export interface MockEngineProfile extends BaseEngineProfileMeta {
+  engineType: 'mock';
+  config: MockEngineConfig;
+}
+
+export type EngineProfile =
+  | ClaudeCodeEngineProfile
+  | AntigravityEngineProfile
+  | MockEngineProfile;
+
+
 /**
  * ルール単位での包括的オーバーライド設定
  */

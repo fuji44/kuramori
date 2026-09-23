@@ -433,6 +433,65 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
     const updatedSettingsData = await resUpdateSettingsEngines.json();
     assertEquals(updatedSettingsData.enabledEngines, ['antigravity', 'mock']);
 
+    // 17. Test engineProfiles in settings and profile test endpoint
+    assertEquals(Array.isArray(settingsBeforeData.engineProfiles), true);
+    assertEquals(settingsBeforeData.engineProfiles.length >= 3, true);
+
+    const customProfile = {
+      id: 'prof-local-ollama',
+      name: 'Local Ollama ornith-1.5',
+      engineType: 'claude-code',
+      isDefault: false,
+      config: {
+        binPath: 'claude',
+        model: 'ornith-1.5:9b',
+        effort: 'high',
+        timeoutSeconds: 900,
+        apiBaseUrl: 'http://localhost:11434',
+        authToken: '',
+        maxTurns: 15,
+      },
+    };
+
+    const resUpdateProfiles = await api.request('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        engineProfiles: [...settingsBeforeData.engineProfiles, customProfile],
+      }),
+    });
+    assertEquals(resUpdateProfiles.status, 200);
+    const updatedProfilesData = await resUpdateProfiles.json();
+    const foundProfile = updatedProfilesData.engineProfiles.find((p: any) => p.id === 'prof-local-ollama');
+    assertEquals(foundProfile !== undefined, true);
+    assertEquals(foundProfile.config.apiBaseUrl, 'http://localhost:11434');
+
+    // Test profile test endpoint via mock engine profile
+    const mockProfile = {
+      id: 'prof-test-mock',
+      name: 'Custom Mock',
+      engineType: 'mock',
+      isDefault: false,
+      config: { delayMs: 100 },
+    };
+    await api.request('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        engineProfiles: [...updatedProfilesData.engineProfiles, mockProfile],
+      }),
+    });
+
+    const resProfileTest = await api.request('/api/engines/prof-test-mock/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'execution' }),
+    });
+    assertEquals(resProfileTest.status, 200);
+    const profileTestData = await resProfileTest.json();
+    assertEquals(profileTestData.success, true);
+    assertEquals(profileTestData.mode, 'execution');
+
     client.close();
   } finally {
     await Deno.remove(tempDir, { recursive: true });

@@ -71,6 +71,7 @@ const DEFAULT_APP_SETTINGS: AppSettings = {
       delayMs: 500,
     },
   },
+  engineProfiles: [],
 };
 
 export interface ReviewQueueOptions {
@@ -121,6 +122,50 @@ export class ReviewQueue {
   ): ReviewEngine {
     if (this.defaultEngine) {
       return this.defaultEngine;
+    }
+
+    const matchedProfile = settings.engineProfiles?.find((p) => p.id === engineName);
+    if (matchedProfile) {
+      if (matchedProfile.engineType === 'mock') {
+        return new MockReviewEngine({ delayMs: matchedProfile.config.delayMs });
+      }
+      if (matchedProfile.engineType === 'claude-code') {
+        const cfg = resolveEngineConfig(matchedProfile.config, rule?.engineOverride);
+        return new ClaudeCodeEngine({
+          claudeBinaryPath: cfg.binPath || settings.claudeBin,
+          model: cfg.model,
+          effort: cfg.effort,
+          timeoutMs: (cfg.timeoutSeconds ?? 900) * 1000,
+          systemPrompt: cfg.systemPrompt,
+          allowedTools: cfg.allowedTools,
+          bare: cfg.bare,
+          inputFormat: cfg.inputFormat,
+          outputFormat: cfg.outputFormat,
+          jsonSchema: cfg.jsonSchema,
+          customArgs: cfg.customArgs,
+          apiBaseUrl: cfg.apiBaseUrl,
+          authToken: cfg.authToken,
+          customEnv: cfg.customEnv,
+          maxTurns: cfg.maxTurns,
+        });
+      }
+      if (matchedProfile.engineType === 'antigravity') {
+        const cfg = resolveEngineConfig(matchedProfile.config, rule?.engineOverride);
+        return new AntigravityEngine({
+          agyBinaryPath: cfg.binPath || settings.agyBin,
+          model: cfg.model,
+          effort: cfg.effort,
+          timeoutMs: (cfg.timeoutSeconds ?? 900) * 1000,
+          systemPrompt: cfg.systemPrompt,
+          printTimeout: cfg.printTimeout,
+          sandbox: cfg.sandbox,
+          disableSlashCommands: cfg.disableSlashCommands,
+          inputFormat: cfg.inputFormat,
+          outputFormat: cfg.outputFormat,
+          jsonSchema: cfg.jsonSchema,
+          customArgs: cfg.customArgs,
+        });
+      }
     }
 
     if (engineName === 'mock') {

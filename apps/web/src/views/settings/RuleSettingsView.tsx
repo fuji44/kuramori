@@ -274,39 +274,60 @@ export function RuleSettingsView({
           </div>
 
           <div>
-            <label className="text-xs text-[#8b949e] block mb-1">実行エンジン</label>
+            <label className="text-xs text-[#8b949e] block mb-1">実行エンジン / プロファイル</label>
             <select
               value={ruleForm.engine}
               onChange={(e) => setRuleForm({ ...ruleForm, engine: e.target.value })}
               className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500"
             >
-              <option value="default">default (システム既定エンジンに追従)</option>
-              <option value="antigravity">
-                antigravity{settings?.enabledEngines && !settings.enabledEngines.includes('antigravity') ? ' (無効化中)' : ''}
-              </option>
-              <option value="claude-code">
-                claude-code{settings?.enabledEngines && !settings.enabledEngines.includes('claude-code') ? ' (無効化中)' : ''}
-              </option>
-              <option value="mock">
-                mock{settings?.enabledEngines && !settings.enabledEngines.includes('mock') ? ' (無効化中)' : ''}
-              </option>
+              <option value="default">default (システム既定エンジン/プロファイルに追従)</option>
+
+              {settings?.engineProfiles && settings.engineProfiles.length > 0 && (
+                <optgroup label="登録済みエンジンプロファイル">
+                  {settings.engineProfiles.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({p.engineType}) {p.isDefault ? '★既定' : ''}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+
+              <optgroup label="基本エンジン (レガシー)">
+                <option value="antigravity">
+                  antigravity{settings?.enabledEngines && !settings.enabledEngines.includes('antigravity') ? ' (無効化中)' : ''}
+                </option>
+                <option value="claude-code">
+                  claude-code{settings?.enabledEngines && !settings.enabledEngines.includes('claude-code') ? ' (無効化中)' : ''}
+                </option>
+                <option value="mock">
+                  mock{settings?.enabledEngines && !settings.enabledEngines.includes('mock') ? ' (無効化中)' : ''}
+                </option>
+              </optgroup>
             </select>
-            {ruleForm.engine !== 'default' && settings?.enabledEngines && !settings.enabledEngines.includes(ruleForm.engine) && (
-              <p className="text-[11px] text-amber-400 mt-1 flex items-center gap-1">
-                <AlertCircle className="w-3.5 h-3.5" />
-                <span>選択されたエンジンは現在エンジン設定で無効化されています。実行時にエラーとなる可能性があります。</span>
-              </p>
-            )}
+            {ruleForm.engine !== 'default' &&
+              !settings?.engineProfiles?.some((p) => p.id === ruleForm.engine) &&
+              settings?.enabledEngines &&
+              !settings.enabledEngines.includes(ruleForm.engine) && (
+                <p className="text-[11px] text-amber-400 mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  <span>選択されたエンジンは現在エンジン設定で無効化されています。実行時にエラーとなる可能性があります。</span>
+                </p>
+              )}
           </div>
 
           {/* Engine Override Section */}
           {(() => {
-            const effectiveEngine =
-              ruleForm.engine === 'default'
-                ? (defaultBackendId || 'antigravity')
-                : ruleForm.engine;
+            const matchedProfile = settings?.engineProfiles?.find((p) => p.id === ruleForm.engine);
+            const effectiveEngine = matchedProfile
+              ? matchedProfile.engineType
+              : ruleForm.engine === 'default'
+              ? (defaultBackendId || 'antigravity')
+              : ruleForm.engine;
 
             const globalConfig = (() => {
+              if (matchedProfile) {
+                return matchedProfile.config;
+              }
               if (effectiveEngine === 'antigravity') {
                 return settings?.engineSettings?.antigravity ?? {
                   binPath: settings?.agyBin || 'agy',
@@ -522,9 +543,17 @@ export function RuleSettingsView({
                         {rule.category}
                       </span>
 
-                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#21262d] text-[#8b949e] font-mono border border-[#30363d]">
-                        engine: {rule.engine}
-                      </span>
+                      {(() => {
+                        const matchedProfile = settings?.engineProfiles?.find((p) => p.id === rule.engine);
+                        const label = matchedProfile
+                          ? `${matchedProfile.name}`
+                          : rule.engine;
+                        return (
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#21262d] text-sky-300 font-mono border border-[#30363d]">
+                            engine: {label}
+                          </span>
+                        );
+                      })()}
 
                       {rule.engine !== 'default' && settings?.enabledEngines && !settings.enabledEngines.includes(rule.engine) && (
                         <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 font-mono border border-amber-800/60 flex items-center gap-1">

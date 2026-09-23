@@ -440,6 +440,7 @@ export function ClaudeCodeFields({
         Boolean(values.jsonSchema?.trim()),
         Boolean(values.allowedTools?.trim()),
         isOverride ? values.bare !== undefined : Boolean(values.bare),
+        values.maxTurns !== undefined && values.maxTurns > 0,
         Boolean(values.customArgs?.trim()),
       ].filter(Boolean).length;
 
@@ -533,6 +534,9 @@ export function ClaudeCodeFields({
             <option value="claude-sonnet-4-5" />
             <option value="claude-haiku-4-5" />
             <option value="claude-3-7-sonnet-20250219" />
+            <option value="ornith-1.5:9b" label="ローカル推奨 (Ollama / RTX 5080)" />
+            <option value="qwen2.5-coder:14b" label="ローカル標準 (Ollama)" />
+            <option value="qwen3:14b" label="ローカル (Ollama)" />
           </datalist>
         </div>
 
@@ -586,6 +590,51 @@ export function ClaudeCodeFields({
             />
           </div>
         )}
+      </div>
+
+      {/* 2.5 接続設定 (API Base URL / 認証トークン) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="text-xs text-[#8b949e] block mb-1">
+            API Base URL (ANTHROPIC_BASE_URL)
+          </label>
+          <input
+            type="text"
+            disabled={disabled}
+            value={values.apiBaseUrl ?? ''}
+            onChange={(e) => onChange({ apiBaseUrl: e.target.value })}
+            placeholder={
+              isOverride
+                ? '例: http://localhost:11434 (未指定時は全体設定を継承)'
+                : '例: http://localhost:11434 (未指定時は公式 Anthropic API)'
+            }
+            className={inputClass}
+          />
+          <p className="text-[11px] text-[#8b949e] mt-1">
+            ローカルの Ollama（11434 ポート）や互換推論サーバーに直接接続する場合に指定します。
+          </p>
+        </div>
+
+        <div>
+          <label className="text-xs text-[#8b949e] block mb-1">
+            API 認証トークン / キー (任意)
+          </label>
+          <input
+            type="password"
+            disabled={disabled}
+            value={values.authToken ?? ''}
+            onChange={(e) => onChange({ authToken: e.target.value })}
+            placeholder={
+              isOverride
+                ? '例: sk-ant-... (未指定時は全体設定を継承)'
+                : '例: sk-ant-... (ローカル Ollama の場合は不要)'
+            }
+            className={inputClass}
+          />
+          <p className="text-[11px] text-[#8b949e] mt-1">
+            ANTHROPIC_AUTH_TOKEN として渡されます（ローカル Ollama の場合は空欄可）。
+          </p>
+        </div>
       </div>
 
       {/* 3. 高度な設定トグルボタン */}
@@ -762,6 +811,40 @@ export function ClaudeCodeFields({
                 description="ローカルの config やプロジェクト固有のカスタムプロンプト等の読み込みを抑制します。"
               />
             )}
+          </div>
+
+          <div>
+            <label className="text-xs text-[#8b949e] block mb-1">
+              最大ターン数制限 (--max-turns)
+            </label>
+            <input
+              type="number"
+              min={1}
+              max={100}
+              step={1}
+              disabled={disabled}
+              value={values.maxTurns !== undefined ? values.maxTurns : ''}
+              onChange={(e) => {
+                const raw = e.target.value;
+                if (raw === '') {
+                  onChange({ maxTurns: undefined });
+                } else {
+                  const num = parseInt(raw, 10);
+                  if (!isNaN(num)) {
+                    onChange({ maxTurns: num });
+                  }
+                }
+              }}
+              placeholder={
+                isOverride
+                  ? '例: 15 (未指定時は全体設定を継承)'
+                  : '例: 15 (空欄で制限なし)'
+              }
+              className={inputClass}
+            />
+            <p className="text-[11px] text-[#8b949e] mt-1">
+              自律探索の往復ターン数を制限し、ローカル GPU の VRAM 枯渇や長時間の無限ループを防止します。
+            </p>
           </div>
 
           <div>

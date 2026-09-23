@@ -579,10 +579,19 @@ export function createApi(deps: ApiDependencies) {
 
     const mode = body?.mode === 'execution' ? 'execution' : 'version';
 
-    if (engine === 'mock') {
+    const settings = await deps.settingsService.getAllSettings();
+    const matchedProfile = settings.engineProfiles?.find((p) => p.id === engine);
+
+    let effectiveEngine = engine;
+    let profileConfig: any = null;
+    if (matchedProfile) {
+      effectiveEngine = matchedProfile.engineType;
+      profileConfig = matchedProfile.config;
+    }
+
+    if (effectiveEngine === 'mock') {
       if (mode === 'execution') {
-        const settings = await deps.settingsService.getAllSettings();
-        const delay = settings.engineSettings?.mock?.delayMs ?? 500;
+        const delay = profileConfig?.delayMs ?? settings.engineSettings?.mock?.delayMs ?? 500;
         await new Promise((r) => setTimeout(r, Math.min(delay, 1500)));
         return c.json({
           success: true,
@@ -600,26 +609,28 @@ export function createApi(deps: ApiDependencies) {
       });
     }
 
-    if (engine !== 'antigravity' && engine !== 'claude-code') {
-      return c.json({ error: `Unknown engine: ${engine}` }, 400);
+    if (effectiveEngine !== 'antigravity' && effectiveEngine !== 'claude-code') {
+      return c.json({ error: `Unknown engine or profile: ${engine}` }, 400);
     }
 
-    const settings = await deps.settingsService.getAllSettings();
     let binPath = '';
     let model = '';
     let effort = '';
-    if (engine === 'antigravity') {
-      binPath = body?.binPath || settings.engineSettings?.antigravity?.binPath || settings.agyBin || 'agy';
-      model = body?.model || settings.engineSettings?.antigravity?.model || '';
-      effort = body?.effort || settings.engineSettings?.antigravity?.effort || '';
+    if (effectiveEngine === 'antigravity') {
+      binPath = body?.binPath || profileConfig?.binPath || settings.engineSettings?.antigravity?.binPath || settings.agyBin || 'agy';
+      model = body?.model || profileConfig?.model || settings.engineSettings?.antigravity?.model || '';
+      effort = body?.effort || profileConfig?.effort || settings.engineSettings?.antigravity?.effort || '';
     } else {
-      binPath = body?.binPath || settings.engineSettings?.claudeCode?.binPath || settings.claudeBin || 'claude';
-      model = body?.model || settings.engineSettings?.claudeCode?.model || '';
-      effort = body?.effort || settings.engineSettings?.claudeCode?.effort || '';
+      binPath = body?.binPath || profileConfig?.binPath || settings.engineSettings?.claudeCode?.binPath || settings.claudeBin || 'claude';
+      model = body?.model || profileConfig?.model || settings.engineSettings?.claudeCode?.model || '';
+      effort = body?.effort || profileConfig?.effort || settings.engineSettings?.claudeCode?.effort || '';
     }
 
+    const apiBaseUrl = body?.apiBaseUrl || profileConfig?.apiBaseUrl || (effectiveEngine === 'claude-code' ? settings.engineSettings?.claudeCode?.apiBaseUrl : undefined);
+    const authToken = body?.authToken || profileConfig?.authToken || (effectiveEngine === 'claude-code' ? settings.engineSettings?.claudeCode?.authToken : undefined);
+
     const isExecution = mode === 'execution';
-    const timeoutMs = isExecution ? 30000 : 5000;
+    const timeoutMs = isExecution ? 45000 : 5000;
 
     const args = isExecution
       ? ['-p', 'Respond with "review-base test OK"', '--dangerously-skip-permissions']
@@ -634,12 +645,24 @@ export function createApi(deps: ApiDependencies) {
       }
     }
 
+    const env: Record<string, string> = {
+      ...Deno.env.toObject(),
+    };
+    if (apiBaseUrl) {
+      env['ANTHROPIC_BASE_URL'] = apiBaseUrl;
+    }
+    if (authToken) {
+      env['ANTHROPIC_AUTH_TOKEN'] = authToken;
+      env['ANTHROPIC_API_KEY'] = authToken;
+    }
+
     try {
       const cmd = new Deno.Command(binPath, {
         args,
         stdin: 'null',
         stdout: 'piped',
         stderr: 'piped',
+        env,
         signal: AbortSignal.timeout(timeoutMs),
       });
       const output = await cmd.output();

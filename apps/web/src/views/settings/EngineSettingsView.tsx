@@ -19,13 +19,21 @@ import {
   AlertCircle,
   Ban,
   FlaskConical,
+  Plus,
+  Trash2,
+  Edit2,
+  Star,
+  X,
+  Layers,
+  Settings2,
 } from 'lucide-react';
-import { AppSettings, EngineSettingsMap } from '../../types.ts';
+import { AppSettings, EngineSettingsMap, EngineProfile, EngineType } from '../../types.ts';
 import {
   AntigravityFields,
   ClaudeCodeFields,
   MockFields,
 } from '../../components/settings/EngineConfigFields.tsx';
+import { EngineProfileModal } from '../../components/settings/EngineProfileModal.tsx';
 
 interface EngineSettingsViewProps {
   settings: AppSettings;
@@ -201,6 +209,10 @@ export function EngineSettingsView({
   const [testingEngine, setTestingEngine] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<Record<string, { success: boolean; mode?: 'version' | 'execution'; version?: string; output?: string; message?: string; error?: string }>>({});
 
+  // EngineProfile state
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [editingProfile, setEditingProfile] = useState<EngineProfile | null>(null);
+
   useEffect(() => {
     setFormSettings(settings);
   }, [settings]);
@@ -212,6 +224,58 @@ export function EngineSettingsView({
   };
 
   const currentBackend = formSettings.defaultBackendId || formSettings.reviewEngine || 'antigravity';
+
+  const defaultProfiles: EngineProfile[] = [
+    {
+      id: 'default-agy',
+      name: 'Antigravity (Default)',
+      description: 'Google Antigravity CLI エンジン',
+      isDefault: currentBackend === 'antigravity',
+      engineType: 'antigravity',
+      config: {
+        binPath: formSettings.agyBin || 'agy',
+        model: 'gemini-3.1-pro',
+        effort: 'high',
+        timeoutSeconds: 900,
+        printTimeout: '',
+        sandbox: false,
+        disableSlashCommands: false,
+      },
+    },
+    {
+      id: 'default-claude',
+      name: 'Claude Code (Default)',
+      description: 'Anthropic Claude Code CLI エンジン',
+      isDefault: currentBackend === 'claude-code',
+      engineType: 'claude-code',
+      config: {
+        binPath: formSettings.claudeBin || 'claude',
+        model: 'sonnet',
+        effort: 'high',
+        timeoutSeconds: 900,
+        allowedTools: '',
+        bare: false,
+        apiBaseUrl: '',
+        authToken: '',
+        maxTurns: 15,
+      },
+    },
+    {
+      id: 'default-mock',
+      name: 'Mock Engine',
+      description: 'テスト用のモックエンジン',
+      isDefault: currentBackend === 'mock',
+      engineType: 'mock',
+      config: {
+        delayMs: 500,
+      },
+    },
+  ];
+
+  const profiles: EngineProfile[] =
+    formSettings.engineProfiles && formSettings.engineProfiles.length > 0
+      ? formSettings.engineProfiles
+      : defaultProfiles;
 
   const toggleEngineEnabled = (engineName: string) => {
     if (enabledEngines.includes(engineName)) {
@@ -239,33 +303,40 @@ export function EngineSettingsView({
   };
 
   const handleTestEngine = async (
-    engineName: 'antigravity' | 'claude-code' | 'mock',
-    mode: 'version' | 'execution' = 'version'
+    engineName: 'antigravity' | 'claude-code' | 'mock' | string,
+    mode: 'version' | 'execution' = 'version',
+    customConfig?: any
   ) => {
     setTestingEngine(engineName);
     try {
-      const binPath = engineName === 'antigravity'
-        ? engines.antigravity.binPath
-        : engineName === 'claude-code'
-        ? engines.claudeCode.binPath
-        : undefined;
+      let binPath: string | undefined;
+      let model: string | undefined;
+      let effort: string | undefined;
+      let apiBaseUrl: string | undefined;
+      let authToken: string | undefined;
 
-      const model = engineName === 'antigravity'
-        ? engines.antigravity.model
-        : engineName === 'claude-code'
-        ? engines.claudeCode.model
-        : undefined;
-
-      const effort = engineName === 'antigravity'
-        ? engines.antigravity.effort
-        : engineName === 'claude-code'
-        ? engines.claudeCode.effort
-        : undefined;
+      if (customConfig) {
+        binPath = customConfig.binPath;
+        model = customConfig.model;
+        effort = customConfig.effort;
+        apiBaseUrl = customConfig.apiBaseUrl;
+        authToken = customConfig.authToken;
+      } else if (engineName === 'antigravity') {
+        binPath = engines.antigravity.binPath;
+        model = engines.antigravity.model;
+        effort = engines.antigravity.effort;
+      } else if (engineName === 'claude-code') {
+        binPath = engines.claudeCode.binPath;
+        model = engines.claudeCode.model;
+        effort = engines.claudeCode.effort;
+        apiBaseUrl = engines.claudeCode.apiBaseUrl;
+        authToken = engines.claudeCode.authToken;
+      }
 
       const res = await fetch(`/api/engines/${engineName}/test`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode, binPath, model, effort }),
+        body: JSON.stringify({ mode, binPath, model, effort, apiBaseUrl, authToken }),
       });
       const data = await res.json();
       setTestResults((prev) => ({
@@ -287,6 +358,132 @@ export function EngineSettingsView({
     } finally {
       setTestingEngine(null);
     }
+  };
+
+  const handleOpenCreateProfile = () => {
+    setEditingProfile(null);
+    setIsProfileModalOpen(true);
+  };
+
+  const handleOpenEditProfile = (profile: EngineProfile) => {
+    setEditingProfile(profile);
+    setIsProfileModalOpen(true);
+  };
+
+  const handleSaveProfile = async (saved: EngineProfile) => {
+    let nextProfiles: EngineProfile[];
+    const exists = profiles.some((p) => p.id === saved.id);
+
+    if (saved.isDefault) {
+      nextProfiles = profiles.map((p) => ({
+        ...p,
+        isDefault: p.id === saved.id,
+      }));
+      if (!exists) {
+        nextProfiles.push(saved);
+      } else {
+        nextProfiles = nextProfiles.map((p) => (p.id === saved.id ? saved : p));
+      }
+    } else {
+      if (exists) {
+        nextProfiles = profiles.map((p) => (p.id === saved.id ? saved : p));
+      } else {
+        nextProfiles = [...profiles, saved];
+      }
+    }
+
+    const updatedSettings: AppSettings = {
+      ...formSettings,
+      engineProfiles: nextProfiles,
+      ...(saved.isDefault
+        ? {
+            defaultEngineProfileId: saved.id,
+            defaultBackendId: saved.engineType,
+            reviewEngine: saved.engineType as any,
+          }
+        : {}),
+    };
+
+    setFormSettings(updatedSettings);
+    await onSaveSettings(updatedSettings);
+  };
+
+  const handleDeleteProfile = async (profileId: string) => {
+    if (profiles.length <= 1) {
+      onShowError('少なくとも1つのプロファイルを保持する必要があります');
+      return;
+    }
+    const target = profiles.find((p) => p.id === profileId);
+    if (!target) return;
+
+    if (!confirm(`プロファイル「${target.name}」を削除してもよろしいですか？`)) {
+      return;
+    }
+
+    let nextProfiles = profiles.filter((p) => p.id !== profileId);
+    let nextDefaultId = formSettings.defaultEngineProfileId;
+
+    if (target.isDefault && nextProfiles.length > 0) {
+      nextProfiles = nextProfiles.map((p, idx) => ({
+        ...p,
+        isDefault: idx === 0,
+      }));
+      nextDefaultId = nextProfiles[0].id;
+    }
+
+    const updatedSettings: AppSettings = {
+      ...formSettings,
+      engineProfiles: nextProfiles,
+      defaultEngineProfileId: nextDefaultId,
+    };
+
+    setFormSettings(updatedSettings);
+    await onSaveSettings(updatedSettings);
+    onShowSuccess(`プロファイル「${target.name}」を削除しました`);
+  };
+
+  const handleDuplicateProfile = async (profile: EngineProfile) => {
+    const newId = `profile-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const duplicated: EngineProfile = {
+      ...profile,
+      id: newId,
+      name: `${profile.name} (Copy)`,
+      isDefault: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const nextProfiles = [...profiles, duplicated];
+    const updatedSettings: AppSettings = {
+      ...formSettings,
+      engineProfiles: nextProfiles,
+    };
+
+    setFormSettings(updatedSettings);
+    await onSaveSettings(updatedSettings);
+    onShowSuccess(`プロファイル「${duplicated.name}」を複製しました`);
+  };
+
+  const handleSetDefaultProfile = async (profileId: string) => {
+    const target = profiles.find((p) => p.id === profileId);
+    if (!target) return;
+
+    const nextProfiles = profiles.map((p) => ({
+      ...p,
+      isDefault: p.id === profileId,
+    }));
+
+    const updatedSettings: AppSettings = {
+      ...formSettings,
+      engineProfiles: nextProfiles,
+      defaultEngineProfileId: profileId,
+      defaultBackendId: target.engineType,
+      reviewEngine: target.engineType as any,
+    };
+
+    setFormSettings(updatedSettings);
+    await onSaveSettings(updatedSettings);
+    onShowSuccess(`「${target.name}」をシステム既定プロファイルに設定しました`);
   };
 
   const engines = formSettings.engineSettings ?? {
@@ -594,6 +791,163 @@ export function EngineSettingsView({
           </div>
         </div>
 
+        {/* 1.5 Engine Profiles Section */}
+        <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-5 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#30363d]">
+            <div>
+              <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-sky-400" />
+                <h3 className="text-sm font-semibold text-white">登録済みエンジンプロファイル</h3>
+                <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-sky-950 text-sky-400 border border-sky-800">
+                  {profiles.length} 件
+                </span>
+              </div>
+              <p className="text-xs text-[#8b949e] mt-1">
+                モデルや接続先（Ollama ローカル推論、Claude CLI、Gemini 等）を個別のプロファイルとして定義できます。レビュールールごとに異なるプロファイルを割り当て可能です。
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleOpenCreateProfile}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-lg transition-colors shrink-0 shadow-sm"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>プロファイルを追加</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3">
+            {profiles.map((p) => {
+              const isDef = Boolean(p.isDefault);
+              const model = p.engineType === 'mock' ? 'N/A' : (p.config as any).model;
+              const apiBaseUrl = p.engineType === 'claude-code' ? (p.config as any).apiBaseUrl : undefined;
+              const isThisTesting = testingEngine === p.id;
+              const result = testResults[p.id];
+
+              return (
+                <div
+                  key={p.id}
+                  className={`p-4 rounded-xl border transition-all ${
+                    isDef
+                      ? 'border-sky-500/60 bg-sky-950/20 shadow-sm'
+                      : 'border-[#30363d] bg-[#0d1117]/80 hover:border-[#8b949e]/60'
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="space-y-1.5 flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-sm text-white truncate">
+                          {p.name}
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded bg-[#21262d] text-sky-300 border border-[#30363d]">
+                          {p.engineType === 'claude-code' && <Terminal className="w-3 h-3" />}
+                          {p.engineType === 'antigravity' && <Cpu className="w-3 h-3" />}
+                          {p.engineType === 'mock' && <Box className="w-3 h-3" />}
+                          <span>{p.engineType}</span>
+                        </span>
+                        {isDef && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">
+                            <Star className="w-2.5 h-2.5 fill-current" />
+                            <span>システム既定</span>
+                          </span>
+                        )}
+                      </div>
+
+                      {p.description && (
+                        <p className="text-xs text-[#8b949e] line-clamp-1">{p.description}</p>
+                      )}
+
+                      <div className="flex items-center gap-4 text-xs text-[#8b949e] font-mono pt-1 flex-wrap">
+                        <div>モデル: <span className="text-[#c9d1d9]">{model || '未指定'}</span></div>
+                        {apiBaseUrl && (
+                          <div>Base URL: <span className="text-sky-300">{apiBaseUrl}</span></div>
+                        )}
+                        <div>タイムアウト: <span className="text-[#c9d1d9]">{p.engineType === 'mock' ? `${(p.config as any).delayMs}ms` : `${(p.config as any).timeoutSeconds ?? 900}s`}</span></div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#21262d]">
+                      {/* テスト実行ボタン */}
+                      <EngineTestButton
+                        engineName={p.engineType}
+                        isTesting={isThisTesting}
+                        onTest={(mode) => handleTestEngine(p.id, mode, p.config)}
+                      />
+
+                      {!isDef && (
+                        <button
+                          type="button"
+                          onClick={() => handleSetDefaultProfile(p.id)}
+                          className="px-2.5 py-1 text-xs font-medium bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-white rounded-lg border border-[#30363d] transition-colors"
+                          title="このプロファイルをシステム既定にする"
+                        >
+                          既定に設定
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditProfile(p)}
+                        className="p-1.5 text-[#8b949e] hover:text-white hover:bg-[#21262d] rounded-lg transition-colors border border-[#30363d]"
+                        title="プロファイルを編集"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDuplicateProfile(p)}
+                        className="p-1.5 text-[#8b949e] hover:text-white hover:bg-[#21262d] rounded-lg transition-colors border border-[#30363d]"
+                        title="プロファイルを複製"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={profiles.length <= 1}
+                        onClick={() => handleDeleteProfile(p.id)}
+                        className="p-1.5 text-[#8b949e] hover:text-red-400 hover:bg-red-950/30 rounded-lg transition-colors border border-[#30363d] disabled:opacity-40 disabled:cursor-not-allowed"
+                        title="プロファイルを削除"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {result && (
+                    <div
+                      className={`mt-3 p-2.5 rounded-lg border text-xs flex items-start gap-2 ${
+                        result.success
+                          ? 'bg-emerald-950/20 border-emerald-800/40 text-emerald-300'
+                          : 'bg-red-950/20 border-red-800/40 text-red-300'
+                      }`}
+                    >
+                      {result.success ? (
+                        <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400 mt-0.5" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 shrink-0 text-red-400 mt-0.5" />
+                      )}
+                      <div className="space-y-0.5 min-w-0">
+                        <div className="font-semibold">
+                          {result.success ? 'テスト成功' : 'テスト失敗'}
+                          {result.version && ` (${result.version})`}
+                        </div>
+                        <div className="text-[11px] text-[#8b949e]">{result.message || result.error}</div>
+                        {result.output && (
+                          <pre className="font-mono text-[10px] bg-black/40 p-2 rounded mt-1 whitespace-pre-wrap max-h-24 overflow-y-auto">
+                            {result.output}
+                          </pre>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         {/* 2. Antigravity CLI Settings Card */}
         <div className={`bg-[#161b22] border rounded-xl p-5 space-y-4 transition-all ${
           isEngineEnabled('antigravity') ? 'border-[#30363d]' : 'border-[#30363d]/50 opacity-80'
@@ -875,6 +1229,17 @@ export function EngineSettingsView({
           </button>
         </div>
       </form>
+
+      {/* Engine Profile Modal */}
+      <EngineProfileModal
+        isOpen={isProfileModalOpen}
+        profile={editingProfile}
+        existingProfiles={profiles}
+        onClose={() => setIsProfileModalOpen(false)}
+        onSave={handleSaveProfile}
+        onShowSuccess={onShowSuccess}
+        onShowError={onShowError}
+      />
     </div>
   );
 }

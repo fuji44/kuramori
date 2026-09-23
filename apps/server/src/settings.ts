@@ -6,6 +6,8 @@ import type {
   ClaudeCodeEngineConfig,
   MockEngineConfig,
   EngineSettingsMap,
+  EngineProfile,
+  EngineType,
 } from '@review-base/core';
 
 export type {
@@ -15,6 +17,8 @@ export type {
   MockEngineConfig,
   EngineSettingsMap,
   EngineOverrideConfig,
+  EngineProfile,
+  EngineType,
 } from '@review-base/core';
 
 export interface AppSettings {
@@ -26,6 +30,7 @@ export interface AppSettings {
   defaultRuleIds: string[];
   defaultRuleId?: string;
   defaultBackendId: string;
+  defaultEngineProfileId?: string;
   enabledEngines: string[];
   globalMaxConcurrency: number;
   backendMaxConcurrency: {
@@ -34,6 +39,7 @@ export interface AppSettings {
     mock: number;
   };
   engineSettings: EngineSettingsMap;
+  engineProfiles: EngineProfile[];
 }
 
 export class SettingsService {
@@ -238,6 +244,25 @@ export class SettingsService {
       };
     }
 
+    let engineProfiles: EngineProfile[];
+    const engineProfilesVal = map.get('engine_profiles');
+    if (engineProfilesVal !== undefined) {
+      try {
+        const parsed = JSON.parse(engineProfilesVal);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          engineProfiles = parsed;
+        } else {
+          engineProfiles = this.createDefaultProfiles(engineSettings, agyBin, claudeBin);
+        }
+      } catch {
+        engineProfiles = this.createDefaultProfiles(engineSettings, agyBin, claudeBin);
+      }
+    } else {
+      engineProfiles = this.createDefaultProfiles(engineSettings, agyBin, claudeBin);
+    }
+
+    const defaultEngineProfileId = map.get('default_engine_profile_id') ?? engineProfiles[0]?.id;
+
     return {
       autoQueue,
       autoQueueIncludeOwn,
@@ -247,11 +272,54 @@ export class SettingsService {
       defaultRuleIds,
       defaultRuleId: defaultRuleIds[0] ?? legacyRuleId,
       defaultBackendId,
+      defaultEngineProfileId,
       enabledEngines,
       globalMaxConcurrency,
       backendMaxConcurrency,
       engineSettings,
+      engineProfiles,
     };
+  }
+
+  private createDefaultProfiles(
+    engineSettings: EngineSettingsMap,
+    agyBin: string,
+    claudeBin: string
+  ): EngineProfile[] {
+    return [
+      {
+        id: 'default-agy',
+        name: 'Antigravity (Default)',
+        description: 'Google Antigravity CLI エンジン',
+        isDefault: true,
+        engineType: 'antigravity',
+        config: {
+          ...engineSettings.antigravity,
+          binPath: engineSettings.antigravity.binPath || agyBin,
+        },
+      },
+      {
+        id: 'default-claude',
+        name: 'Claude Code (Default)',
+        description: 'Anthropic Claude Code CLI エンジン',
+        isDefault: false,
+        engineType: 'claude-code',
+        config: {
+          ...engineSettings.claudeCode,
+          binPath: engineSettings.claudeCode.binPath || claudeBin,
+        },
+      },
+      {
+        id: 'default-mock',
+        name: 'Mock Engine',
+        description: 'テスト用のモックエンジン',
+        isDefault: false,
+        engineType: 'mock',
+        config: {
+          ...engineSettings.mock,
+        },
+      },
+    ];
   }
 
   async updateSettings(updates: Partial<AppSettings>): Promise<AppSettings> {
@@ -317,6 +385,12 @@ export class SettingsService {
       if (updates.engineSettings.claudeCode?.binPath) {
         await upsert('claude_bin', updates.engineSettings.claudeCode.binPath);
       }
+    }
+    if (updates.engineProfiles !== undefined) {
+      await upsert('engine_profiles', JSON.stringify(updates.engineProfiles));
+    }
+    if (updates.defaultEngineProfileId !== undefined) {
+      await upsert('default_engine_profile_id', updates.defaultEngineProfileId);
     }
 
     return this.getAllSettings();
