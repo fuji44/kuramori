@@ -24,6 +24,7 @@
     "start": "deno run --allow-all apps/server/src/index.ts",
     "dev:server": "deno run --allow-all --watch apps/server/src/index.ts",
     "dev:web": "deno task --cwd apps/web dev",
-    "runner": "deno run --allow-all packages/runner/src/cli.ts"
+    "runner": "deno run --allow-all packages/runner/src/cli.ts",
+    "verify:local-llm": "deno run --allow-all packages/runner/scripts/verify-local-llm.ts"
   }
 }
