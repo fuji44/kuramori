@@ -1,39 +1,36 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Save,
   Cpu,
   Terminal,
-  Shield,
-  Clock,
-  Sparkles,
-  Zap,
-  CheckCircle2,
   Box,
   Copy,
   Check,
   ChevronDown,
-  ChevronUp,
-  Sliders,
   Play,
   RefreshCw,
   AlertCircle,
-  Ban,
   FlaskConical,
   Plus,
   Trash2,
   Edit2,
   Star,
-  X,
-  Layers,
-  Settings2,
+  ArrowLeft,
+  CheckCircle2,
+  Save,
 } from 'lucide-react';
-import { AppSettings, EngineSettingsMap, EngineProfile, EngineType } from '../../types.ts';
+import {
+  AppSettings,
+  EngineProfile,
+  EngineType,
+  ClaudeCodeEngineConfig,
+  AntigravityEngineConfig,
+  MockEngineConfig,
+} from '../../types.ts';
 import {
   AntigravityFields,
   ClaudeCodeFields,
   MockFields,
 } from '../../components/settings/EngineConfigFields.tsx';
-import { EngineProfileModal } from '../../components/settings/EngineProfileModal.tsx';
 
 interface EngineSettingsViewProps {
   settings: AppSettings;
@@ -65,7 +62,7 @@ function CommandPreview({ command, title = '実行コマンドプレビュー' }
         <button
           type="button"
           onClick={handleCopy}
-          className="flex items-center gap-1 text-[11px] text-[#8b949e] hover:text-white transition-colors"
+          className="flex items-center gap-1 text-[11px] text-[#8b949e] hover:text-white transition-colors cursor-pointer"
           title="コマンドをコピー"
         >
           {copied ? (
@@ -90,7 +87,6 @@ function CommandPreview({ command, title = '実行コマンドプレビュー' }
 }
 
 interface EngineTestButtonProps {
-  engineName: 'antigravity' | 'claude-code' | 'mock';
   isTesting: boolean;
   onTest: (mode: 'version' | 'execution') => void;
   disabled?: boolean;
@@ -117,13 +113,12 @@ function EngineTestButton({ isTesting, onTest, disabled = false }: EngineTestBut
   return (
     <div className="relative inline-flex items-center" ref={dropdownRef}>
       <div className="inline-flex rounded-lg border border-[#30363d] overflow-hidden shadow-sm">
-        {/* メインアクション: 接続テスト */}
         <button
           type="button"
           disabled={disabled || isTesting}
           onClick={() => onTest('version')}
-          className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-[#21262d] hover:bg-[#30363d] text-[#c9d1d9] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed border-r border-[#30363d]"
-          title="CLIバイナリの存在とバージョンを検証（~1秒）"
+          className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-[#21262d] hover:bg-[#30363d] text-[#c9d1d9] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed border-r border-[#30363d] cursor-pointer"
+          title="CLIバイナリの存在とバージョンを検証 (~1秒)"
         >
           {isTesting ? (
             <>
@@ -138,19 +133,17 @@ function EngineTestButton({ isTesting, onTest, disabled = false }: EngineTestBut
           )}
         </button>
 
-        {/* ドロップダウントグル */}
         <button
           type="button"
           disabled={disabled || isTesting}
           onClick={() => setIsOpen((prev) => !prev)}
-          className="px-1.5 py-1 bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-1.5 py-1 bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           title="テスト方法を選択"
         >
           <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
         </button>
       </div>
 
-      {/* ドロップダウンメニュー */}
       {isOpen && (
         <div className="absolute right-0 top-full mt-1.5 w-64 bg-[#1c2128] border border-[#30363d] rounded-xl shadow-2xl z-50 p-1.5 text-xs flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-100">
           <button
@@ -159,7 +152,7 @@ function EngineTestButton({ isTesting, onTest, disabled = false }: EngineTestBut
               setIsOpen(false);
               onTest('version');
             }}
-            className="w-full text-left p-2 rounded-lg hover:bg-[#21262d] transition-colors flex items-start gap-2.5 group"
+            className="w-full text-left p-2 rounded-lg hover:bg-[#21262d] transition-colors flex items-start gap-2.5 group cursor-pointer"
           >
             <FlaskConical className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
             <div>
@@ -178,7 +171,7 @@ function EngineTestButton({ isTesting, onTest, disabled = false }: EngineTestBut
               setIsOpen(false);
               onTest('execution');
             }}
-            className="w-full text-left p-2 rounded-lg hover:bg-[#21262d] transition-colors flex items-start gap-2.5 group"
+            className="w-full text-left p-2 rounded-lg hover:bg-[#21262d] transition-colors flex items-start gap-2.5 group cursor-pointer"
           >
             <Play className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
             <div>
@@ -203,34 +196,67 @@ export function EngineSettingsView({
   onShowError,
 }: EngineSettingsViewProps) {
   const [formSettings, setFormSettings] = useState<AppSettings>(settings);
-  const [saving, setSaving] = useState(false);
-  const [showAgyAdvanced, setShowAgyAdvanced] = useState(false);
-  const [showClaudeAdvanced, setShowClaudeAdvanced] = useState(false);
-  const [testingEngine, setTestingEngine] = useState<string | null>(null);
-  const [testResults, setTestResults] = useState<Record<string, { success: boolean; mode?: 'version' | 'execution'; version?: string; output?: string; message?: string; error?: string }>>({});
+  const [isCreatingProfile, setIsCreatingProfile] = useState(false);
+  const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
 
-  // EngineProfile state
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [editingProfile, setEditingProfile] = useState<EngineProfile | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [testingProfileId, setTestingProfileId] = useState<string | null>(null);
+  const [testResults, setTestResults] = useState<
+    Record<
+      string,
+      {
+        success: boolean;
+        mode?: 'version' | 'execution';
+        version?: string;
+        output?: string;
+        message?: string;
+        error?: string;
+      }
+    >
+  >({});
+
+  // フォーム用ステート
+  const [formName, setFormName] = useState('');
+  const [formDescription, setFormDescription] = useState('');
+  const [formIsDefault, setFormIsDefault] = useState(false);
+  const [formEngineType, setFormEngineType] = useState<EngineType>('claude-code');
+
+  const [formClaudeConfig, setFormClaudeConfig] = useState<ClaudeCodeEngineConfig>({
+    binPath: 'claude',
+    model: 'ornith-1.5:9b',
+    effort: 'high',
+    timeoutSeconds: 900,
+    allowedTools: '',
+    bare: false,
+    apiBaseUrl: 'http://localhost:11434',
+    authToken: '',
+    maxTurns: 15,
+  });
+
+  const [formAgyConfig, setFormAgyConfig] = useState<AntigravityEngineConfig>({
+    binPath: 'agy',
+    model: 'gemini-3.1-pro',
+    effort: 'high',
+    timeoutSeconds: 900,
+    printTimeout: '',
+    sandbox: false,
+    disableSlashCommands: false,
+  });
+
+  const [formMockConfig, setFormMockConfig] = useState<MockEngineConfig>({
+    delayMs: 500,
+  });
 
   useEffect(() => {
     setFormSettings(settings);
   }, [settings]);
-
-  const enabledEngines = formSettings.enabledEngines ?? ['antigravity', 'claude-code', 'mock'];
-
-  const isEngineEnabled = (engineName: string) => {
-    return enabledEngines.includes(engineName);
-  };
-
-  const currentBackend = formSettings.defaultBackendId || formSettings.reviewEngine || 'antigravity';
 
   const defaultProfiles: EngineProfile[] = [
     {
       id: 'default-agy',
       name: 'Antigravity (Default)',
       description: 'Google Antigravity CLI エンジン',
-      isDefault: currentBackend === 'antigravity',
+      isDefault: (formSettings.defaultBackendId || formSettings.reviewEngine || 'antigravity') === 'antigravity',
       engineType: 'antigravity',
       config: {
         binPath: formSettings.agyBin || 'agy',
@@ -246,7 +272,7 @@ export function EngineSettingsView({
       id: 'default-claude',
       name: 'Claude Code (Default)',
       description: 'Anthropic Claude Code CLI エンジン',
-      isDefault: currentBackend === 'claude-code',
+      isDefault: (formSettings.defaultBackendId || formSettings.reviewEngine) === 'claude-code',
       engineType: 'claude-code',
       config: {
         binPath: formSettings.claudeBin || 'claude',
@@ -264,7 +290,7 @@ export function EngineSettingsView({
       id: 'default-mock',
       name: 'Mock Engine',
       description: 'テスト用のモックエンジン',
-      isDefault: currentBackend === 'mock',
+      isDefault: (formSettings.defaultBackendId || formSettings.reviewEngine) === 'mock',
       engineType: 'mock',
       config: {
         delayMs: 500,
@@ -277,135 +303,160 @@ export function EngineSettingsView({
       ? formSettings.engineProfiles
       : defaultProfiles;
 
-  const toggleEngineEnabled = (engineName: string) => {
-    if (enabledEngines.includes(engineName)) {
-      if (enabledEngines.length <= 1) {
-        onShowError('少なくとも1つのエンジンを有効にしておく必要があります');
-        return;
-      }
-      const next = enabledEngines.filter((id) => id !== engineName);
-      let nextBackend = currentBackend;
-      if (currentBackend === engineName) {
-        nextBackend = next[0] ?? 'antigravity';
-      }
-      setFormSettings((prev) => ({
-        ...prev,
-        enabledEngines: next,
-        reviewEngine: nextBackend as any,
-        defaultBackendId: nextBackend,
-      }));
-    } else {
-      setFormSettings((prev) => ({
-        ...prev,
-        enabledEngines: [...enabledEngines, engineName],
-      }));
+  const isFormMode = isCreatingProfile || editingProfileId !== null;
+
+  const handleStartCreate = () => {
+    setEditingProfileId(null);
+    setIsCreatingProfile(true);
+    setFormName('');
+    setFormDescription('');
+    setFormIsDefault(profiles.length === 0);
+    setFormEngineType('claude-code');
+    setFormClaudeConfig({
+      binPath: 'claude',
+      model: 'ornith-1.5:9b',
+      effort: 'high',
+      timeoutSeconds: 900,
+      allowedTools: '',
+      bare: false,
+      apiBaseUrl: 'http://localhost:11434',
+      authToken: '',
+      maxTurns: 15,
+    });
+    setFormAgyConfig({
+      binPath: 'agy',
+      model: 'gemini-3.1-pro',
+      effort: 'high',
+      timeoutSeconds: 900,
+      printTimeout: '',
+      sandbox: false,
+      disableSlashCommands: false,
+    });
+    setFormMockConfig({ delayMs: 500 });
+  };
+
+  const handleStartEdit = (profile: EngineProfile) => {
+    setEditingProfileId(profile.id);
+    setIsCreatingProfile(false);
+    setFormName(profile.name);
+    setFormDescription(profile.description ?? '');
+    setFormIsDefault(Boolean(profile.isDefault));
+    setFormEngineType(profile.engineType);
+
+    if (profile.engineType === 'claude-code') {
+      setFormClaudeConfig({ ...profile.config });
+    } else if (profile.engineType === 'antigravity') {
+      setFormAgyConfig({ ...profile.config });
+    } else if (profile.engineType === 'mock') {
+      setFormMockConfig({ ...profile.config });
     }
   };
 
-  const handleTestEngine = async (
-    engineName: 'antigravity' | 'claude-code' | 'mock' | string,
-    mode: 'version' | 'execution' = 'version',
-    customConfig?: any
-  ) => {
-    setTestingEngine(engineName);
+  const handleCancelForm = () => {
+    setIsCreatingProfile(false);
+    setEditingProfileId(null);
+  };
+
+  const handleSaveProfileForm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formName.trim()) {
+      onShowError('プロファイル名を入力してください');
+      return;
+    }
+
+    setSaving(true);
     try {
-      let binPath: string | undefined;
-      let model: string | undefined;
-      let effort: string | undefined;
-      let apiBaseUrl: string | undefined;
-      let authToken: string | undefined;
+      const now = new Date().toISOString();
+      const id = editingProfileId ?? `profile-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
-      if (customConfig) {
-        binPath = customConfig.binPath;
-        model = customConfig.model;
-        effort = customConfig.effort;
-        apiBaseUrl = customConfig.apiBaseUrl;
-        authToken = customConfig.authToken;
-      } else if (engineName === 'antigravity') {
-        binPath = engines.antigravity.binPath;
-        model = engines.antigravity.model;
-        effort = engines.antigravity.effort;
-      } else if (engineName === 'claude-code') {
-        binPath = engines.claudeCode.binPath;
-        model = engines.claudeCode.model;
-        effort = engines.claudeCode.effort;
-        apiBaseUrl = engines.claudeCode.apiBaseUrl;
-        authToken = engines.claudeCode.authToken;
-      }
+      let savedProfile: EngineProfile;
 
-      const res = await fetch(`/api/engines/${engineName}/test`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode, binPath, model, effort, apiBaseUrl, authToken }),
-      });
-      const data = await res.json();
-      setTestResults((prev) => ({
-        ...prev,
-        [engineName]: data,
-      }));
-      if (data.success) {
-        onShowSuccess(data.message || `${engineName} のテストに成功しました`);
+      if (formEngineType === 'claude-code') {
+        savedProfile = {
+          id,
+          name: formName.trim(),
+          description: formDescription.trim() || undefined,
+          isDefault: formIsDefault,
+          engineType: 'claude-code',
+          config: {
+            ...formClaudeConfig,
+            timeoutSeconds: Number(formClaudeConfig.timeoutSeconds) || 900,
+            maxTurns: formClaudeConfig.maxTurns ? Number(formClaudeConfig.maxTurns) : undefined,
+          },
+          createdAt: now,
+          updatedAt: now,
+        };
+      } else if (formEngineType === 'antigravity') {
+        savedProfile = {
+          id,
+          name: formName.trim(),
+          description: formDescription.trim() || undefined,
+          isDefault: formIsDefault,
+          engineType: 'antigravity',
+          config: {
+            ...formAgyConfig,
+            timeoutSeconds: Number(formAgyConfig.timeoutSeconds) || 900,
+          },
+          createdAt: now,
+          updatedAt: now,
+        };
       } else {
-        onShowError(data.error || `${engineName} のテストに失敗しました`);
+        savedProfile = {
+          id,
+          name: formName.trim(),
+          description: formDescription.trim() || undefined,
+          isDefault: formIsDefault,
+          engineType: 'mock',
+          config: {
+            delayMs: Number(formMockConfig.delayMs) >= 0 ? Number(formMockConfig.delayMs) : 500,
+          },
+          createdAt: now,
+          updatedAt: now,
+        };
       }
-    } catch (err: any) {
-      const errorMsg = err.message || 'テストの実行に失敗しました';
-      setTestResults((prev) => ({
-        ...prev,
-        [engineName]: { success: false, mode, error: errorMsg },
-      }));
-      onShowError(errorMsg);
+
+      let nextProfiles: EngineProfile[];
+      const exists = profiles.some((p) => p.id === id);
+
+      if (formIsDefault) {
+        nextProfiles = profiles.map((p) => ({
+          ...p,
+          isDefault: p.id === id,
+        }));
+        if (!exists) {
+          nextProfiles.push(savedProfile);
+        } else {
+          nextProfiles = nextProfiles.map((p) => (p.id === id ? savedProfile : p));
+        }
+      } else {
+        if (exists) {
+          nextProfiles = profiles.map((p) => (p.id === id ? savedProfile : p));
+        } else {
+          nextProfiles = [...profiles, savedProfile];
+        }
+      }
+
+      const updatedSettings: AppSettings = {
+        ...formSettings,
+        engineProfiles: nextProfiles,
+        ...(formIsDefault
+          ? {
+              defaultEngineProfileId: savedProfile.id,
+              defaultBackendId: savedProfile.engineType,
+              reviewEngine: savedProfile.engineType as any,
+            }
+          : {}),
+      };
+
+      setFormSettings(updatedSettings);
+      await onSaveSettings(updatedSettings);
+      onShowSuccess(`プロファイル「${savedProfile.name}」を保存しました`);
+      handleCancelForm();
+    } catch {
+      onShowError('プロファイルの保存に失敗しました');
     } finally {
-      setTestingEngine(null);
+      setSaving(false);
     }
-  };
-
-  const handleOpenCreateProfile = () => {
-    setEditingProfile(null);
-    setIsProfileModalOpen(true);
-  };
-
-  const handleOpenEditProfile = (profile: EngineProfile) => {
-    setEditingProfile(profile);
-    setIsProfileModalOpen(true);
-  };
-
-  const handleSaveProfile = async (saved: EngineProfile) => {
-    let nextProfiles: EngineProfile[];
-    const exists = profiles.some((p) => p.id === saved.id);
-
-    if (saved.isDefault) {
-      nextProfiles = profiles.map((p) => ({
-        ...p,
-        isDefault: p.id === saved.id,
-      }));
-      if (!exists) {
-        nextProfiles.push(saved);
-      } else {
-        nextProfiles = nextProfiles.map((p) => (p.id === saved.id ? saved : p));
-      }
-    } else {
-      if (exists) {
-        nextProfiles = profiles.map((p) => (p.id === saved.id ? saved : p));
-      } else {
-        nextProfiles = [...profiles, saved];
-      }
-    }
-
-    const updatedSettings: AppSettings = {
-      ...formSettings,
-      engineProfiles: nextProfiles,
-      ...(saved.isDefault
-        ? {
-            defaultEngineProfileId: saved.id,
-            defaultBackendId: saved.engineType,
-            reviewEngine: saved.engineType as any,
-          }
-        : {}),
-    };
-
-    setFormSettings(updatedSettings);
-    await onSaveSettings(updatedSettings);
   };
 
   const handleDeleteProfile = async (profileId: string) => {
@@ -486,760 +537,506 @@ export function EngineSettingsView({
     onShowSuccess(`「${target.name}」をシステム既定プロファイルに設定しました`);
   };
 
-  const engines = formSettings.engineSettings ?? {
-    antigravity: {
-      binPath: formSettings.agyBin || 'agy',
-      model: 'gemini-3.1-pro',
-      effort: 'high',
-      timeoutSeconds: 900,
-      printTimeout: '',
-      sandbox: false,
-      disableSlashCommands: false,
-      inputFormat: 'text',
-      outputFormat: 'text',
-      jsonSchema: '',
-      customArgs: '',
-    },
-    claudeCode: {
-      binPath: formSettings.claudeBin || 'claude',
-      model: 'sonnet',
-      effort: 'high',
-      timeoutSeconds: 900,
-      allowedTools: '',
-      bare: false,
-      inputFormat: 'text',
-      outputFormat: 'text',
-      jsonSchema: '',
-      customArgs: '',
-    },
-    mock: {
-      delayMs: 500,
-    },
-  };
-
-  const updateAntigravity = (updates: Partial<typeof engines.antigravity>) => {
-    const nextEngines: EngineSettingsMap = {
-      ...engines,
-      antigravity: { ...engines.antigravity, ...updates },
-    };
-    setFormSettings({
-      ...formSettings,
-      agyBin: nextEngines.antigravity.binPath,
-      engineSettings: nextEngines,
-    });
-  };
-
-  const updateClaudeCode = (updates: Partial<typeof engines.claudeCode>) => {
-    const nextEngines: EngineSettingsMap = {
-      ...engines,
-      claudeCode: { ...engines.claudeCode, ...updates },
-    };
-    setFormSettings({
-      ...formSettings,
-      claudeBin: nextEngines.claudeCode.binPath,
-      engineSettings: nextEngines,
-    });
-  };
-
-  const updateMock = (updates: Partial<typeof engines.mock>) => {
-    const nextEngines: EngineSettingsMap = {
-      ...engines,
-      mock: { ...engines.mock, ...updates },
-    };
-    setFormSettings({
-      ...formSettings,
-      engineSettings: nextEngines,
-    });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
+  const handleTest = async (
+    targetId: string,
+    engineType: EngineType,
+    config: any,
+    mode: 'version' | 'execution' = 'version'
+  ) => {
+    setTestingProfileId(targetId);
     try {
-      const normalizedSettings: AppSettings = {
-        ...formSettings,
-        engineSettings: {
-          antigravity: {
-            ...engines.antigravity,
-            timeoutSeconds: Number(engines.antigravity.timeoutSeconds) || 900,
-          },
-          claudeCode: {
-            ...engines.claudeCode,
-            timeoutSeconds: Number(engines.claudeCode.timeoutSeconds) || 900,
-          },
-          mock: {
-            ...engines.mock,
-            delayMs:
-              Number(engines.mock.delayMs) >= 0 ? Number(engines.mock.delayMs) : 500,
-          },
-        },
-      };
-
-      await onSaveSettings(normalizedSettings);
-      onShowSuccess('レビューエンジンの設定を保存しました');
-    } catch {
-      onShowError('設定の保存に失敗しました');
+      const res = await fetch(`/api/engines/${engineType}/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode,
+          binPath: config.binPath,
+          model: config.model,
+          effort: config.effort,
+          apiBaseUrl: config.apiBaseUrl,
+          authToken: config.authToken,
+        }),
+      });
+      const data = await res.json();
+      setTestResults((prev) => ({
+        ...prev,
+        [targetId]: data,
+      }));
+      if (data.success) {
+        onShowSuccess(data.message || '接続テストに成功しました');
+      } else {
+        onShowError(data.error || 'テストに失敗しました');
+      }
+    } catch (err: any) {
+      const errorMsg = err.message || 'テスト実行エラー';
+      setTestResults((prev) => ({
+        ...prev,
+        [targetId]: { success: false, mode, error: errorMsg },
+      }));
+      onShowError(errorMsg);
     } finally {
-      setSaving(false);
+      setTestingProfileId(null);
     }
   };
 
-  const agyPreviewCommand = (() => {
-    const parts = [
-      engines.antigravity.binPath || 'agy',
-      '--new-project',
-      '-p',
-      '"<prompt>"',
-      '--dangerously-skip-permissions',
-    ];
-    if (engines.antigravity.model) parts.push('--model', engines.antigravity.model);
-    if (engines.antigravity.effort) parts.push('--effort', engines.antigravity.effort);
-    if (engines.antigravity.printTimeout?.trim()) {
-      const val = engines.antigravity.printTimeout.trim();
-      const formatted = /^\d+$/.test(val) ? `${val}s` : val;
-      parts.push('--print-timeout', formatted);
+  // コマンドプレビュー計算
+  const previewCommand = (() => {
+    if (formEngineType === 'antigravity') {
+      const parts = [
+        formAgyConfig.binPath || 'agy',
+        '--new-project',
+        '-p',
+        '"<prompt>"',
+        '--dangerously-skip-permissions',
+      ];
+      if (formAgyConfig.model) parts.push('--model', formAgyConfig.model);
+      if (formAgyConfig.effort) parts.push('--effort', formAgyConfig.effort);
+      if (formAgyConfig.printTimeout?.trim()) {
+        const val = formAgyConfig.printTimeout.trim();
+        const formatted = /^\d+$/.test(val) ? `${val}s` : val;
+        parts.push('--print-timeout', formatted);
+      }
+      if (formAgyConfig.sandbox) parts.push('--sandbox');
+      if (formAgyConfig.disableSlashCommands) parts.push('--disable-slash-commands');
+      if (formAgyConfig.customArgs?.trim()) {
+        parts.push(...formAgyConfig.customArgs.trim().split(/\s+/));
+      }
+      return parts.join(' ');
     }
-    if (engines.antigravity.sandbox) parts.push('--sandbox');
-    if (engines.antigravity.disableSlashCommands) parts.push('--disable-slash-commands');
-    if (engines.antigravity.inputFormat && engines.antigravity.inputFormat !== 'text') {
-      parts.push('--input-format', engines.antigravity.inputFormat);
+    if (formEngineType === 'claude-code') {
+      const parts: string[] = [];
+      if (formClaudeConfig.apiBaseUrl?.trim()) {
+        parts.push(`ANTHROPIC_BASE_URL="${formClaudeConfig.apiBaseUrl.trim()}"`);
+      }
+      if (formClaudeConfig.authToken?.trim()) {
+        parts.push(`ANTHROPIC_AUTH_TOKEN="***"`);
+      }
+      parts.push(formClaudeConfig.binPath || 'claude', '-p', '"<prompt>"', '--dangerously-skip-permissions');
+      if (formClaudeConfig.model) parts.push('--model', formClaudeConfig.model);
+      if (formClaudeConfig.effort) parts.push('--effort', formClaudeConfig.effort);
+      if (formClaudeConfig.maxTurns && formClaudeConfig.maxTurns > 0) {
+        parts.push('--max-turns', String(formClaudeConfig.maxTurns));
+      }
+      if (formClaudeConfig.bare) parts.push('--bare');
+      if (formClaudeConfig.customArgs?.trim()) {
+        parts.push(...formClaudeConfig.customArgs.trim().split(/\s+/));
+      }
+      return parts.join(' ');
     }
-    if (engines.antigravity.outputFormat && engines.antigravity.outputFormat !== 'text') {
-      parts.push('--output-format', engines.antigravity.outputFormat);
-    }
-    if (engines.antigravity.jsonSchema?.trim()) {
-      parts.push('--json-schema', `'${engines.antigravity.jsonSchema.trim()}'`);
-    }
-    if (engines.antigravity.customArgs?.trim()) {
-      parts.push(...engines.antigravity.customArgs.trim().split(/\s+/));
-    }
-    return parts.join(' ');
+    return `プロセス起動なし (Mock 遅延: ${formMockConfig.delayMs}ms)`;
   })();
 
-  const claudePreviewCommand = (() => {
-    const parts = [
-      engines.claudeCode.binPath || 'claude',
-      '-p',
-      '"<prompt>"',
-      '--dangerously-skip-permissions',
-    ];
-    if (engines.claudeCode.model) parts.push('--model', engines.claudeCode.model);
-    if (engines.claudeCode.effort) parts.push('--effort', engines.claudeCode.effort);
-    if (engines.claudeCode.inputFormat && engines.claudeCode.inputFormat !== 'text') {
-      parts.push('--input-format', engines.claudeCode.inputFormat);
-    }
-    if (engines.claudeCode.outputFormat && engines.claudeCode.outputFormat !== 'text') {
-      parts.push('--output-format', engines.claudeCode.outputFormat);
-    }
-    if (engines.claudeCode.jsonSchema?.trim()) {
-      parts.push('--json-schema', `'${engines.claudeCode.jsonSchema.trim()}'`);
-    }
-    if (engines.claudeCode.systemPrompt?.trim()) {
-      parts.push('--append-system-prompt', `"${engines.claudeCode.systemPrompt.trim().slice(0, 30)}..."`);
-    }
-    if (engines.claudeCode.allowedTools?.trim()) {
-      parts.push('--allowed-tools', `"${engines.claudeCode.allowedTools.trim()}"`);
-    }
-    if (engines.claudeCode.bare) parts.push('--bare');
-    if (engines.claudeCode.customArgs?.trim()) {
-      parts.push(...engines.claudeCode.customArgs.trim().split(/\s+/));
-    }
-    return parts.join(' ');
-  })();
+  // 1. 個別設定フォーム表示モード
+  if (isFormMode) {
+    const currentConfig =
+      formEngineType === 'claude-code'
+        ? formClaudeConfig
+        : formEngineType === 'antigravity'
+        ? formAgyConfig
+        : formMockConfig;
 
-  return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center gap-2.5">
-        <Cpu className="w-5 h-5 text-sky-400" />
-        <div>
-          <h2 className="text-xl font-bold text-white tracking-tight">エンジン</h2>
-          <p className="text-xs text-[#8b949e] mt-0.5">
-            デフォルト実行エンジンの選択と、各 AI エージェント CLI（Antigravity, Claude Code, Mock）の動作パラメータを管理します。
-          </p>
-        </div>
-      </div>
+    const currentTestResult = testResults['current-form'];
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* 1. Global Default Engine Card */}
-        <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-5 space-y-4">
-          <div className="flex items-center gap-2 pb-3 border-b border-[#30363d]">
-            <Cpu className="w-4 h-4 text-sky-400" />
-            <h3 className="text-sm font-semibold text-white">デフォルト AI レビューエンジン</h3>
-          </div>
+    return (
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex flex-col gap-3">
+          <button
+            type="button"
+            onClick={handleCancelForm}
+            className="inline-flex items-center gap-1.5 text-xs text-[#8b949e] hover:text-white transition-colors self-start cursor-pointer group"
+          >
+            <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+            <span>エンジンプロファイル一覧に戻る</span>
+          </button>
 
-          <p className="text-xs text-[#8b949e]">
-            ルール設定で「default」が指定されている場合に利用される標準エンジンです。
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <button
-              type="button"
-              disabled={!isEngineEnabled('antigravity')}
-              onClick={() =>
-                setFormSettings({
-                  ...formSettings,
-                  reviewEngine: 'antigravity',
-                  defaultBackendId: 'antigravity',
-                })
-              }
-              className={`p-4 rounded-xl border text-left transition-all ${
-                !isEngineEnabled('antigravity')
-                  ? 'border-[#30363d]/50 bg-[#0d1117]/50 opacity-50 cursor-not-allowed text-[#8b949e]'
-                  : currentBackend === 'antigravity'
-                  ? 'border-sky-500 bg-sky-950/40 text-white ring-1 ring-sky-500'
-                  : 'border-[#30363d] bg-[#0d1117] text-[#8b949e] hover:border-[#8b949e]'
-              }`}
-            >
-              <div className="font-semibold text-sm text-sky-400 flex items-center justify-between mb-1.5">
-                <span className="flex items-center gap-1.5">
-                  <Cpu className="w-4 h-4" />
-                  <span>antigravity</span>
-                </span>
-                <div className="flex items-center gap-1.5">
-                  {!isEngineEnabled('antigravity') && (
-                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-neutral-800 text-neutral-400 border border-neutral-700">
-                      無効化中
-                    </span>
-                  )}
-                  {currentBackend === 'antigravity' && (
-                    <CheckCircle2 className="w-4 h-4 text-sky-400" />
-                  )}
-                </div>
-              </div>
-              <p className="text-xs text-[#8b949e] leading-relaxed">
-                Google agy CLI を使用（推奨）。Gemini による多段階推論レビューを実行します。
-              </p>
-            </button>
-
-            <button
-              type="button"
-              disabled={!isEngineEnabled('claude-code')}
-              onClick={() =>
-                setFormSettings({
-                  ...formSettings,
-                  reviewEngine: 'claude-code',
-                  defaultBackendId: 'claude-code',
-                })
-              }
-              className={`p-4 rounded-xl border text-left transition-all ${
-                !isEngineEnabled('claude-code')
-                  ? 'border-[#30363d]/50 bg-[#0d1117]/50 opacity-50 cursor-not-allowed text-[#8b949e]'
-                  : currentBackend === 'claude-code'
-                  ? 'border-sky-500 bg-sky-950/40 text-white ring-1 ring-sky-500'
-                  : 'border-[#30363d] bg-[#0d1117] text-[#8b949e] hover:border-[#8b949e]'
-              }`}
-            >
-              <div className="font-semibold text-sm text-sky-400 flex items-center justify-between mb-1.5">
-                <span className="flex items-center gap-1.5">
-                  <Terminal className="w-4 h-4" />
-                  <span>claude-code</span>
-                </span>
-                <div className="flex items-center gap-1.5">
-                  {!isEngineEnabled('claude-code') && (
-                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-neutral-800 text-neutral-400 border border-neutral-700">
-                      無効化中
-                    </span>
-                  )}
-                  {currentBackend === 'claude-code' && (
-                    <CheckCircle2 className="w-4 h-4 text-sky-400" />
-                  )}
-                </div>
-              </div>
-              <p className="text-xs text-[#8b949e] leading-relaxed">
-                claude -p を使用。Claude Code による自律型コードレビューを実行します。
-              </p>
-            </button>
-
-            <button
-              type="button"
-              disabled={!isEngineEnabled('mock')}
-              onClick={() =>
-                setFormSettings({
-                  ...formSettings,
-                  reviewEngine: 'mock',
-                  defaultBackendId: 'mock',
-                })
-              }
-              className={`p-4 rounded-xl border text-left transition-all ${
-                !isEngineEnabled('mock')
-                  ? 'border-[#30363d]/50 bg-[#0d1117]/50 opacity-50 cursor-not-allowed text-[#8b949e]'
-                  : currentBackend === 'mock'
-                  ? 'border-sky-500 bg-sky-950/40 text-white ring-1 ring-sky-500'
-                  : 'border-[#30363d] bg-[#0d1117] text-[#8b949e] hover:border-[#8b949e]'
-              }`}
-            >
-              <div className="font-semibold text-sm text-sky-400 flex items-center justify-between mb-1.5">
-                <span className="flex items-center gap-1.5">
-                  <Box className="w-4 h-4" />
-                  <span>mock</span>
-                </span>
-                <div className="flex items-center gap-1.5">
-                  {!isEngineEnabled('mock') && (
-                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-neutral-800 text-neutral-400 border border-neutral-700">
-                      無効化中
-                    </span>
-                  )}
-                  {currentBackend === 'mock' && (
-                    <CheckCircle2 className="w-4 h-4 text-sky-400" />
-                  )}
-                </div>
-              </div>
-              <p className="text-xs text-[#8b949e] leading-relaxed">
-                テスト用モック。API 呼び出しを行わず、即座にダミー結果を生成します。
-              </p>
-            </button>
-          </div>
-        </div>
-
-        {/* 1.5 Engine Profiles Section */}
-        <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-5 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#30363d]">
+          <div className="flex items-center gap-2.5">
+            <Cpu className="w-5 h-5 text-sky-400" />
             <div>
-              <div className="flex items-center gap-2">
-                <Layers className="w-4 h-4 text-sky-400" />
-                <h3 className="text-sm font-semibold text-white">登録済みエンジンプロファイル</h3>
-                <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-sky-950 text-sky-400 border border-sky-800">
-                  {profiles.length} 件
-                </span>
-              </div>
-              <p className="text-xs text-[#8b949e] mt-1">
-                モデルや接続先（Ollama ローカル推論、Claude CLI、Gemini 等）を個別のプロファイルとして定義できます。レビュールールごとに異なるプロファイルを割り当て可能です。
+              <h2 className="text-xl font-bold text-white tracking-tight">
+                {editingProfileId ? 'エンジンプロファイルを編集' : '新規エンジンプロファイルを作成'}
+              </h2>
+              <p className="text-xs text-[#8b949e] mt-0.5">
+                {editingProfileId
+                  ? `「${formName || 'プロファイル'}」のモデル、接続先、推論パラメータを設定します。`
+                  : 'Ollama ローカル推論やクラウド AI CLI の新しいプロファイルを定義します。'}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={handleOpenCreateProfile}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-lg transition-colors shrink-0 shadow-sm"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>プロファイルを追加</span>
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3">
-            {profiles.map((p) => {
-              const isDef = Boolean(p.isDefault);
-              const model = p.engineType === 'mock' ? 'N/A' : (p.config as any).model;
-              const apiBaseUrl = p.engineType === 'claude-code' ? (p.config as any).apiBaseUrl : undefined;
-              const isThisTesting = testingEngine === p.id;
-              const result = testResults[p.id];
-
-              return (
-                <div
-                  key={p.id}
-                  className={`p-4 rounded-xl border transition-all ${
-                    isDef
-                      ? 'border-sky-500/60 bg-sky-950/20 shadow-sm'
-                      : 'border-[#30363d] bg-[#0d1117]/80 hover:border-[#8b949e]/60'
-                  }`}
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="space-y-1.5 flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-sm text-white truncate">
-                          {p.name}
-                        </span>
-                        <span className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded bg-[#21262d] text-sky-300 border border-[#30363d]">
-                          {p.engineType === 'claude-code' && <Terminal className="w-3 h-3" />}
-                          {p.engineType === 'antigravity' && <Cpu className="w-3 h-3" />}
-                          {p.engineType === 'mock' && <Box className="w-3 h-3" />}
-                          <span>{p.engineType}</span>
-                        </span>
-                        {isDef && (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">
-                            <Star className="w-2.5 h-2.5 fill-current" />
-                            <span>システム既定</span>
-                          </span>
-                        )}
-                      </div>
-
-                      {p.description && (
-                        <p className="text-xs text-[#8b949e] line-clamp-1">{p.description}</p>
-                      )}
-
-                      <div className="flex items-center gap-4 text-xs text-[#8b949e] font-mono pt-1 flex-wrap">
-                        <div>モデル: <span className="text-[#c9d1d9]">{model || '未指定'}</span></div>
-                        {apiBaseUrl && (
-                          <div>Base URL: <span className="text-sky-300">{apiBaseUrl}</span></div>
-                        )}
-                        <div>タイムアウト: <span className="text-[#c9d1d9]">{p.engineType === 'mock' ? `${(p.config as any).delayMs}ms` : `${(p.config as any).timeoutSeconds ?? 900}s`}</span></div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#21262d]">
-                      {/* テスト実行ボタン */}
-                      <EngineTestButton
-                        engineName={p.engineType}
-                        isTesting={isThisTesting}
-                        onTest={(mode) => handleTestEngine(p.id, mode, p.config)}
-                      />
-
-                      {!isDef && (
-                        <button
-                          type="button"
-                          onClick={() => handleSetDefaultProfile(p.id)}
-                          className="px-2.5 py-1 text-xs font-medium bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-white rounded-lg border border-[#30363d] transition-colors"
-                          title="このプロファイルをシステム既定にする"
-                        >
-                          既定に設定
-                        </button>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEditProfile(p)}
-                        className="p-1.5 text-[#8b949e] hover:text-white hover:bg-[#21262d] rounded-lg transition-colors border border-[#30363d]"
-                        title="プロファイルを編集"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleDuplicateProfile(p)}
-                        className="p-1.5 text-[#8b949e] hover:text-white hover:bg-[#21262d] rounded-lg transition-colors border border-[#30363d]"
-                        title="プロファイルを複製"
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                      </button>
-
-                      <button
-                        type="button"
-                        disabled={profiles.length <= 1}
-                        onClick={() => handleDeleteProfile(p.id)}
-                        className="p-1.5 text-[#8b949e] hover:text-red-400 hover:bg-red-950/30 rounded-lg transition-colors border border-[#30363d] disabled:opacity-40 disabled:cursor-not-allowed"
-                        title="プロファイルを削除"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {result && (
-                    <div
-                      className={`mt-3 p-2.5 rounded-lg border text-xs flex items-start gap-2 ${
-                        result.success
-                          ? 'bg-emerald-950/20 border-emerald-800/40 text-emerald-300'
-                          : 'bg-red-950/20 border-red-800/40 text-red-300'
-                      }`}
-                    >
-                      {result.success ? (
-                        <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400 mt-0.5" />
-                      ) : (
-                        <AlertCircle className="w-4 h-4 shrink-0 text-red-400 mt-0.5" />
-                      )}
-                      <div className="space-y-0.5 min-w-0">
-                        <div className="font-semibold">
-                          {result.success ? 'テスト成功' : 'テスト失敗'}
-                          {result.version && ` (${result.version})`}
-                        </div>
-                        <div className="text-[11px] text-[#8b949e]">{result.message || result.error}</div>
-                        {result.output && (
-                          <pre className="font-mono text-[10px] bg-black/40 p-2 rounded mt-1 whitespace-pre-wrap max-h-24 overflow-y-auto">
-                            {result.output}
-                          </pre>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
           </div>
         </div>
 
-        {/* 2. Antigravity CLI Settings Card */}
-        <div className={`bg-[#161b22] border rounded-xl p-5 space-y-4 transition-all ${
-          isEngineEnabled('antigravity') ? 'border-[#30363d]' : 'border-[#30363d]/50 opacity-80'
-        }`}>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#30363d] gap-2">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-sky-400" />
-              <h3 className="text-sm font-semibold text-white">Antigravity CLI (agy) 設定</h3>
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-sky-950 text-sky-400 font-mono border border-sky-800/60">
-                engine: antigravity
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2 self-end sm:self-auto">
-              <button
-                type="button"
-                onClick={() => toggleEngineEnabled('antigravity')}
-                className={`text-xs px-2.5 py-1 rounded-lg border font-medium transition-colors flex items-center gap-1.5 ${
-                  isEngineEnabled('antigravity')
-                    ? 'bg-emerald-950/50 text-emerald-300 border-emerald-800/80 hover:bg-emerald-900/50'
-                    : 'bg-[#21262d] text-[#8b949e] border-[#30363d] hover:text-white'
-                }`}
-                title={isEngineEnabled('antigravity') ? 'クリックして無効化' : 'クリックして有効化'}
-              >
-                <span className={`w-1.5 h-1.5 rounded-full ${isEngineEnabled('antigravity') ? 'bg-emerald-400' : 'bg-neutral-500'}`} />
-                <span>{isEngineEnabled('antigravity') ? '有効' : '無効'}</span>
-              </button>
-
-              <EngineTestButton
-                engineName="antigravity"
-                isTesting={testingEngine === 'antigravity'}
-                onTest={(mode) => handleTestEngine('antigravity', mode)}
-                disabled={!isEngineEnabled('antigravity')}
-              />
-            </div>
-          </div>
-
-          {testResults.antigravity && (
-            testResults.antigravity.success ? (
-              <div className="p-3 rounded-lg bg-emerald-950/30 border border-emerald-800/60 text-xs text-emerald-300 space-y-1.5">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
-                    <span className="font-semibold">{testResults.antigravity.message}</span>
-                  </div>
-                  {testResults.antigravity.version && (
-                    <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-200 border border-emerald-700/60 shrink-0">
-                      {testResults.antigravity.version}
-                    </span>
-                  )}
-                </div>
-                {testResults.antigravity.output && (
-                  <div className="pt-1">
-                    <div className="text-[10px] text-emerald-400/80 mb-1 font-mono">推論レスポンス:</div>
-                    <pre className="font-mono text-[11px] text-emerald-200 whitespace-pre-wrap break-all bg-[#0d1117] p-2 rounded border border-emerald-900/60">
-                      {testResults.antigravity.output}
-                    </pre>
-                  </div>
-                )}
+        <form
+          onSubmit={handleSaveProfileForm}
+          className="bg-[#161b22] border border-[#30363d] rounded-xl p-5 space-y-6 animate-in fade-in duration-150"
+        >
+          {/* 基本情報 */}
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-semibold text-[#8b949e] block mb-1">
+                  プロファイル名 *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  placeholder="例: Ollama (ornith-1.5:9b), Claude 3.7 Cloud, Fast Haiku"
+                  className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500"
+                />
               </div>
-            ) : (
-              <div className="p-3 rounded-lg bg-rose-950/30 border border-rose-800/60 text-xs text-rose-300 space-y-1.5">
-                <div className="flex items-center gap-2 font-semibold text-rose-400">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{testResults.antigravity.mode === 'execution' ? '実行検証（推論テスト）に失敗しました' : '接続テストに失敗しました'}</span>
-                </div>
-                <pre className="font-mono text-[11px] text-rose-200 whitespace-pre-wrap break-all bg-[#0d1117] p-2.5 rounded border border-rose-900/60">
-                  {testResults.antigravity.error}
-                </pre>
+
+              <div>
+                <label className="text-xs font-semibold text-[#8b949e] block mb-1">
+                  説明 (任意)
+                </label>
+                <input
+                  type="text"
+                  value={formDescription}
+                  onChange={(e) => setFormDescription(e.target.value)}
+                  placeholder="例: ローカル RTX 5080 で高速実行する Ollama 推論プロファイル"
+                  className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500"
+                />
               </div>
-            )
-          )}
-
-          {!isEngineEnabled('antigravity') && (
-            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-neutral-900 border border-neutral-800 text-xs text-neutral-400">
-              <Ban className="w-4 h-4 shrink-0 text-neutral-500" />
-              <span>このエンジンは現在無効化されています。ルール実行やデフォルトエンジンとしては選択・実行されません。</span>
-            </div>
-          )}
-
-          <AntigravityFields
-            values={engines.antigravity}
-            onChange={updateAntigravity}
-            showAdvanced={showAgyAdvanced}
-            onToggleAdvanced={() => setShowAgyAdvanced(!showAgyAdvanced)}
-            disabled={!isEngineEnabled('antigravity')}
-          />
-
-          <CommandPreview command={agyPreviewCommand} />
-        </div>
-
-        {/* 3. Claude Code Settings Card */}
-        <div className={`bg-[#161b22] border rounded-xl p-5 space-y-4 transition-all ${
-          isEngineEnabled('claude-code') ? 'border-[#30363d]' : 'border-[#30363d]/50 opacity-80'
-        }`}>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#30363d] gap-2">
-            <div className="flex items-center gap-2">
-              <Terminal className="w-4 h-4 text-sky-400" />
-              <h3 className="text-sm font-semibold text-white">Claude Code (claude) 設定</h3>
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-purple-950 text-purple-400 font-mono border border-purple-800/60">
-                engine: claude-code
-              </span>
             </div>
 
-            <div className="flex items-center gap-2 self-end sm:self-auto">
-              <button
-                type="button"
-                onClick={() => toggleEngineEnabled('claude-code')}
-                className={`text-xs px-2.5 py-1 rounded-lg border font-medium transition-colors flex items-center gap-1.5 ${
-                  isEngineEnabled('claude-code')
-                    ? 'bg-emerald-950/50 text-emerald-300 border-emerald-800/80 hover:bg-emerald-900/50'
-                    : 'bg-[#21262d] text-[#8b949e] border-[#30363d] hover:text-white'
-                }`}
-                title={isEngineEnabled('claude-code') ? 'クリックして無効化' : 'クリックして有効化'}
-              >
-                <span className={`w-1.5 h-1.5 rounded-full ${isEngineEnabled('claude-code') ? 'bg-emerald-400' : 'bg-neutral-500'}`} />
-                <span>{isEngineEnabled('claude-code') ? '有効' : '無効'}</span>
-              </button>
+            {/* エンジン種別選択 */}
+            <div>
+              <label className="text-xs font-semibold text-[#8b949e] block mb-1.5">
+                エンジン種別
+              </label>
+              {!editingProfileId ? (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setFormEngineType('claude-code')}
+                    className={`p-3 rounded-xl border text-left flex items-center gap-3 transition-all cursor-pointer ${
+                      formEngineType === 'claude-code'
+                        ? 'border-sky-500 bg-sky-950/40 text-white ring-1 ring-sky-500'
+                        : 'border-[#30363d] bg-[#0d1117] text-[#8b949e] hover:border-[#8b949e]'
+                    }`}
+                  >
+                    <Terminal className="w-5 h-5 text-sky-400 shrink-0" />
+                    <div>
+                      <div className="text-sm font-semibold">Claude Code</div>
+                      <div className="text-[11px] text-[#8b949e]">Ollama / Claude CLI</div>
+                    </div>
+                  </button>
 
-              <EngineTestButton
-                engineName="claude-code"
-                isTesting={testingEngine === 'claude-code'}
-                onTest={(mode) => handleTestEngine('claude-code', mode)}
-                disabled={!isEngineEnabled('claude-code')}
-              />
-            </div>
-          </div>
+                  <button
+                    type="button"
+                    onClick={() => setFormEngineType('antigravity')}
+                    className={`p-3 rounded-xl border text-left flex items-center gap-3 transition-all cursor-pointer ${
+                      formEngineType === 'antigravity'
+                        ? 'border-sky-500 bg-sky-950/40 text-white ring-1 ring-sky-500'
+                        : 'border-[#30363d] bg-[#0d1117] text-[#8b949e] hover:border-[#8b949e]'
+                    }`}
+                  >
+                    <Cpu className="w-5 h-5 text-sky-400 shrink-0" />
+                    <div>
+                      <div className="text-sm font-semibold">Antigravity</div>
+                      <div className="text-[11px] text-[#8b949e]">Google agy CLI</div>
+                    </div>
+                  </button>
 
-          {testResults['claude-code'] && (
-            testResults['claude-code'].success ? (
-              <div className="p-3 rounded-lg bg-emerald-950/30 border border-emerald-800/60 text-xs text-emerald-300 space-y-1.5">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
-                    <span className="font-semibold">{testResults['claude-code'].message}</span>
-                  </div>
-                  {testResults['claude-code'].version && (
-                    <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-200 border border-emerald-700/60 shrink-0">
-                      {testResults['claude-code'].version}
-                    </span>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setFormEngineType('mock')}
+                    className={`p-3 rounded-xl border text-left flex items-center gap-3 transition-all cursor-pointer ${
+                      formEngineType === 'mock'
+                        ? 'border-sky-500 bg-sky-950/40 text-white ring-1 ring-sky-500'
+                        : 'border-[#30363d] bg-[#0d1117] text-[#8b949e] hover:border-[#8b949e]'
+                    }`}
+                  >
+                    <Box className="w-5 h-5 text-sky-400 shrink-0" />
+                    <div>
+                      <div className="text-sm font-semibold">Mock</div>
+                      <div className="text-[11px] text-[#8b949e]">テスト用ダミー</div>
+                    </div>
+                  </button>
                 </div>
-                {testResults['claude-code'].output && (
-                  <div className="pt-1">
-                    <div className="text-[10px] text-emerald-400/80 mb-1 font-mono">推論レスポンス:</div>
-                    <pre className="font-mono text-[11px] text-emerald-200 whitespace-pre-wrap break-all bg-[#0d1117] p-2 rounded border border-emerald-900/60">
-                      {testResults['claude-code'].output}
-                    </pre>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="p-3 rounded-lg bg-rose-950/30 border border-rose-800/60 text-xs text-rose-300 space-y-1.5">
-                <div className="flex items-center gap-2 font-semibold text-rose-400">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{testResults['claude-code'].mode === 'execution' ? '実行検証（推論テスト）に失敗しました' : '接続テストに失敗しました'}</span>
-                </div>
-                <pre className="font-mono text-[11px] text-rose-200 whitespace-pre-wrap break-all bg-[#0d1117] p-2.5 rounded border border-rose-900/60">
-                  {testResults['claude-code'].error}
-                </pre>
-              </div>
-            )
-          )}
-
-          {!isEngineEnabled('claude-code') && (
-            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-neutral-900 border border-neutral-800 text-xs text-neutral-400">
-              <Ban className="w-4 h-4 shrink-0 text-neutral-500" />
-              <span>このエンジンは現在無効化されています。ルール実行やデフォルトエンジンとしては選択・実行されません。</span>
-            </div>
-          )}
-
-          <ClaudeCodeFields
-            values={engines.claudeCode}
-            onChange={updateClaudeCode}
-            showAdvanced={showClaudeAdvanced}
-            onToggleAdvanced={() => setShowClaudeAdvanced(!showClaudeAdvanced)}
-            disabled={!isEngineEnabled('claude-code')}
-          />
-
-          <CommandPreview command={claudePreviewCommand} />
-        </div>
-
-        {/* 4. Mock Engine Settings Card */}
-        <div className={`bg-[#161b22] border rounded-xl p-5 space-y-4 transition-all ${
-          isEngineEnabled('mock') ? 'border-[#30363d]' : 'border-[#30363d]/50 opacity-80'
-        }`}>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#30363d] gap-2">
-            <div className="flex items-center gap-2">
-              <Box className="w-4 h-4 text-sky-400" />
-              <h3 className="text-sm font-semibold text-white">Mock レビューエンジン設定</h3>
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-400 font-mono border border-neutral-700">
-                engine: mock
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2 self-end sm:self-auto">
-              <button
-                type="button"
-                onClick={() => toggleEngineEnabled('mock')}
-                className={`text-xs px-2.5 py-1 rounded-lg border font-medium transition-colors flex items-center gap-1.5 ${
-                  isEngineEnabled('mock')
-                    ? 'bg-emerald-950/50 text-emerald-300 border-emerald-800/80 hover:bg-emerald-900/50'
-                    : 'bg-[#21262d] text-[#8b949e] border-[#30363d] hover:text-white'
-                }`}
-                title={isEngineEnabled('mock') ? 'クリックして無効化' : 'クリックして有効化'}
-              >
-                <span className={`w-1.5 h-1.5 rounded-full ${isEngineEnabled('mock') ? 'bg-emerald-400' : 'bg-neutral-500'}`} />
-                <span>{isEngineEnabled('mock') ? '有効' : '無効'}</span>
-              </button>
-
-              <EngineTestButton
-                engineName="mock"
-                isTesting={testingEngine === 'mock'}
-                onTest={(mode) => handleTestEngine('mock', mode)}
-                disabled={!isEngineEnabled('mock')}
-              />
-            </div>
-          </div>
-
-          {testResults.mock && (
-            <div className="p-3 rounded-lg bg-emerald-950/30 border border-emerald-800/60 text-xs text-emerald-300 space-y-1.5">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
-                  <span className="font-semibold">{testResults.mock.message}</span>
-                </div>
-                {testResults.mock.version && (
-                  <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-200 border border-emerald-700/60 shrink-0">
-                    {testResults.mock.version}
-                  </span>
-                )}
-              </div>
-              {testResults.mock.output && (
-                <div className="pt-1">
-                  <div className="text-[10px] text-emerald-400/80 mb-1 font-mono">シミュレート結果:</div>
-                  <pre className="font-mono text-[11px] text-emerald-200 whitespace-pre-wrap break-all bg-[#0d1117] p-2 rounded border border-emerald-900/60">
-                    {testResults.mock.output}
-                  </pre>
+              ) : (
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#0d1117] border border-[#30363d] text-xs text-sky-400 font-mono">
+                  {formEngineType === 'claude-code' && <Terminal className="w-3.5 h-3.5" />}
+                  {formEngineType === 'antigravity' && <Cpu className="w-3.5 h-3.5" />}
+                  {formEngineType === 'mock' && <Box className="w-3.5 h-3.5" />}
+                  <span>{formEngineType}</span>
                 </div>
               )}
             </div>
-          )}
 
-          {!isEngineEnabled('mock') && (
-            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-neutral-900 border border-neutral-800 text-xs text-neutral-400">
-              <Ban className="w-4 h-4 shrink-0 text-neutral-500" />
-              <span>このエンジンは現在無効化されています。ルール実行やデフォルトエンジンとしては選択・実行されません。</span>
+            <div className="pt-1">
+              <label className="flex items-center gap-2 cursor-pointer text-xs text-[#c9d1d9]">
+                <input
+                  type="checkbox"
+                  checked={formIsDefault}
+                  onChange={(e) => setFormIsDefault(e.target.checked)}
+                  className="rounded bg-[#0d1117] border-[#30363d] text-sky-500 focus:ring-sky-500/30"
+                />
+                <span>システム既定のプロファイルとして使用する（レビュールールで default 指定時に適用）</span>
+              </label>
             </div>
-          )}
-
-          <div className="max-w-xs">
-            <MockFields
-              values={engines.mock}
-              onChange={updateMock}
-              disabled={!isEngineEnabled('mock')}
-            />
           </div>
 
-          <div className="pt-2">
-            <div className="flex items-center gap-1.5 text-xs text-[#8b949e] mb-1.5">
-              <Box className="w-3.5 h-3.5 text-sky-400" />
-              <span className="font-semibold text-white/90">実行動作プレビュー</span>
+          {/* 動作パラメータ設定 */}
+          <div className="border-t border-[#30363d] pt-5 space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-[#30363d]/60">
+              <div className="flex items-center gap-2">
+                <Terminal className="w-4 h-4 text-sky-400" />
+                <h4 className="text-xs font-semibold text-white uppercase tracking-wider">
+                  動作パラメータ設定 ({formEngineType})
+                </h4>
+              </div>
+
+              {/* フォーム内でのテスト実行 */}
+              <div className="flex items-center gap-2">
+                <EngineTestButton
+                  isTesting={testingProfileId === 'current-form'}
+                  onTest={(mode) => handleTest('current-form', formEngineType, currentConfig, mode)}
+                />
+              </div>
             </div>
-            <div className="bg-[#090d13] border border-[#21262d] rounded-lg p-2.5 font-mono text-xs text-neutral-400">
-              プロセス起動なし (インメモリ実行 - 模擬遅延: {engines.mock.delayMs}ms)
-            </div>
+
+            {currentTestResult && (
+              <div
+                className={`p-3 rounded-lg border text-xs flex items-start gap-2.5 ${
+                  currentTestResult.success
+                    ? 'bg-emerald-950/30 border-emerald-800/50 text-emerald-300'
+                    : 'bg-red-950/30 border-red-800/50 text-red-300'
+                }`}
+              >
+                {currentTestResult.success ? (
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400 mt-0.5" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-400 mt-0.5" />
+                )}
+                <div className="space-y-1 min-w-0">
+                  <div className="font-semibold">
+                    {currentTestResult.success ? 'テスト成功' : 'テスト失敗'}
+                    {currentTestResult.version && ` (${currentTestResult.version})`}
+                  </div>
+                  <div>{currentTestResult.message || currentTestResult.error}</div>
+                  {currentTestResult.output && (
+                    <pre className="font-mono text-[11px] bg-black/40 p-2 rounded mt-1 whitespace-pre-wrap max-h-32 overflow-y-auto">
+                      {currentTestResult.output}
+                    </pre>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {formEngineType === 'claude-code' && (
+              <ClaudeCodeFields
+                values={formClaudeConfig}
+                onChange={(updates) => setFormClaudeConfig((prev) => ({ ...prev, ...updates }))}
+              />
+            )}
+
+            {formEngineType === 'antigravity' && (
+              <AntigravityFields
+                values={formAgyConfig}
+                onChange={(updates) => setFormAgyConfig((prev) => ({ ...prev, ...updates }))}
+              />
+            )}
+
+            {formEngineType === 'mock' && (
+              <MockFields
+                values={formMockConfig}
+                onChange={(updates) => setFormMockConfig((prev) => ({ ...prev, ...updates }))}
+              />
+            )}
+
+            <CommandPreview command={previewCommand} />
+          </div>
+
+          {/* Form Actions */}
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#30363d]">
+            <button
+              type="button"
+              onClick={handleCancelForm}
+              className="px-4 py-2 text-xs font-medium text-[#c9d1d9] bg-[#21262d] hover:bg-[#30363d] rounded-lg transition-colors cursor-pointer"
+            >
+              キャンセル
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex items-center gap-1.5 px-5 py-2 text-xs font-medium bg-sky-600 hover:bg-sky-500 text-white rounded-lg transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
+            >
+              <Save className="w-3.5 h-3.5" />
+              <span>{saving ? '保存中...' : 'プロファイルを保存'}</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
+  // 2. 一覧表示モード
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
+        <div className="flex items-center gap-2.5">
+          <Cpu className="w-5 h-5 text-sky-400" />
+          <div>
+            <h2 className="text-xl font-bold text-white tracking-tight">エンジンプロファイル</h2>
+            <p className="text-xs text-[#8b949e] mt-0.5">
+              AI レビュー実行エンジンのプロファイル（モデル、Ollama 接続先、動作パラメータ）を管理します。
+            </p>
           </div>
         </div>
 
-        {/* Form Actions */}
-        <div className="flex justify-end pt-2">
-          <button
-            type="submit"
-            disabled={saving}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium text-white bg-sky-600 hover:bg-sky-500 transition-colors shadow-sm disabled:opacity-50"
-          >
-            <Save className="w-4 h-4" />
-            <span>{saving ? '設定を保存中...' : 'エンジン設定を保存する'}</span>
-          </button>
-        </div>
-      </form>
+        <button
+          type="button"
+          onClick={handleStartCreate}
+          className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-lg transition-colors self-start sm:self-auto shadow-sm cursor-pointer"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span>新規プロファイルを作成</span>
+        </button>
+      </div>
 
-      {/* Engine Profile Modal */}
-      <EngineProfileModal
-        isOpen={isProfileModalOpen}
-        profile={editingProfile}
-        existingProfiles={profiles}
-        onClose={() => setIsProfileModalOpen(false)}
-        onSave={handleSaveProfile}
-        onShowSuccess={onShowSuccess}
-        onShowError={onShowError}
-      />
+      {/* Profile List */}
+      <div className="grid grid-cols-1 gap-3">
+        {profiles.map((p) => {
+          const isDef = Boolean(p.isDefault);
+          const model = p.engineType === 'mock' ? 'N/A' : (p.config as any).model;
+          const apiBaseUrl = p.engineType === 'claude-code' ? (p.config as any).apiBaseUrl : undefined;
+          const isThisTesting = testingProfileId === p.id;
+          const result = testResults[p.id];
+
+          return (
+            <div
+              key={p.id}
+              className={`p-4 rounded-xl border transition-all ${
+                isDef
+                  ? 'border-sky-500/60 bg-sky-950/20 shadow-sm'
+                  : 'border-[#30363d] bg-[#161b22] hover:border-[#8b949e]/60'
+              }`}
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-1.5 flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-sm text-white truncate">
+                      {p.name}
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded bg-[#21262d] text-sky-300 border border-[#30363d]">
+                      {p.engineType === 'claude-code' && <Terminal className="w-3 h-3" />}
+                      {p.engineType === 'antigravity' && <Cpu className="w-3 h-3" />}
+                      {p.engineType === 'mock' && <Box className="w-3 h-3" />}
+                      <span>{p.engineType}</span>
+                    </span>
+                    {isDef && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">
+                        <Star className="w-2.5 h-2.5 fill-current" />
+                        <span>システム既定</span>
+                      </span>
+                    )}
+                  </div>
+
+                  {p.description && (
+                    <p className="text-xs text-[#8b949e] line-clamp-1">{p.description}</p>
+                  )}
+
+                  <div className="flex items-center gap-4 text-xs text-[#8b949e] font-mono pt-1 flex-wrap">
+                    <div>
+                      モデル: <span className="text-[#c9d1d9]">{model || '未指定'}</span>
+                    </div>
+                    {apiBaseUrl && (
+                      <div>
+                        Base URL: <span className="text-sky-300">{apiBaseUrl}</span>
+                      </div>
+                    )}
+                    <div>
+                      タイムアウト:{' '}
+                      <span className="text-[#c9d1d9]">
+                        {p.engineType === 'mock'
+                          ? `${(p.config as any).delayMs}ms`
+                          : `${(p.config as any).timeoutSeconds ?? 900}s`}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#21262d]">
+                  {/* テスト実行ボタン */}
+                  <EngineTestButton
+                    isTesting={isThisTesting}
+                    onTest={(mode) => handleTest(p.id, p.engineType, p.config, mode)}
+                  />
+
+                  {!isDef && (
+                    <button
+                      type="button"
+                      onClick={() => handleSetDefaultProfile(p.id)}
+                      className="px-2.5 py-1 text-xs font-medium bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-white rounded-lg border border-[#30363d] transition-colors cursor-pointer"
+                      title="このプロファイルをシステム既定にする"
+                    >
+                      既定に設定
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => handleStartEdit(p)}
+                    className="p-1.5 text-[#8b949e] hover:text-white hover:bg-[#21262d] rounded-lg transition-colors border border-[#30363d] cursor-pointer"
+                    title="プロファイルを編集"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDuplicateProfile(p)}
+                    className="p-1.5 text-[#8b949e] hover:text-white hover:bg-[#21262d] rounded-lg transition-colors border border-[#30363d] cursor-pointer"
+                    title="プロファイルを複製"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={profiles.length <= 1}
+                    onClick={() => handleDeleteProfile(p.id)}
+                    className="p-1.5 text-[#8b949e] hover:text-red-400 hover:bg-red-950/30 rounded-lg transition-colors border border-[#30363d] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    title="プロファイルを削除"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {result && (
+                <div
+                  className={`mt-3 p-2.5 rounded-lg border text-xs flex items-start gap-2 ${
+                    result.success
+                      ? 'bg-emerald-950/20 border-emerald-800/40 text-emerald-300'
+                      : 'bg-red-950/20 border-red-800/40 text-red-300'
+                  }`}
+                >
+                  {result.success ? (
+                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400 mt-0.5" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 shrink-0 text-red-400 mt-0.5" />
+                  )}
+                  <div className="space-y-0.5 min-w-0">
+                    <div className="font-semibold">
+                      {result.success ? 'テスト成功' : 'テスト失敗'}
+                      {result.version && ` (${result.version})`}
+                    </div>
+                    <div className="text-[11px] text-[#8b949e]">{result.message || result.error}</div>
+                    {result.output && (
+                      <pre className="font-mono text-[10px] bg-black/40 p-2 rounded mt-1 whitespace-pre-wrap max-h-24 overflow-y-auto">
+                        {result.output}
+                      </pre>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
