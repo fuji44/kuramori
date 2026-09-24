@@ -4,6 +4,8 @@ import {
   AntigravityEngineConfig,
   ClaudeCodeEngineConfig,
   MockEngineConfig,
+  CodexEngineConfig,
+  BaseCliEngineConfig,
 } from '../../types.ts';
 import { Checkbox } from '../Checkbox.tsx';
 
@@ -39,6 +41,7 @@ export function AntigravityFields({
         isOverride ? values.sandbox !== undefined : Boolean(values.sandbox),
         isOverride ? values.disableSlashCommands !== undefined : Boolean(values.disableSlashCommands),
         Boolean(values.customArgs?.trim()),
+        Object.keys(values.customEnv ?? {}).length > 0,
       ].filter(Boolean).length;
 
   const inputClass = `w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-[#090d13]`;
@@ -390,6 +393,10 @@ export function AntigravityFields({
           </div>
 
           <div>
+            <EngineEnvironmentVariables values={values} onChange={onChange} disabled={disabled} engineLabel="Antigravity" />
+          </div>
+
+          <div>
             <label className="text-xs text-[#8b949e] block mb-1">追加カスタム引数 (Custom Args)</label>
             <input
               type="text"
@@ -419,14 +426,16 @@ export interface ClaudeCodeFieldsProps {
   onToggleAdvanced?: () => void;
 }
 
-function ClaudeCodeEnvironmentVariables({
+export function EngineEnvironmentVariables({
   values,
   onChange,
   disabled,
+  engineLabel,
 }: {
-  values: Partial<ClaudeCodeEngineConfig>;
-  onChange: (updates: Partial<ClaudeCodeEngineConfig>) => void;
+  values: Partial<BaseCliEngineConfig>;
+  onChange: (updates: Partial<BaseCliEngineConfig>) => void;
   disabled: boolean;
+  engineLabel: string;
 }) {
   const environment: Record<string, { value: string; secret: boolean; configured?: boolean }> = Object.fromEntries(
     Object.entries(values.customEnv ?? {}).map(([name, entry]) => [
@@ -474,7 +483,7 @@ function ClaudeCodeEnvironmentVariables({
       </div>
 
       {Object.entries(environment).length === 0 ? (
-        <p className="text-[11px] text-[#8b949e]">実行時に Claude Code CLI へ渡す環境変数を設定します。</p>
+        <p className="text-[11px] text-[#8b949e]">実行時に {engineLabel} CLI へ渡す環境変数を設定します。</p>
       ) : (
         <div className="space-y-2">
           {Object.entries(environment).map(([name, entry], index) => (
@@ -730,7 +739,7 @@ export function ClaudeCodeFields({
       {/* 4. 高度な設定コンテンツ */}
       {isAdvancedOpen && (
         <div className="space-y-4 pt-1 pl-3 border-l-2 border-sky-800/40">
-          <ClaudeCodeEnvironmentVariables values={values} onChange={onChange} disabled={disabled} />
+          <EngineEnvironmentVariables values={values} onChange={onChange} disabled={disabled} engineLabel="CLI" />
 
           <div>
             <label className="text-xs text-[#8b949e] block mb-1">
@@ -932,6 +941,58 @@ export function ClaudeCodeFields({
   );
 }
 
+export interface CodexFieldsProps {
+  values: Partial<CodexEngineConfig>;
+  onChange: (updates: Partial<CodexEngineConfig>) => void;
+  disabled?: boolean;
+}
+
+export function CodexFields({ values, onChange, disabled = false }: CodexFieldsProps) {
+  const inputClass = 'w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500 disabled:opacity-50';
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="text-xs text-[#8b949e] block mb-1">codex バイナリパス *</label>
+          <input required disabled={disabled} className={inputClass} value={values.binPath ?? ''} onChange={(event) => onChange({ binPath: event.target.value })} />
+        </div>
+        <div>
+          <label className="text-xs text-[#8b949e] block mb-1">実行タイムアウト (秒)</label>
+          <input type="number" min={10} max={3600} disabled={disabled} className={inputClass} value={values.timeoutSeconds ?? 900} onChange={(event) => onChange({ timeoutSeconds: Number(event.target.value) || 900 })} />
+        </div>
+        <div>
+          <label className="text-xs text-[#8b949e] block mb-1">モデル (--model)</label>
+          <input disabled={disabled} className={inputClass} value={values.model ?? ''} onChange={(event) => onChange({ model: event.target.value })} placeholder="gpt-5-codex" />
+        </div>
+        <div>
+          <label className="text-xs text-[#8b949e] block mb-1">推論レベル</label>
+          <input list="codex-effort-suggestions" disabled={disabled} className={inputClass} value={values.effort ?? ''} onChange={(event) => onChange({ effort: event.target.value })} placeholder="high" />
+          <datalist id="codex-effort-suggestions"><option value="low" /><option value="medium" /><option value="high" /><option value="xhigh" /><option value="max" /><option value="ultra" /></datalist>
+        </div>
+        <div>
+          <label className="text-xs text-[#8b949e] block mb-1">サンドボックス</label>
+          <select disabled={disabled} className={inputClass} value={values.sandboxMode ?? 'workspace-write'} onChange={(event) => onChange({ sandboxMode: event.target.value as CodexEngineConfig['sandboxMode'] })}>
+            <option value="read-only">read-only</option><option value="workspace-write">workspace-write</option><option value="danger-full-access">danger-full-access</option>
+          </select>
+        </div>
+      </div>
+      <Checkbox variant="card" disabled={disabled} checked={values.ephemeral ?? true} onChange={(checked) => onChange({ ephemeral: checked })} label="一時セッション (--ephemeral)" description="Codex のセッション記録を保存せずに実行します。" />
+      <details className="rounded border border-[#30363d] p-3">
+        <summary className="cursor-pointer text-xs text-[#c9d1d9]">高度な設定</summary>
+        <div className="mt-3 space-y-4">
+          <label className="block text-xs text-[#8b949e]">システムプロンプト
+            <textarea rows={3} disabled={disabled} className={`${inputClass} mt-1`} value={values.systemPrompt ?? ''} onChange={(event) => onChange({ systemPrompt: event.target.value })} />
+          </label>
+          <EngineEnvironmentVariables values={values} onChange={onChange} disabled={disabled} engineLabel="Codex" />
+          <label className="block text-xs text-[#8b949e]">追加カスタム引数
+            <input disabled={disabled} className={`${inputClass} mt-1`} value={values.customArgs ?? ''} onChange={(event) => onChange({ customArgs: event.target.value })} />
+          </label>
+        </div>
+      </details>
+    </div>
+  );
+}
+
 export interface MockFieldsProps {
   values: Partial<MockEngineConfig>;
   onChange: (updates: Partial<MockEngineConfig>) => void;
@@ -1046,6 +1107,10 @@ export function EngineConfigFields({
         disabled={disabled}
       />
     );
+  }
+
+  if (engine === 'codex') {
+    return <CodexFields values={values} onChange={onChange} disabled={disabled} />;
   }
 
   return (

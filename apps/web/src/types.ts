@@ -62,7 +62,16 @@ export interface BaseCliEngineConfig {
   outputFormat?: 'text' | 'json' | 'stream-json';
   jsonSchema?: string;
   customArgs?: string;
+  customEnv?: EngineEnvironment;
 }
+
+export interface EngineEnvironmentVariable {
+  value: string;
+  secret: boolean;
+  configured?: boolean;
+}
+
+export type EngineEnvironment = Record<string, string | EngineEnvironmentVariable>;
 
 export interface AntigravityEngineConfig extends BaseCliEngineConfig {
   printTimeout: string;
@@ -73,8 +82,14 @@ export interface AntigravityEngineConfig extends BaseCliEngineConfig {
 export interface ClaudeCodeEngineConfig extends BaseCliEngineConfig {
   allowedTools?: string;
   bare: boolean;
-  customEnv?: Record<string, string | { value: string; secret: boolean; configured?: boolean }>;
   maxTurns?: number;
+}
+
+export type CodexSandboxMode = 'read-only' | 'workspace-write' | 'danger-full-access';
+
+export interface CodexEngineConfig extends BaseCliEngineConfig {
+  sandboxMode: CodexSandboxMode;
+  ephemeral: boolean;
 }
 
 export interface MockEngineConfig {
@@ -84,10 +99,11 @@ export interface MockEngineConfig {
 export interface EngineSettingsMap {
   antigravity: AntigravityEngineConfig;
   claudeCode: ClaudeCodeEngineConfig;
+  codex: CodexEngineConfig;
   mock: MockEngineConfig;
 }
 
-export type EngineType = 'claude-code' | 'antigravity' | 'mock';
+export type EngineType = 'claude-code' | 'antigravity' | 'codex' | 'mock';
 
 export interface BaseEngineProfileMeta {
   id: string;
@@ -114,12 +130,18 @@ export interface MockEngineProfile extends BaseEngineProfileMeta {
   config: MockEngineConfig;
 }
 
+export interface CodexEngineProfile extends BaseEngineProfileMeta {
+  engineType: 'codex';
+  config: CodexEngineConfig;
+}
+
 export type EngineProfile =
   | ClaudeCodeEngineProfile
   | AntigravityEngineProfile
+  | CodexEngineProfile
   | MockEngineProfile;
 
-export type EngineOverrideConfig = Partial<AntigravityEngineConfig & ClaudeCodeEngineConfig & MockEngineConfig>;
+export type EngineOverrideConfig = Partial<AntigravityEngineConfig & ClaudeCodeEngineConfig & CodexEngineConfig & MockEngineConfig>;
 
 export interface ReviewTrigger {
   id: string;
@@ -151,7 +173,7 @@ export interface ReviewRule {
 export interface AppSettings {
   autoQueue: boolean;
   autoQueueIncludeOwn: boolean;
-  reviewEngine: 'antigravity' | 'claude-code' | 'mock';
+  reviewEngine: 'antigravity' | 'claude-code' | 'codex' | 'mock';
   agyBin: string;
   claudeBin: string;
   defaultRuleIds: string[];
@@ -163,6 +185,7 @@ export interface AppSettings {
   backendMaxConcurrency: {
     antigravity: number;
     claudeCode: number;
+    codex: number;
     mock: number;
   };
   engineSettings: EngineSettingsMap;

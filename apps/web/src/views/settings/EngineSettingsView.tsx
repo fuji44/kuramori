@@ -25,11 +25,13 @@ import {
   ClaudeCodeEngineConfig,
   AntigravityEngineConfig,
   MockEngineConfig,
+  CodexEngineConfig,
 } from '../../types.ts';
 import {
   AntigravityFields,
   ClaudeCodeFields,
   MockFields,
+  CodexFields,
 } from '../../components/settings/EngineConfigFields.tsx';
 import {
   SettingCard,
@@ -252,6 +254,10 @@ export function EngineSettingsView({
   const [formMockConfig, setFormMockConfig] = useState<MockEngineConfig>({
     delayMs: 500,
   });
+  const [formCodexConfig, setFormCodexConfig] = useState<CodexEngineConfig>({
+    binPath: 'codex', model: 'gpt-5-codex', effort: 'high', timeoutSeconds: 900,
+    sandboxMode: 'workspace-write', ephemeral: true, customEnv: {},
+  });
 
   useEffect(() => {
     setFormSettings(settings);
@@ -290,6 +296,12 @@ export function EngineSettingsView({
         customEnv: {},
         maxTurns: 15,
       },
+    },
+    {
+      id: 'default-codex', name: 'Codex (Default)', description: 'OpenAI Codex CLI エンジン',
+      isDefault: (formSettings.defaultBackendId || formSettings.reviewEngine) === 'codex',
+      engineType: 'codex',
+      config: { binPath: 'codex', model: 'gpt-5-codex', effort: 'high', timeoutSeconds: 900, sandboxMode: 'workspace-write', ephemeral: true, customEnv: {} },
     },
     {
       id: 'default-mock',
@@ -337,6 +349,7 @@ export function EngineSettingsView({
       disableSlashCommands: false,
     });
     setFormMockConfig({ delayMs: 500 });
+    setFormCodexConfig({ binPath: 'codex', model: 'gpt-5-codex', effort: 'high', timeoutSeconds: 900, sandboxMode: 'workspace-write', ephemeral: true, customEnv: {} });
   };
 
   const handleStartEdit = (profile: EngineProfile) => {
@@ -351,6 +364,8 @@ export function EngineSettingsView({
       setFormClaudeConfig({ ...profile.config });
     } else if (profile.engineType === 'antigravity') {
       setFormAgyConfig({ ...profile.config });
+    } else if (profile.engineType === 'codex') {
+      setFormCodexConfig({ ...profile.config });
     } else if (profile.engineType === 'mock') {
       setFormMockConfig({ ...profile.config });
     }
@@ -406,6 +421,14 @@ export function EngineSettingsView({
           },
           createdAt: now,
           updatedAt: now,
+        };
+      } else if (formEngineType === 'codex') {
+        savedProfile = {
+          id, name: formName.trim(), description: formDescription.trim() || undefined,
+          isDefault: formIsDefault, enabled: existingProfile?.enabled ?? true,
+          engineType: 'codex',
+          config: { ...formCodexConfig, timeoutSeconds: Number(formCodexConfig.timeoutSeconds) || 900 },
+          createdAt: now, updatedAt: now,
         };
       } else {
         savedProfile = {
@@ -615,6 +638,8 @@ export function EngineSettingsView({
           model: config.model,
           effort: config.effort,
           customEnv: config.customEnv,
+          sandboxMode: config.sandboxMode,
+          ephemeral: config.ephemeral,
         }),
       });
       const data = await res.json();
@@ -663,6 +688,13 @@ export function EngineSettingsView({
       }
       return parts.join(' ');
     }
+    if (formEngineType === 'codex') {
+      const parts = [formCodexConfig.binPath || 'codex', 'exec', '--json', '--sandbox', formCodexConfig.sandboxMode, '--output-schema', '<schema.json>', '-'];
+      if (formCodexConfig.model) parts.push('--model', formCodexConfig.model);
+      if (formCodexConfig.effort) parts.push('--config', `model_reasoning_effort=${JSON.stringify(formCodexConfig.effort)}`);
+      if (formCodexConfig.ephemeral) parts.push('--ephemeral');
+      return parts.join(' ');
+    }
     if (formEngineType === 'claude-code') {
       const environmentNames = new Set(Object.keys(formClaudeConfig.customEnv ?? {}));
       const parts = [...environmentNames].map((name) => `${name}="<value>"`);
@@ -688,6 +720,8 @@ export function EngineSettingsView({
         ? formClaudeConfig
         : formEngineType === 'antigravity'
         ? formAgyConfig
+        : formEngineType === 'codex'
+        ? formCodexConfig
         : formMockConfig;
 
     const currentTestResult = testResults['current-form'];
@@ -702,7 +736,7 @@ export function EngineSettingsView({
           description={
             editingProfileId
               ? `「${formName || '実行プロファイル'}」のモデル、接続先、推論パラメータを設定します。`
-              : 'Claude Code CLI や Antigravity の実行プロファイルを定義します。'
+              : 'Claude Code、Antigravity、Codex の実行プロファイルを定義します。'
           }
         />
 
@@ -747,7 +781,7 @@ export function EngineSettingsView({
                 エンジン種別
               </label>
               {!editingProfileId ? (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                   <button
                     type="button"
                     onClick={() => setFormEngineType('claude-code')}
@@ -782,6 +816,15 @@ export function EngineSettingsView({
 
                   <button
                     type="button"
+                    onClick={() => setFormEngineType('codex')}
+                    className={`p-3 rounded-xl border text-left flex items-center gap-3 transition-all cursor-pointer ${formEngineType === 'codex' ? 'border-sky-500 bg-sky-950/40 text-white ring-1 ring-sky-500' : 'border-[#30363d] bg-[#0d1117] text-[#8b949e] hover:border-[#8b949e]'}`}
+                  >
+                    <Terminal className="w-5 h-5 text-emerald-400 shrink-0" />
+                    <div><div className="text-sm font-semibold">Codex</div><div className="text-[11px] text-[#8b949e]">OpenAI Codex CLI</div></div>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => setFormEngineType('mock')}
                     className={`p-3 rounded-xl border text-left flex items-center gap-3 transition-all cursor-pointer ${
                       formEngineType === 'mock'
@@ -800,6 +843,7 @@ export function EngineSettingsView({
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#0d1117] border border-[#30363d] text-xs text-sky-400 font-mono">
                   {formEngineType === 'claude-code' && <Terminal className="w-3.5 h-3.5" />}
                   {formEngineType === 'antigravity' && <Cpu className="w-3.5 h-3.5" />}
+                  {formEngineType === 'codex' && <Terminal className="w-3.5 h-3.5" />}
                   {formEngineType === 'mock' && <Box className="w-3.5 h-3.5" />}
                   <span>{formEngineType}</span>
                 </div>
@@ -840,6 +884,10 @@ export function EngineSettingsView({
                 values={formAgyConfig}
                 onChange={(updates) => setFormAgyConfig((prev) => ({ ...prev, ...updates }))}
               />
+            )}
+
+            {formEngineType === 'codex' && (
+              <CodexFields values={formCodexConfig} onChange={(updates) => setFormCodexConfig((prev) => ({ ...prev, ...updates }))} />
             )}
 
             {formEngineType === 'mock' && (
@@ -947,6 +995,8 @@ export function EngineSettingsView({
                         <Terminal className="w-3 h-3" />
                       ) : p.engineType === 'antigravity' ? (
                         <Cpu className="w-3 h-3" />
+                      ) : p.engineType === 'codex' ? (
+                        <Terminal className="w-3 h-3" />
                       ) : (
                         <Box className="w-3 h-3" />
                       )

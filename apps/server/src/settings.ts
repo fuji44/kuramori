@@ -4,6 +4,7 @@ import { appSettingsTable } from './db/schema.ts';
 import type {
   AntigravityEngineConfig,
   ClaudeCodeEngineConfig,
+  CodexEngineConfig,
   MockEngineConfig,
   EngineSettingsMap,
   EngineProfile,
@@ -14,6 +15,7 @@ export type {
   BaseCliEngineConfig,
   AntigravityEngineConfig,
   ClaudeCodeEngineConfig,
+  CodexEngineConfig,
   MockEngineConfig,
   EngineSettingsMap,
   EngineOverrideConfig,
@@ -24,7 +26,7 @@ export type {
 export interface AppSettings {
   autoQueue: boolean;
   autoQueueIncludeOwn: boolean;
-  reviewEngine: 'antigravity' | 'claude-code' | 'mock';
+  reviewEngine: 'antigravity' | 'claude-code' | 'codex' | 'mock';
   agyBin: string;
   claudeBin: string;
   defaultRuleIds: string[];
@@ -36,6 +38,7 @@ export interface AppSettings {
   backendMaxConcurrency: {
     antigravity: number;
     claudeCode: number;
+    codex: number;
     mock: number;
   };
   engineSettings: EngineSettingsMap;
@@ -46,7 +49,7 @@ export class SettingsService {
   private readonly db: AppDatabase;
   private readonly defaultAutoQueue: boolean;
   private readonly defaultAutoQueueIncludeOwn: boolean;
-  private readonly defaultReviewEngine: 'antigravity' | 'claude-code' | 'mock';
+  private readonly defaultReviewEngine: 'antigravity' | 'claude-code' | 'codex' | 'mock';
   private readonly defaultAgyBin: string;
   private readonly defaultClaudeBin: string;
   private readonly defaultRuleIds: string[];
@@ -56,6 +59,7 @@ export class SettingsService {
   private readonly defaultBackendMaxConcurrency: {
     antigravity: number;
     claudeCode: number;
+    codex: number;
     mock: number;
   };
   private readonly defaultEngineSettings: EngineSettingsMap;
@@ -77,7 +81,7 @@ export class SettingsService {
     }
 
     const envEngine = Deno.env.get('REVIEW_ENGINE');
-    if (envEngine === 'claude-code' || envEngine === 'mock' || envEngine === 'antigravity') {
+    if (envEngine === 'claude-code' || envEngine === 'mock' || envEngine === 'antigravity' || envEngine === 'codex') {
       this.defaultReviewEngine = envEngine;
     } else {
       this.defaultReviewEngine = 'antigravity';
@@ -87,11 +91,12 @@ export class SettingsService {
     this.defaultClaudeBin = Deno.env.get('CLAUDE_BIN') ?? 'claude';
     this.defaultRuleIds = ['preset-correctness'];
     this.defaultBackendId = 'antigravity';
-    this.defaultEnabledEngines = ['antigravity', 'claude-code', 'mock'];
+    this.defaultEnabledEngines = ['antigravity', 'claude-code', 'codex', 'mock'];
     this.defaultGlobalMaxConcurrency = 2;
     this.defaultBackendMaxConcurrency = {
       antigravity: 2,
       claudeCode: 1,
+      codex: 1,
       mock: 5,
     };
     this.defaultEngineSettings = {
@@ -122,6 +127,14 @@ export class SettingsService {
         jsonSchema: '',
         customArgs: '',
       },
+      codex: {
+        binPath: 'codex',
+        model: 'gpt-5-codex',
+        effort: 'high',
+        timeoutSeconds: 900,
+        sandboxMode: 'workspace-write',
+        ephemeral: true,
+      },
       mock: {
         delayMs: 500,
       },
@@ -146,7 +159,7 @@ export class SettingsService {
       : this.defaultAutoQueueIncludeOwn;
 
     const engineVal = map.get('review_engine');
-    const reviewEngine = (engineVal === 'claude-code' || engineVal === 'mock' || engineVal === 'antigravity')
+    const reviewEngine = (engineVal === 'claude-code' || engineVal === 'mock' || engineVal === 'antigravity' || engineVal === 'codex')
       ? engineVal
       : this.defaultReviewEngine;
 
@@ -177,7 +190,7 @@ export class SettingsService {
       try {
         const parsed = JSON.parse(enabledEnginesVal);
         if (Array.isArray(parsed)) {
-          enabledEngines = parsed;
+          enabledEngines = parsed.includes('codex') ? parsed : [...parsed, 'codex'];
         }
       } catch {
         // Fallback to default
@@ -199,6 +212,7 @@ export class SettingsService {
           backendMaxConcurrency = {
             antigravity: typeof parsed.antigravity === 'number' ? parsed.antigravity : this.defaultBackendMaxConcurrency.antigravity,
             claudeCode: typeof parsed.claudeCode === 'number' ? parsed.claudeCode : this.defaultBackendMaxConcurrency.claudeCode,
+            codex: typeof parsed.codex === 'number' ? parsed.codex : this.defaultBackendMaxConcurrency.codex,
             mock: typeof parsed.mock === 'number' ? parsed.mock : this.defaultBackendMaxConcurrency.mock,
           };
         }
@@ -227,6 +241,10 @@ export class SettingsService {
               ...(parsed.claudeCode || {}),
               binPath: parsed.claudeCode?.binPath || claudeBin,
             },
+            codex: {
+              ...this.defaultEngineSettings.codex,
+              ...(parsed.codex || {}),
+            },
             mock: {
               ...this.defaultEngineSettings.mock,
               ...(parsed.mock || {}),
@@ -241,6 +259,7 @@ export class SettingsService {
         ...this.defaultEngineSettings,
         antigravity: { ...this.defaultEngineSettings.antigravity, binPath: agyBin },
         claudeCode: { ...this.defaultEngineSettings.claudeCode, binPath: claudeBin },
+        codex: { ...this.defaultEngineSettings.codex },
       };
     }
 
@@ -308,6 +327,14 @@ export class SettingsService {
           ...engineSettings.claudeCode,
           binPath: engineSettings.claudeCode.binPath || claudeBin,
         },
+      },
+      {
+        id: 'default-codex',
+        name: 'Codex (Default)',
+        description: 'OpenAI Codex CLI エンジン',
+        isDefault: false,
+        engineType: 'codex',
+        config: { ...engineSettings.codex },
       },
       {
         id: 'default-mock',
@@ -411,4 +438,3 @@ export class SettingsService {
     return updated.autoQueue;
   }
 }
-

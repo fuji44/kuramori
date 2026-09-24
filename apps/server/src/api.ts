@@ -4,21 +4,11 @@ import { desc, eq } from 'drizzle-orm';
 import type { AppDatabase } from './db/index.ts';
 import { reviewJobsTable, reviewReportsTable, reviewRequestsTable, reviewRulesTable, reviewRuleResultsTable, reviewTriggersTable } from './db/schema.ts';
 
-import type { ReportStorage } from '@review-base/core';
+import type { EngineEnvironment, ReportStorage } from '@review-base/core';
 import type { GitHubPoller } from './poller.ts';
 import type { ReviewQueue } from './queue.ts';
 import type { SettingsService } from './settings.ts';
-import { compileD2ToSvg, generateStandaloneReviewHtml } from '@review-base/runner';
-
-interface ClaudeEnvironmentValue {
-  value: string;
-  secret: boolean;
-  configured?: boolean;
-}
-
-function isClaudeEnvironmentValue(entry: unknown): entry is ClaudeEnvironmentValue {
-  return typeof entry === 'object' && entry !== null && 'value' in entry && 'secret' in entry;
-}
+import { compileD2ToSvg, generateStandaloneReviewHtml, resolveEngineEnvironment } from '@review-base/runner';
 
 export interface ApiDependencies {
   db: AppDatabase;
@@ -28,7 +18,7 @@ export interface ApiDependencies {
   settingsService: SettingsService;
 }
 
-function mapClaudeEnvironment(settings: any, transform: (config: any, previous?: any) => any, previous?: any) {
+function mapEngineEnvironments(settings: any, transform: (entry: any, previous?: any) => any, previous?: any) {
   const mapConfig = (config: any, oldConfig?: any) => {
     if (!config) return config;
     const customEnv = { ...(config.customEnv ?? {}) };
@@ -38,15 +28,18 @@ function mapClaudeEnvironment(settings: any, transform: (config: any, previous?:
     return { ...config, customEnv };
   };
   const result = { ...settings };
-  if (settings.engineSettings?.claudeCode) {
+  if (settings.engineSettings) {
     result.engineSettings = {
-      ...settings.engineSettings,
-      claudeCode: mapConfig(settings.engineSettings.claudeCode, previous?.engineSettings?.claudeCode),
+      ...Object.fromEntries(
+        Object.entries(settings.engineSettings).map(([engine, config]: [string, any]) => [
+          engine,
+          mapConfig(config, previous?.engineSettings?.[engine]),
+        ]),
+      ),
     };
   }
   if (Array.isArray(settings.engineProfiles)) {
     result.engineProfiles = settings.engineProfiles.map((profile: any) => {
-      if (profile.engineType !== 'claude-code') return profile;
       const oldProfile = previous?.engineProfiles?.find((candidate: any) => candidate.id === profile.id);
       return {
         ...profile,
@@ -58,14 +51,14 @@ function mapClaudeEnvironment(settings: any, transform: (config: any, previous?:
 }
 
 function maskSecretEnvironmentValues(settings: any) {
-  return mapClaudeEnvironment(settings, (entry) => {
+  return mapEngineEnvironments(settings, (entry) => {
     if (typeof entry === 'string' || !entry.secret) return entry;
     return { ...entry, value: '', configured: Boolean(entry.value || entry.configured) };
   });
 }
 
 function restoreSecretEnvironmentValues(settings: any, previous: any) {
-  return mapClaudeEnvironment(settings, (entry, oldEntry) => {
+  return mapEngineEnvironments(settings, (entry, oldEntry) => {
     if (typeof entry === 'string') return entry;
     const value = entry.secret && entry.value === '' && entry.configured && oldEntry?.secret
       ? oldEntry.value
@@ -667,7 +660,7 @@ export function createApi(deps: ApiDependencies) {
       });
     }
 
-    if (effectiveEngine !== 'antigravity' && effectiveEngine !== 'claude-code') {
+    if (!['antigravity', 'claude-code', 'codex'].includes(effectiveEngine)) {
       return c.json({ error: `Unknown engine or profile: ${engine}` }, 400);
     }
 
@@ -678,20 +671,33 @@ export function createApi(deps: ApiDependencies) {
       binPath = body?.binPath || profileConfig?.binPath || settings.engineSettings?.antigravity?.binPath || settings.agyBin || 'agy';
       model = body?.model || profileConfig?.model || settings.engineSettings?.antigravity?.model || '';
       effort = body?.effort || profileConfig?.effort || settings.engineSettings?.antigravity?.effort || '';
-    } else {
+    } else if (effectiveEngine === 'claude-code') {
       binPath = body?.binPath || profileConfig?.binPath || settings.engineSettings?.claudeCode?.binPath || settings.claudeBin || 'claude';
       model = body?.model || profileConfig?.model || settings.engineSettings?.claudeCode?.model || '';
       effort = body?.effort || profileConfig?.effort || settings.engineSettings?.claudeCode?.effort || '';
+    } else {
+      binPath = body?.binPath || profileConfig?.binPath || settings.engineSettings?.codex?.binPath || 'codex';
+      model = body?.model || profileConfig?.model || settings.engineSettings?.codex?.model || '';
+      effort = body?.effort || profileConfig?.effort || settings.engineSettings?.codex?.effort || '';
     }
 
     const isExecution = mode === 'execution';
     const timeoutMs = isExecution ? 45000 : 5000;
 
-    const args = isExecution
+    let args: string[] = isExecution
       ? ['-p', 'Respond with "review-base test OK"', '--dangerously-skip-permissions']
       : ['--version'];
 
-    if (isExecution) {
+    if (effectiveEngine === 'codex' && isExecution) {
+      const sandboxMode = body?.sandboxMode || profileConfig?.sandboxMode || settings.engineSettings.codex.sandboxMode || 'workspace-write';
+      args = ['exec', '--json', '--sandbox', sandboxMode, '--config', 'approval_policy="never"'];
+      if (body?.ephemeral ?? profileConfig?.ephemeral ?? settings.engineSettings.codex.ephemeral) args.push('--ephemeral');
+      if (model) args.push('--model', model);
+      if (effort) args.push('--config', `model_reasoning_effort=${JSON.stringify(effort)}`);
+      args.push('-');
+    }
+
+    if (isExecution && effectiveEngine !== 'codex') {
       if (model) {
         args.push('--model', model);
       }
@@ -700,35 +706,25 @@ export function createApi(deps: ApiDependencies) {
       }
     }
 
-    const env: Record<string, string> = {
-      ...Deno.env.toObject(),
-    };
-    if (effectiveEngine === 'claude-code') {
-      const profileEnvironment = profileConfig?.customEnv ?? {};
-      const globalEnvironment = settings.engineSettings?.claudeCode?.customEnv ?? {};
-      for (const source of [globalEnvironment, profileEnvironment, body?.customEnv ?? {}]) {
-        for (const [name, entry] of Object.entries(source)) {
-          const fallback = profileEnvironment[name] ?? globalEnvironment[name];
-          env[name] = typeof entry === 'string'
-            ? entry
-            : isClaudeEnvironmentValue(entry)
-            ? entry.secret && entry.value === '' && entry.configured
-              ? typeof fallback === 'string' ? fallback : isClaudeEnvironmentValue(fallback) ? fallback.value : ''
-              : entry.value
-            : '';
-        }
-      }
-    }
+    const engineKey = effectiveEngine === 'claude-code' ? 'claudeCode' : effectiveEngine;
+    const globalEnvironment = (settings.engineSettings as unknown as Record<string, { customEnv?: EngineEnvironment }> | undefined)?.[engineKey]?.customEnv;
+    const env = resolveEngineEnvironment(Deno.env.toObject(), globalEnvironment, profileConfig?.customEnv, body?.customEnv);
     try {
       const cmd = new Deno.Command(binPath, {
         args,
-        stdin: 'null',
+        stdin: effectiveEngine === 'codex' && isExecution ? 'piped' : 'null',
         stdout: 'piped',
         stderr: 'piped',
         env,
         signal: AbortSignal.timeout(timeoutMs),
       });
-      const output = await cmd.output();
+      const child = cmd.spawn();
+      if (effectiveEngine === 'codex' && isExecution) {
+        const writer = child.stdin.getWriter();
+        await writer.write(new TextEncoder().encode('Respond with "review-base test OK"'));
+        await writer.close();
+      }
+      const output = await child.output();
       const stdout = new TextDecoder().decode(output.stdout).trim();
       const stderr = new TextDecoder().decode(output.stderr).trim();
 

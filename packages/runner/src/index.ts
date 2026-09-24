@@ -2,9 +2,9 @@ export * from './worktree.ts';
 export * from './engines/claude-code.ts';
 export * from './engines/mock.ts';
 export * from './engines/antigravity.ts';
+export * from './engines/codex.ts';
+export * from './engines/environment.ts';
 export * from './diagram/d2-compiler.ts';
 export * from './pipeline/rule-matcher.ts';
 export * from './pipeline/runner-pipeline.ts';
 export * from './report/html-generator.ts';
-
-

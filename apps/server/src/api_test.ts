@@ -431,7 +431,7 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
     });
     assertEquals(resUpdateSettingsEngines.status, 200);
     const updatedSettingsData = await resUpdateSettingsEngines.json();
-    assertEquals(updatedSettingsData.enabledEngines, ['antigravity', 'mock']);
+    assertEquals(updatedSettingsData.enabledEngines, ['antigravity', 'mock', 'codex']);
 
     // 17. Test engineProfiles in settings and profile test endpoint
     assertEquals(Array.isArray(settingsBeforeData.engineProfiles), true);
@@ -472,6 +472,94 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
     assertEquals(foundProfile.config.customEnv.ANTHROPIC_AUTH_TOKEN.configured, true);
     assertEquals(foundProfile.config.customEnv.ANTHROPIC_API_KEY.value, '');
     assertEquals(foundProfile.config.customEnv.ANTHROPIC_API_KEY.configured, true);
+
+    const currentSettings = await settingsService.getAllSettings();
+    const antigravityProfile = {
+      id: 'prof-agy-env',
+      name: 'Antigravity environment profile',
+      engineType: 'antigravity',
+      config: {
+        ...currentSettings.engineSettings.antigravity,
+        customEnv: {
+          AGY_SECRET: { value: 'agy-secret-value', secret: true },
+          AGY_VISIBLE: { value: 'visible-value', secret: false },
+        },
+      },
+    };
+    const codexProfile = {
+      id: 'prof-codex-env',
+      name: 'Codex environment profile',
+      engineType: 'codex',
+      config: {
+        ...currentSettings.engineSettings.codex,
+        customEnv: { CODEX_SECRET: { value: 'codex-secret-value', secret: true } },
+      },
+    };
+    const resGenericEnvironment = await api.request('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        engineSettings: {
+          ...currentSettings.engineSettings,
+          antigravity: {
+            ...currentSettings.engineSettings.antigravity,
+            customEnv: {
+              GLOBAL_AGY_SECRET: { value: 'global-secret-value', secret: true },
+            },
+          },
+          codex: {
+            ...currentSettings.engineSettings.codex,
+            customEnv: { GLOBAL_CODEX_SECRET: { value: 'global-codex-secret', secret: true } },
+          },
+        },
+        engineProfiles: [...updatedProfilesData.engineProfiles, antigravityProfile, codexProfile],
+      }),
+    });
+    assertEquals(resGenericEnvironment.status, 200);
+    const genericEnvironmentSettings = await resGenericEnvironment.json();
+    const genericAgyProfile = genericEnvironmentSettings.engineProfiles.find(
+      (profile: any) => profile.id === 'prof-agy-env',
+    );
+    assertEquals(genericEnvironmentSettings.engineSettings.antigravity.customEnv.GLOBAL_AGY_SECRET.value, '');
+    assertEquals(genericEnvironmentSettings.engineSettings.antigravity.customEnv.GLOBAL_AGY_SECRET.configured, true);
+    assertEquals(genericAgyProfile.config.customEnv.AGY_SECRET.value, '');
+    assertEquals(genericAgyProfile.config.customEnv.AGY_SECRET.configured, true);
+    assertEquals(genericAgyProfile.config.customEnv.AGY_VISIBLE.value, 'visible-value');
+    const genericCodexProfile = genericEnvironmentSettings.engineProfiles.find(
+      (profile: any) => profile.id === 'prof-codex-env',
+    );
+    assertEquals(genericEnvironmentSettings.engineSettings.codex.customEnv.GLOBAL_CODEX_SECRET.value, '');
+    assertEquals(genericEnvironmentSettings.engineSettings.codex.customEnv.GLOBAL_CODEX_SECRET.configured, true);
+    assertEquals(genericCodexProfile.config.customEnv.CODEX_SECRET.value, '');
+    assertEquals(genericCodexProfile.config.customEnv.CODEX_SECRET.configured, true);
+
+    const resGenericEnvironmentRoundTrip = await api.request('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(genericEnvironmentSettings),
+    });
+    assertEquals(resGenericEnvironmentRoundTrip.status, 200);
+    const storedGenericEnvironment: any = await settingsService.getAllSettings();
+    assertEquals(storedGenericEnvironment.engineSettings.antigravity.customEnv?.GLOBAL_AGY_SECRET, {
+      value: 'global-secret-value',
+      secret: true,
+    });
+    const storedAgyProfile = storedGenericEnvironment.engineProfiles.find(
+      (profile: any) => profile.id === 'prof-agy-env',
+    );
+    assertEquals(storedAgyProfile?.engineType === 'antigravity' ? storedAgyProfile.config.customEnv?.AGY_SECRET : undefined, {
+      value: 'agy-secret-value',
+      secret: true,
+    });
+    assertEquals(storedGenericEnvironment.engineSettings.codex.customEnv?.GLOBAL_CODEX_SECRET, {
+      value: 'global-codex-secret', secret: true,
+    });
+    const storedCodexProfile = storedGenericEnvironment.engineProfiles.find(
+      (profile: any) => profile.id === 'prof-codex-env',
+    );
+    assertEquals(storedCodexProfile?.engineType === 'codex' ? storedCodexProfile.config.customEnv?.CODEX_SECRET : undefined, {
+      value: 'codex-secret-value', secret: true,
+    });
 
     // Test profile test endpoint via mock engine profile
     const mockProfile = {

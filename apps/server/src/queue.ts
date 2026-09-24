@@ -12,10 +12,12 @@ import {
   WorktreeManager,
   ClaudeCodeEngine,
   AntigravityEngine,
+  CodexEngine,
   MockReviewEngine,
   extractChangedFilesFromDiff,
   matchRuleTrigger,
   filterRulesByTriggers,
+  resolveEngineEnvironment,
 } from '@review-base/runner';
 import {
   type ReportStorage,
@@ -37,9 +39,9 @@ const DEFAULT_APP_SETTINGS: AppSettings = {
   defaultRuleIds: ['preset-correctness'],
   defaultRuleId: 'preset-correctness',
   defaultBackendId: 'antigravity',
-  enabledEngines: ['antigravity', 'claude-code', 'mock'],
+  enabledEngines: ['antigravity', 'claude-code', 'codex', 'mock'],
   globalMaxConcurrency: 2,
-  backendMaxConcurrency: { antigravity: 2, claudeCode: 1, mock: 5 },
+  backendMaxConcurrency: { antigravity: 2, claudeCode: 1, codex: 1, mock: 5 },
   engineSettings: {
     antigravity: {
       binPath: 'agy',
@@ -65,6 +67,10 @@ const DEFAULT_APP_SETTINGS: AppSettings = {
       outputFormat: 'text',
       jsonSchema: '',
       customArgs: '',
+    },
+    codex: {
+      binPath: 'codex', model: 'gpt-5-codex', effort: 'high', timeoutSeconds: 900,
+      sandboxMode: 'workspace-write', ephemeral: true,
     },
     mock: {
       delayMs: 500,
@@ -141,7 +147,7 @@ export class ReviewQueue {
           outputFormat: cfg.outputFormat,
           jsonSchema: cfg.jsonSchema,
           customArgs: cfg.customArgs,
-          customEnv: cfg.customEnv,
+          customEnv: resolveEngineEnvironment({}, settings.engineSettings?.claudeCode?.customEnv, cfg.customEnv),
           maxTurns: cfg.maxTurns,
         });
       }
@@ -160,12 +166,41 @@ export class ReviewQueue {
           outputFormat: cfg.outputFormat,
           jsonSchema: cfg.jsonSchema,
           customArgs: cfg.customArgs,
+          customEnv: resolveEngineEnvironment({}, settings.engineSettings?.antigravity?.customEnv, cfg.customEnv),
+        });
+      }
+      if (matchedProfile.engineType === 'codex') {
+        const cfg = matchedProfile.config;
+        return new CodexEngine({
+          codexBinaryPath: cfg.binPath,
+          model: cfg.model,
+          effort: cfg.effort,
+          timeoutMs: (cfg.timeoutSeconds ?? 900) * 1000,
+          systemPrompt: cfg.systemPrompt,
+          sandboxMode: cfg.sandboxMode,
+          ephemeral: cfg.ephemeral,
+          customArgs: cfg.customArgs,
+          customEnv: resolveEngineEnvironment({}, settings.engineSettings?.codex?.customEnv, cfg.customEnv),
         });
       }
     }
 
     if (engineName === 'mock') {
       return new MockReviewEngine({ delayMs: settings.engineSettings?.mock?.delayMs });
+    }
+    if (engineName === 'codex') {
+      const cfg = settings.engineSettings.codex;
+      return new CodexEngine({
+        codexBinaryPath: cfg.binPath,
+        model: cfg.model,
+        effort: cfg.effort,
+        timeoutMs: (cfg.timeoutSeconds ?? 900) * 1000,
+        systemPrompt: cfg.systemPrompt,
+        sandboxMode: cfg.sandboxMode,
+        ephemeral: cfg.ephemeral,
+        customArgs: cfg.customArgs,
+        customEnv: cfg.customEnv,
+      });
     }
     if (engineName === 'claude-code') {
       const baseCfg = settings.engineSettings?.claudeCode ?? {
@@ -473,13 +508,14 @@ export class ReviewQueue {
         ? await this.settingsService.getAllSettings()
         : {
             globalMaxConcurrency: 2,
-            backendMaxConcurrency: { antigravity: 2, claudeCode: 1, mock: 5 },
+            backendMaxConcurrency: { antigravity: 2, claudeCode: 1, codex: 1, mock: 5 },
           };
 
       const globalLimit = settings.globalMaxConcurrency ?? 2;
       const backendLimits = settings.backendMaxConcurrency ?? {
         antigravity: 2,
         claudeCode: 1,
+        codex: 1,
         mock: 5,
       };
 
@@ -493,6 +529,7 @@ export class ReviewQueue {
         const runningEngineCount: Record<string, number> = {
           antigravity: 0,
           'claude-code': 0,
+          codex: 0,
           mock: 0,
         };
         for (const j of runningJobs) {
@@ -516,6 +553,7 @@ export class ReviewQueue {
           let limit = 2;
           if (engine === 'antigravity') limit = backendLimits.antigravity;
           else if (engine === 'claude-code') limit = backendLimits.claudeCode;
+          else if (engine === 'codex') limit = backendLimits.codex;
           else if (engine === 'mock') limit = backendLimits.mock;
 
           const currentRunning = runningEngineCount[engine] ?? 0;

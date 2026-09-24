@@ -130,6 +130,14 @@ export function GeneralSettingsView({
             </div>
 
             <div className="bg-[#0d1117] border border-[#30363d] rounded-lg p-3">
+              <label className="text-xs font-medium text-white block mb-1">Codex 最大並列</label>
+              <input type="number" min={1} max={10} value={formSettings.backendMaxConcurrency?.codex ?? 1}
+                onChange={(e) => setFormSettings({ ...formSettings, backendMaxConcurrency: { ...formSettings.backendMaxConcurrency, codex: parseInt(e.target.value, 10) || 1 } })}
+                className="w-full bg-[#161b22] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500" />
+              <span className="text-[10px] text-[#8b949e] mt-1 block">codex exec プロセス数</span>
+            </div>
+
+            <div className="bg-[#0d1117] border border-[#30363d] rounded-lg p-3">
               <label className="text-xs font-medium text-white block mb-1">
                 Mock 最大並列
               </label>

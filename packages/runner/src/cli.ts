@@ -4,6 +4,7 @@ import { WorktreeManager } from './worktree.ts';
 import { ClaudeCodeEngine } from './engines/claude-code.ts';
 import { AntigravityEngine } from './engines/antigravity.ts';
 import { MockReviewEngine } from './engines/mock.ts';
+import { CodexEngine } from './engines/codex.ts';
 import type { ReviewEngine } from '@review-base/core';
 
 async function main() {
@@ -70,7 +71,9 @@ Options:
     console.log(`Worktree ready at: ${session.worktreePath}`);
 
     let engine: ReviewEngine;
-    if (args.engine === 'antigravity') {
+    if (args.engine === 'codex') {
+      engine = new CodexEngine();
+    } else if (args.engine === 'antigravity') {
       engine = new AntigravityEngine({
         model: args.model,
       });

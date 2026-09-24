@@ -1,5 +1,6 @@
-import type { ReviewEngine, ReviewExecutionContext, ReviewExecutionResult } from '@review-base/core';
+import type { EngineEnvironment, ReviewEngine, ReviewExecutionContext, ReviewExecutionResult } from '@review-base/core';
 import { executePreFlight, buildReviewPrompt, executePostFlight } from '../pipeline/runner-pipeline.ts';
+import { resolveEngineEnvironment } from './environment.ts';
 
 export interface AntigravityEngineOptions {
   agyBinaryPath?: string;
@@ -14,6 +15,7 @@ export interface AntigravityEngineOptions {
   outputFormat?: 'text' | 'json' | 'stream-json';
   jsonSchema?: string;
   customArgs?: string;
+  customEnv?: EngineEnvironment;
 }
 
 export class AntigravityEngine implements ReviewEngine {
@@ -30,6 +32,7 @@ export class AntigravityEngine implements ReviewEngine {
   private readonly outputFormat?: 'text' | 'json' | 'stream-json';
   private readonly jsonSchema?: string;
   private readonly customArgs?: string;
+  private readonly customEnv?: EngineEnvironment;
 
   constructor(options?: AntigravityEngineOptions) {
     this.agyBinaryPath = options?.agyBinaryPath ?? Deno.env.get('AGY_BIN') ?? 'agy';
@@ -44,6 +47,7 @@ export class AntigravityEngine implements ReviewEngine {
     this.outputFormat = options?.outputFormat;
     this.jsonSchema = options?.jsonSchema;
     this.customArgs = options?.customArgs;
+    this.customEnv = options?.customEnv;
   }
 
   async execute(context: ReviewExecutionContext): Promise<ReviewExecutionResult> {
@@ -112,7 +116,7 @@ export class AntigravityEngine implements ReviewEngine {
         stdin: 'null',
         stdout: 'piped',
         stderr: 'piped',
-        env: Deno.env.toObject(),
+        env: resolveEngineEnvironment(Deno.env.toObject(), this.customEnv),
       });
 
       const child = cmd.spawn();

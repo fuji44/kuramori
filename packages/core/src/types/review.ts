@@ -100,11 +100,20 @@ export interface RuleConcurrency {
 /**
  * 全 AI CLI エンジン共通の基底設定
  */
+export interface EngineEnvironmentVariable {
+  value: string;
+  secret: boolean;
+  configured?: boolean;
+}
+
+export type EngineEnvironment = Record<string, string | EngineEnvironmentVariable>;
+
 export interface BaseCliEngineConfig {
   binPath: string;
   model: string;
   effort: string;
   timeoutSeconds: number;
+  customEnv?: EngineEnvironment;
   systemPrompt?: string;
   inputFormat?: 'text' | 'stream-json';
   outputFormat?: 'text' | 'json' | 'stream-json';
@@ -118,17 +127,17 @@ export interface AntigravityEngineConfig extends BaseCliEngineConfig {
   disableSlashCommands: boolean;
 }
 
-export interface ClaudeCodeEnvironmentVariable {
-  value: string;
-  secret: boolean;
-  configured?: boolean;
-}
-
 export interface ClaudeCodeEngineConfig extends BaseCliEngineConfig {
   allowedTools?: string;
   bare: boolean;
-  customEnv?: Record<string, string | ClaudeCodeEnvironmentVariable>;
   maxTurns?: number;
+}
+
+export type CodexSandboxMode = 'read-only' | 'workspace-write' | 'danger-full-access';
+
+export interface CodexEngineConfig extends BaseCliEngineConfig {
+  sandboxMode: CodexSandboxMode;
+  ephemeral: boolean;
 }
 
 export interface MockEngineConfig {
@@ -138,10 +147,11 @@ export interface MockEngineConfig {
 export interface EngineSettingsMap {
   antigravity: AntigravityEngineConfig;
   claudeCode: ClaudeCodeEngineConfig;
+  codex: CodexEngineConfig;
   mock: MockEngineConfig;
 }
 
-export type EngineType = 'claude-code' | 'antigravity' | 'mock';
+export type EngineType = 'claude-code' | 'antigravity' | 'codex' | 'mock';
 
 export interface BaseEngineProfileMeta {
   id: string;
@@ -163,6 +173,11 @@ export interface AntigravityEngineProfile extends BaseEngineProfileMeta {
   config: AntigravityEngineConfig;
 }
 
+export interface CodexEngineProfile extends BaseEngineProfileMeta {
+  engineType: 'codex';
+  config: CodexEngineConfig;
+}
+
 export interface MockEngineProfile extends BaseEngineProfileMeta {
   engineType: 'mock';
   config: MockEngineConfig;
@@ -171,13 +186,14 @@ export interface MockEngineProfile extends BaseEngineProfileMeta {
 export type EngineProfile =
   | ClaudeCodeEngineProfile
   | AntigravityEngineProfile
+  | CodexEngineProfile
   | MockEngineProfile;
 
 
 /**
  * ルール単位での包括的オーバーライド設定
  */
-export type EngineOverrideConfig = Partial<AntigravityEngineConfig & ClaudeCodeEngineConfig & MockEngineConfig>;
+export type EngineOverrideConfig = Partial<AntigravityEngineConfig & ClaudeCodeEngineConfig & CodexEngineConfig & MockEngineConfig>;
 
 /**
  * 包括的設定リゾルバ
@@ -279,6 +295,7 @@ export interface AntigravityOptions {
   outputFormat?: 'text' | 'json' | 'stream-json';
   jsonSchema?: string;
   customArgs?: string;
+  customEnv?: EngineEnvironment;
 }
 
 export interface ClaudeCodeOptions {
@@ -291,8 +308,19 @@ export interface ClaudeCodeOptions {
   outputFormat?: 'text' | 'json' | 'stream-json';
   jsonSchema?: string;
   customArgs?: string;
-  customEnv?: Record<string, string | ClaudeCodeEnvironmentVariable>;
+  customEnv?: EngineEnvironment;
   maxTurns?: number;
+}
+
+export interface CodexOptions {
+  model?: string;
+  effort?: string;
+  timeoutSeconds?: number;
+  systemPrompt?: string;
+  sandboxMode?: CodexSandboxMode;
+  ephemeral?: boolean;
+  customArgs?: string;
+  customEnv?: EngineEnvironment;
 }
 
 export interface MockEngineOptions {
@@ -310,6 +338,7 @@ export interface SystemAppSettings {
   backends: {
     antigravity: AgentBackendConfig<AntigravityOptions>;
     claudeCode: AgentBackendConfig<ClaudeCodeOptions>;
+    codex: AgentBackendConfig<CodexOptions>;
     mock: AgentBackendConfig<MockEngineOptions>;
   };
 }

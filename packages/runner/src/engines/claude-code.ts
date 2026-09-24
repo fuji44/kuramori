@@ -1,5 +1,6 @@
-import type { ReviewEngine, ReviewExecutionContext, ReviewExecutionResult } from '@review-base/core';
+import type { EngineEnvironment, ReviewEngine, ReviewExecutionContext, ReviewExecutionResult } from '@review-base/core';
 import { executePreFlight, buildReviewPrompt, executePostFlight } from '../pipeline/runner-pipeline.ts';
+import { resolveEngineEnvironment } from './environment.ts';
 
 export interface ClaudeCodeEngineOptions {
   claudeBinaryPath?: string;
@@ -13,7 +14,7 @@ export interface ClaudeCodeEngineOptions {
   outputFormat?: 'text' | 'json' | 'stream-json';
   jsonSchema?: string;
   customArgs?: string;
-  customEnv?: Record<string, string | { value: string; secret: boolean; configured?: boolean }>;
+  customEnv?: EngineEnvironment;
   maxTurns?: number;
 }
 
@@ -109,12 +110,7 @@ export class ClaudeCodeEngine implements ReviewEngine {
         args.push(...extra);
       }
 
-      const env: Record<string, string> = {
-        ...Deno.env.toObject(),
-      };
-      for (const [name, entry] of Object.entries(this.customEnv ?? {})) {
-        env[name] = typeof entry === 'string' ? entry : entry.value;
-      }
+      const env = resolveEngineEnvironment(Deno.env.toObject(), this.customEnv);
       const cmd = new Deno.Command(this.claudeBinaryPath, {
         args,
         cwd: context.worktreePath,

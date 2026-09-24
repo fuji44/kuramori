@@ -57,13 +57,14 @@ export default function App() {
     defaultRuleId: 'preset-correctness',
     defaultBackendId: 'antigravity',
     globalMaxConcurrency: 2,
-    backendMaxConcurrency: { antigravity: 2, claudeCode: 1, mock: 5 },
+    backendMaxConcurrency: { antigravity: 2, claudeCode: 1, codex: 1, mock: 5 },
     engineSettings: {
       antigravity: {
         binPath: 'agy',
         model: 'gemini-2.5-pro',
         effort: 'high',
         timeoutSeconds: 900,
+        printTimeout: '',
         sandbox: false,
         disableSlashCommands: false,
         customArgs: '',
@@ -76,6 +77,10 @@ export default function App() {
         allowedTools: '',
         bare: false,
         customArgs: '',
+      },
+      codex: {
+        binPath: 'codex', model: 'gpt-5-codex', effort: 'high', timeoutSeconds: 900,
+        sandboxMode: 'workspace-write', ephemeral: true,
       },
       mock: {
         delayMs: 500,
