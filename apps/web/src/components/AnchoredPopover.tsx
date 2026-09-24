@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 export type PopoverPlacement = 'top-end' | 'bottom-end' | 'bottom-start' | 'bottom-stretch';
@@ -11,13 +11,6 @@ interface AnchoredPopoverProps {
   className: string;
   onClick?: React.MouseEventHandler<HTMLDivElement>;
   maxHeight?: number;
-}
-
-interface Position {
-  top: number;
-  left: number;
-  maxHeight: number;
-  width?: number;
 }
 
 const VIEWPORT_GUTTER = 8;
@@ -33,7 +26,6 @@ export function AnchoredPopover({
   maxHeight: maxPanelHeight,
 }: AnchoredPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState<Position | null>(null);
 
   useLayoutEffect(() => {
     const anchor = anchorRef.current;
@@ -61,12 +53,11 @@ export function AnchoredPopover({
         : anchorRect.right - popoverRect.width;
       if (placement === 'bottom-stretch') left = anchorRect.left;
       left = Math.min(Math.max(VIEWPORT_GUTTER, left), viewportWidth - popoverRect.width - VIEWPORT_GUTTER);
-      setPosition({
-        top: useTop ? Math.max(VIEWPORT_GUTTER, anchorRect.top - ANCHOR_GAP - Math.min(popoverRect.height, maxHeight)) : anchorRect.bottom + ANCHOR_GAP,
-        left,
-        maxHeight,
-        width: placement === 'bottom-stretch' ? anchorRect.width : undefined,
-      });
+      popover.style.top = `${useTop ? Math.max(VIEWPORT_GUTTER, anchorRect.top - ANCHOR_GAP - Math.min(popoverRect.height, maxHeight)) : anchorRect.bottom + ANCHOR_GAP}px`;
+      popover.style.left = `${left}px`;
+      popover.style.maxHeight = `${maxHeight}px`;
+      popover.style.width = placement === 'bottom-stretch' ? `${anchorRect.width}px` : '';
+      popover.style.visibility = 'visible';
     };
 
     updatePosition();
@@ -80,7 +71,7 @@ export function AnchoredPopover({
       window.removeEventListener('resize', updatePosition);
       window.removeEventListener('scroll', updatePosition, true);
     };
-  }, [anchorRef, children, maxPanelHeight, placement]);
+  }, [anchorRef, maxPanelHeight, placement]);
 
   useLayoutEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
@@ -107,12 +98,10 @@ export function AnchoredPopover({
       className={className}
       style={{
         position: 'fixed',
-        top: position?.top ?? 0,
-        left: position?.left ?? 0,
-        maxHeight: position?.maxHeight,
-        width: position?.width,
+        top: -10000,
+        left: -10000,
         overflowY: 'auto',
-        visibility: position ? 'visible' : 'hidden',
+        visibility: 'hidden',
       }}
     >
       {children}
