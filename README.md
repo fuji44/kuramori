@@ -4,14 +4,11 @@
 
 ## 主な特徴
 
-- 🚀 **ゼロコンフィグ自動検出**: ローカルの `gh auth token` から自分宛てレビュー依頼（`review-requested:@me`）を自動検出し、DB に蓄積。
-- 🔄 **完全自動キューイング**: 未レビューの PR を検知すると、自動的にジョブキューへ投入（並列数制御付きで安全に順次消化）。
-- 🛠️ **分離されたレビューランナー**: 一時 Git worktree を自動生成・クリーンアップし、メインの作業ツリーを汚さずに AI レビューを実行。
-- 🧩 **抽象化された設計**:
-  - `VCSProvider`: GitHub から開始し、GitLab や Pure Git への差し替えが可能。
-  - `ReviewEngine`: 既存の Claude Code autopilot スキル呼び出しから開始し、API 直呼び出しエンジンへ段階的移行が可能。
-  - `ReportStorage`: ローカルファイルシステムから S3 / オブジェクトストレージへ透過的に移行可能。
-- 🖥️ **洗練された Web UI**: レビュー依頼 PR 一覧、ステータスバッジ（待機中/実行中/完了/失敗）、AI 生成レポートのアプリ内プレビュー ＆ 別タブ表示。
+- 🚀 **PR の自動検出**: `gh` CLI の認証を使い、自分がレビューを依頼されたオープン PR と、自分が作成したオープン PR を検出して管理。
+- 🔄 **ルールベースのレビュー実行**: PR や変更ファイルに応じてルールを選び、ジョブキューで並列数を制御しながらレビューを実行。
+- 🛠️ **分離されたレビューランナー**: 一時 Git worktree を作成・クリーンアップし、メインの作業ツリーから分離して AI レビューを実行。
+- 🧩 **実行先をプロファイルで管理**: Claude Code、Antigravity、Codex の実行設定をプロファイルとして登録し、レビューに使う実行先を選択。
+- 🖥️ **レビュー管理 Web UI**: PR のレビュー状態を確認し、生成されたレポートをアプリ内で表示。
 
 ---
 
@@ -69,7 +66,7 @@ deno task --cwd packages/runner compile
 ### 4. ローカル LLM（Ollama 等）での実行
 
 RTX 5080（16GB VRAM）等のローカル GPU 環境で `ornith-1.5:9b` などのオープンソースモデルを用いてレビューを実行できます。
-詳細は [ローカルLLM連携ガイド](file:///home/fuji44/git/review-base/docs/local-llm-setup.md) をご覧ください。
+詳細は [ローカル LLM 連携ガイド](docs/local-llm-setup.md) をご覧ください。
 
 ```bash
 # 推論エンドポイントの接続確認（Ollama 直結）
@@ -78,4 +75,3 @@ deno task verify:local-llm --url http://localhost:11434 --model ornith-1.5:9b
 # ローカル推論サーバーを指定してレビュー実行
 deno task runner --repo owner/repo --pr 1234 --engine claude-code --model ornith-1.5:9b --api-base-url http://localhost:11434
 ```
-
