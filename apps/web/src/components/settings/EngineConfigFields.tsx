@@ -962,7 +962,11 @@ export function CodexFields({ values, onChange, disabled = false }: CodexFieldsP
         </div>
         <div>
           <label className="text-xs text-[#8b949e] block mb-1">モデル (--model)</label>
-          <input disabled={disabled} className={inputClass} value={values.model ?? ''} onChange={(event) => onChange({ model: event.target.value })} placeholder="gpt-5-codex" />
+          <input list="codex-model-suggestions" disabled={disabled} className={inputClass} value={values.model ?? ''} onChange={(event) => onChange({ model: event.target.value })} placeholder="gpt-6-sol" />
+          <datalist id="codex-model-suggestions">
+            <option value="gpt-6-sol" label="Codex 推奨" />
+            <option value="gpt-5.3-codex" label="Codex 向けに最適化" />
+          </datalist>
         </div>
         <div>
           <label className="text-xs text-[#8b949e] block mb-1">推論レベル</label>

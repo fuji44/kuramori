@@ -255,7 +255,7 @@ export function EngineSettingsView({
     delayMs: 500,
   });
   const [formCodexConfig, setFormCodexConfig] = useState<CodexEngineConfig>({
-    binPath: 'codex', model: 'gpt-5-codex', effort: 'high', timeoutSeconds: 900,
+    binPath: 'codex', model: 'gpt-6-sol', effort: 'high', timeoutSeconds: 900,
     sandboxMode: 'workspace-write', ephemeral: true, customEnv: {},
   });
 
@@ -301,7 +301,7 @@ export function EngineSettingsView({
       id: 'default-codex', name: 'Codex (Default)', description: 'OpenAI Codex CLI エンジン',
       isDefault: (formSettings.defaultBackendId || formSettings.reviewEngine) === 'codex',
       engineType: 'codex',
-      config: { binPath: 'codex', model: 'gpt-5-codex', effort: 'high', timeoutSeconds: 900, sandboxMode: 'workspace-write', ephemeral: true, customEnv: {} },
+      config: { binPath: 'codex', model: 'gpt-6-sol', effort: 'high', timeoutSeconds: 900, sandboxMode: 'workspace-write', ephemeral: true, customEnv: {} },
     },
     {
       id: 'default-mock',
@@ -349,7 +349,7 @@ export function EngineSettingsView({
       disableSlashCommands: false,
     });
     setFormMockConfig({ delayMs: 500 });
-    setFormCodexConfig({ binPath: 'codex', model: 'gpt-5-codex', effort: 'high', timeoutSeconds: 900, sandboxMode: 'workspace-write', ephemeral: true, customEnv: {} });
+    setFormCodexConfig({ binPath: 'codex', model: 'gpt-6-sol', effort: 'high', timeoutSeconds: 900, sandboxMode: 'workspace-write', ephemeral: true, customEnv: {} });
   };
 
   const handleStartEdit = (profile: EngineProfile) => {

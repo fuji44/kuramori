@@ -69,7 +69,7 @@ const DEFAULT_APP_SETTINGS: AppSettings = {
       customArgs: '',
     },
     codex: {
-      binPath: 'codex', model: 'gpt-5-codex', effort: 'high', timeoutSeconds: 900,
+      binPath: 'codex', model: 'gpt-6-sol', effort: 'high', timeoutSeconds: 900,
       sandboxMode: 'workspace-write', ephemeral: true,
     },
     mock: {

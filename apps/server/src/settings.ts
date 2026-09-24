@@ -129,7 +129,7 @@ export class SettingsService {
       },
       codex: {
         binPath: 'codex',
-        model: 'gpt-5-codex',
+        model: 'gpt-6-sol',
         effort: 'high',
         timeoutSeconds: 900,
         sandboxMode: 'workspace-write',
