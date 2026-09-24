@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, X, Tag, User, GitPullRequest, Check, CornerDownLeft, GitBranch, Calendar, Filter } from 'lucide-react';
+import { AnchoredPopover } from './AnchoredPopover.tsx';
 
 export interface SuggestionItem {
   value: string;
@@ -215,17 +216,6 @@ export function SearchQueryBar({ query, onChange, authors, repositories, branche
     setSelectedIndex(0);
   }, [suggestions]);
 
-  // Close dropdown on click outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   const applySuggestion = (suggestion: SuggestionItem) => {
     const trimmed = query.trimEnd();
     const tokens = trimmed ? trimmed.split(/\s+/) : [];
@@ -299,7 +289,13 @@ export function SearchQueryBar({ query, onChange, authors, repositories, branche
 
       {/* Suggestions Dropdown */}
       {isOpen && suggestions.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-[#161b22] border border-[#30363d] rounded-lg shadow-2xl z-50 overflow-hidden max-h-72 overflow-y-auto">
+        <AnchoredPopover
+          anchorRef={containerRef}
+          placement="bottom-stretch"
+          onDismiss={() => setIsOpen(false)}
+          maxHeight={288}
+          className="max-w-[calc(100vw-16px)] bg-[#161b22] border border-[#30363d] rounded-lg shadow-2xl z-[1000] overflow-hidden"
+        >
           <div className="px-3 py-1.5 border-b border-[#30363d] bg-[#21262d] flex items-center justify-between text-[11px] text-[#8b949e]">
             <span>フィルタ候補 (↑↓ 移動, Enter 確定)</span>
             <span className="flex items-center gap-1 font-mono">
@@ -345,7 +341,7 @@ export function SearchQueryBar({ query, onChange, authors, repositories, branche
               );
             })}
           </div>
-        </div>
+        </AnchoredPopover>
       )}
     </div>
   );

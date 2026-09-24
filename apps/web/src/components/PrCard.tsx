@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { EngineProfile, ReviewItem, ReviewRule } from '../types.ts';
 import { getPrAnchorId } from '../utils/anchor.ts';
+import { AnchoredPopover } from './AnchoredPopover.tsx';
 
 interface PrCardProps {
   item: ReviewItem;
@@ -71,20 +72,6 @@ export function PrCard({
       setSelectedEngine('default');
     }
   }, [engineProfiles, selectedEngine]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false);
-      }
-    };
-    if (isDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isDropdownOpen]);
 
   const jobStatus = item.latestJob?.status;
   const orgName = item.repository.split('/')[0];
@@ -413,9 +400,12 @@ export function PrCard({
 
           {/* ドロップダウンメニュー */}
           {isDropdownOpen && (
-            <div
+            <AnchoredPopover
+              anchorRef={dropdownRef}
+              placement="top-end"
+              onDismiss={() => setIsDropdownOpen(false)}
               onClick={(e) => e.stopPropagation()}
-              className="absolute right-0 bottom-full mb-2 w-80 bg-[#1c2128] border border-[#30363d] rounded-xl shadow-2xl z-50 p-3 text-xs flex flex-col gap-2.5 animate-in fade-in zoom-in-95 duration-100"
+              className="w-80 max-w-[calc(100vw-16px)] bg-[#1c2128] border border-[#30363d] rounded-xl shadow-2xl z-[1000] p-3 text-xs flex flex-col gap-2.5 animate-in fade-in zoom-in-95 duration-100"
             >
               <div className="flex items-center justify-between pb-2 border-b border-[#30363d]">
                 <span className="font-semibold text-white">ルール選択実行</span>
@@ -531,7 +521,7 @@ export function PrCard({
                   選択したルールを実行
                 </button>
               </div>
-            </div>
+            </AnchoredPopover>
           )}
         </div>
       </div>

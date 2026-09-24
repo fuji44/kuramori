@@ -45,6 +45,7 @@ import {
   SettingEmptyState,
   SettingFormFooter,
 } from '../../components/settings/SettingViewLayout.tsx';
+import { AnchoredPopover } from '../../components/AnchoredPopover.tsx';
 
 interface EngineSettingsViewProps {
   settings: AppSettings;
@@ -110,20 +111,6 @@ function EngineTestButton({ isTesting, onTest, disabled = false }: EngineTestBut
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
-
   return (
     <div className="relative inline-flex items-center" ref={dropdownRef}>
       <div className="inline-flex rounded-lg border border-[#30363d] overflow-hidden shadow-sm">
@@ -153,7 +140,12 @@ function EngineTestButton({ isTesting, onTest, disabled = false }: EngineTestBut
       </div>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-1.5 w-64 bg-[#1c2128] border border-[#30363d] rounded-xl shadow-2xl z-50 p-1.5 text-xs flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-100">
+        <AnchoredPopover
+          anchorRef={dropdownRef}
+          placement="bottom-end"
+          onDismiss={() => setIsOpen(false)}
+          className="w-64 max-w-[calc(100vw-16px)] bg-[#1c2128] border border-[#30363d] rounded-xl shadow-2xl z-[1000] p-1.5 text-xs flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-100"
+        >
           <button
             type="button"
             onClick={() => {
@@ -191,7 +183,7 @@ function EngineTestButton({ isTesting, onTest, disabled = false }: EngineTestBut
               </div>
             </div>
           </button>
-        </div>
+        </AnchoredPopover>
       )}
     </div>
   );
