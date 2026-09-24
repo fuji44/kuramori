@@ -349,6 +349,7 @@ export function RuleSettingsView({
             return (
               <SettingCard
                 key={rule.id}
+                className="overflow-hidden"
                 isDefault={isDefault}
                 disabled={!rule.enabled}
                 title={rule.name}
