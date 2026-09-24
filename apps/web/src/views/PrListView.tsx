@@ -95,26 +95,6 @@ export function PrListView({
     setHighlightedAnchor(anchorId);
   };
 
-  const handleCopyAnchor = async (anchorId: string) => {
-    const url = `${window.location.origin}${window.location.pathname}${window.location.search}#${anchorId}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      window.history.replaceState(null, '', `#${anchorId}`);
-      setHighlightedAnchor(anchorId);
-
-      if (highlightTimeoutRef.current) {
-        clearTimeout(highlightTimeoutRef.current);
-      }
-      highlightTimeoutRef.current = window.setTimeout(() => {
-        setHighlightedAnchor(null);
-      }, 2500);
-
-      onShowSuccess(`PRアンカーURLをコピーしました (#${anchorId})`);
-    } catch {
-      onShowError('URLのコピーに失敗しました');
-    }
-  };
-
   // Distinct repositories, authors, branches
   const repositories = useMemo(() => {
     const set = new Set<string>();
@@ -314,7 +294,6 @@ export function PrListView({
                 onRunReview={onRunReview}
                 onSelectReport={onSelectReport}
                 onSelectCard={handleSelectCard}
-                onCopyAnchor={handleCopyAnchor}
               />
             );
           })}

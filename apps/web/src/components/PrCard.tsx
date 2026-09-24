@@ -35,7 +35,6 @@ interface PrCardProps {
   onRunReview: (e: React.MouseEvent, id: string, ruleIds?: string[], engine?: string) => void;
   onSelectReport: (reportId: string, prTitle: string) => void;
   onSelectCard?: (anchorId: string) => void;
-  onCopyAnchor?: (anchorId: string) => void;
 }
 
 export function PrCard({
@@ -49,7 +48,6 @@ export function PrCard({
   onRunReview,
   onSelectReport,
   onSelectCard,
-  onCopyAnchor,
 }: PrCardProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [selectedRuleIds, setSelectedRuleIds] = useState<Set<string>>(new Set());
@@ -86,13 +84,12 @@ export function PrCard({
       id={anchorId}
       data-pr-number={item.number}
       onClick={() => onSelectCard?.(anchorId)}
-      onDoubleClick={() => onCopyAnchor?.(anchorId)}
       className={`p-4 rounded-xl border transition-all scroll-mt-20 ${
         isSelected || isHighlighted
           ? 'border-sky-500 bg-[#161b22] ring-2 ring-sky-500/70 shadow-lg'
           : 'border-[#30363d] bg-[#161b22] hover:border-[#484f58]'
       }`}
-      title="クリックでURLにアンカーを設定、ダブルクリックでアンカーURLをコピー"
+      title="クリックでURLにアンカーを設定"
     >
       {/* Header: Project Icon & Repo / PR number / Badges (Left) & Results (Right) */}
       <div className="flex items-center justify-between gap-3 pb-2.5 border-b border-[#21262d] mb-3">
