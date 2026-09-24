@@ -178,7 +178,7 @@ export function PrListView({
       <div className="mb-4 flex items-center gap-2">
         <SearchQueryBar
           query={searchQuery}
-          onChange={(q) => setParam('q', q || undefined)}
+          onSubmit={(q) => setParam('q', q)}
           authors={authors}
           repositories={repositories}
           branches={branches}

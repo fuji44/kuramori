@@ -10,23 +10,27 @@ export interface SuggestionItem {
 
 interface SearchQueryBarProps {
   query: string;
-  onChange: (query: string) => void;
+  onSubmit: (query: string | undefined) => void;
   authors: string[];
   repositories: string[];
   branches?: string[];
 }
 
-export function SearchQueryBar({ query, onChange, authors, repositories, branches = [] }: SearchQueryBarProps) {
+export function SearchQueryBar({ query, onSubmit, authors, repositories, branches = [] }: SearchQueryBarProps) {
+  const [draftQuery, setDraftQuery] = useState(query);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Determine current active token based on cursor position or end of text
+  // Determine the token at the end of the query, or an empty token after whitespace.
   const activeToken = useMemo(() => {
-    const trimmed = query.trimEnd();
-    const tokens = trimmed.split(/\s+/);
+    const tokens = draftQuery.split(/\s+/);
     return tokens[tokens.length - 1] ?? '';
+  }, [draftQuery]);
+
+  useEffect(() => {
+    setDraftQuery(query);
   }, [query]);
 
   // Compute suggestions based on active token
@@ -217,21 +221,31 @@ export function SearchQueryBar({ query, onChange, authors, repositories, branche
   }, [suggestions]);
 
   const applySuggestion = (suggestion: SuggestionItem) => {
-    const trimmed = query.trimEnd();
+    const trimmed = draftQuery.trimEnd();
     const tokens = trimmed ? trimmed.split(/\s+/) : [];
+    const suffix = suggestion.value.endsWith(':') ? '' : ' ';
 
     if (tokens.length === 0) {
-      onChange(suggestion.value + ' ');
+      setDraftQuery(suggestion.value + suffix);
+    } else if (/\s$/.test(draftQuery)) {
+      setDraftQuery(`${trimmed} ${suggestion.value}${suffix}`);
     } else {
       tokens[tokens.length - 1] = suggestion.value;
-      onChange(tokens.join(' ') + ' ');
+      setDraftQuery(tokens.join(' ') + suffix);
     }
 
-    setIsOpen(false);
+    setIsOpen(true);
     inputRef.current?.focus();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      onSubmit(draftQuery.trim() || undefined);
+      setIsOpen(false);
+      return;
+    }
+
     if (!isOpen || suggestions.length === 0) {
       if (e.key === 'ArrowDown') {
         setIsOpen(true);
@@ -245,7 +259,7 @@ export function SearchQueryBar({ query, onChange, authors, repositories, branche
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setSelectedIndex((prev) => (prev - 1 + suggestions.length) % suggestions.length);
-    } else if (e.key === 'Enter' || e.key === 'Tab') {
+    } else if (e.key === 'Tab') {
       e.preventDefault();
       const target = suggestions[selectedIndex];
       if (target) {
@@ -263,9 +277,9 @@ export function SearchQueryBar({ query, onChange, authors, repositories, branche
         <input
           ref={inputRef}
           type="text"
-          value={query}
+          value={draftQuery}
           onChange={(e) => {
-            onChange(e.target.value);
+            setDraftQuery(e.target.value);
             setIsOpen(true);
           }}
           onFocus={() => setIsOpen(true)}
@@ -273,10 +287,11 @@ export function SearchQueryBar({ query, onChange, authors, repositories, branche
           placeholder="GitHubクエリでフィルタ (例: is:open author:alice -is:draft review:approved)"
           className="w-full pl-9 pr-8 py-1.5 bg-[#161b22] border border-[#30363d] focus:border-sky-500 focus:ring-1 focus:ring-sky-500 rounded-lg text-xs text-white placeholder-[#8b949e] focus:outline-none transition-colors"
         />
-        {query && (
+        {draftQuery && (
           <button
             onClick={() => {
-              onChange('');
+              setDraftQuery('');
+              onSubmit(undefined);
               inputRef.current?.focus();
             }}
             className="absolute right-2.5 text-[#8b949e] hover:text-white p-0.5"
@@ -297,9 +312,9 @@ export function SearchQueryBar({ query, onChange, authors, repositories, branche
           className="max-w-[calc(100vw-16px)] bg-[#161b22] border border-[#30363d] rounded-lg shadow-2xl z-[1000] overflow-hidden"
         >
           <div className="px-3 py-1.5 border-b border-[#30363d] bg-[#21262d] flex items-center justify-between text-[11px] text-[#8b949e]">
-            <span>フィルタ候補 (↑↓ 移動, Enter 確定)</span>
+            <span>候補: ↑↓ 移動・Tab/クリックで挿入 / Enter で検索</span>
             <span className="flex items-center gap-1 font-mono">
-              <CornerDownLeft className="w-3 h-3" /> Select
+              <CornerDownLeft className="w-3 h-3" /> Search
             </span>
           </div>
 
