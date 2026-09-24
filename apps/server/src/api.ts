@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { desc, eq } from 'drizzle-orm';
+import { resolve } from 'node:path';
 import type { AppDatabase } from './db/index.ts';
 import { reviewJobsTable, reviewReportsTable, reviewRequestsTable, reviewRulesTable, reviewRuleResultsTable, reviewTriggersTable } from './db/schema.ts';
 
@@ -16,6 +17,7 @@ export interface ApiDependencies {
   poller: GitHubPoller;
   queue: ReviewQueue;
   settingsService: SettingsService;
+  logsDir?: string;
 }
 
 function mapEngineEnvironments(settings: any, transform: (entry: any, previous?: any) => any, previous?: any) {
@@ -88,8 +90,8 @@ export function createApi(deps: ApiDependencies) {
       const prJobs = jobs.filter((j) => j.requestId === req.id);
       // Latest job by startedAt or created
       const latestJob = prJobs.sort((a, b) => (b.startedAt ?? '').localeCompare(a.startedAt ?? ''))[0];
-      const report = latestJob?.reportId
-        ? reports.find((r) => r.id === latestJob.reportId)
+      const report = latestJob
+        ? reports.find((r) => r.id === latestJob.reportId) ?? reports.find((r) => r.jobId === latestJob.id)
         : undefined;
 
       let parsedLabels: Array<{ name: string; color?: string; description?: string }> = [];
@@ -183,6 +185,11 @@ export function createApi(deps: ApiDependencies) {
       if (r.metadata) {
         try {
           metadata = JSON.parse(r.metadata);
+          if (metadata && typeof metadata === 'object' && !Array.isArray(metadata)) {
+            metadata = Object.fromEntries(
+              Object.entries(metadata).filter(([key]) => key !== 'reviewReport')
+            );
+          }
         } catch {
           // ignore
         }
@@ -288,7 +295,7 @@ export function createApi(deps: ApiDependencies) {
       return c.text('Invalid job ID format', 400);
     }
 
-    const logPath = `./data/logs/${id}.log`;
+    const logPath = resolve(deps.logsDir ?? './data/logs', `${id}.log`);
     try {
       const content = await Deno.readTextFile(logPath);
       return c.text(content);

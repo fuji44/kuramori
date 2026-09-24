@@ -1,5 +1,5 @@
 import { parseArgs } from 'jsr:@std/cli@^1.0.9/parse-args';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { WorktreeManager } from './worktree.ts';
 import { ClaudeCodeEngine } from './engines/claude-code.ts';
 import { AntigravityEngine } from './engines/antigravity.ts';
@@ -56,9 +56,9 @@ Options:
     Deno.exit(1);
   }
 
-  const cacheDir = args['cache-dir'] ?? './data/cache';
-  const worktreeBaseDir = args['worktree-dir'] ?? './.worktrees';
-  const outputDir = args['output-dir'] ?? join('./data/reports', `${repository.replace('/', '__')}_${prNumber}`);
+  const cacheDir = resolve(args['cache-dir'] ?? './data/cache');
+  const worktreeBaseDir = resolve(args['worktree-dir'] ?? './.worktrees');
+  const outputDir = resolve(args['output-dir'] ?? join('./data/reports', `${repository.replace('/', '__')}_${prNumber}`));
 
   await Deno.mkdir(outputDir, { recursive: true });
 

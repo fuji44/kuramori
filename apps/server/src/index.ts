@@ -1,4 +1,6 @@
 import { Hono } from 'hono';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createDb, initDatabase } from './db/index.ts';
 import { LocalFileReportStorage, GitHubProvider } from '@review-base/core';
 import { ReviewQueue } from './queue.ts';
@@ -10,7 +12,8 @@ import { SettingsService } from './settings.ts';
 async function bootstrap() {
   const port = parseInt(Deno.env.get('PORT') ?? '3456', 10);
   const dbUrl = Deno.env.get('DATABASE_URL') ?? 'file:data/review-base.db';
-  const reportsDir = Deno.env.get('REPORTS_DIR') ?? './data/reports';
+  const reportsDir = resolve(Deno.env.get('REPORTS_DIR') ?? './data/reports');
+  const logsDir = join(dirname(reportsDir), 'logs');
 
   const { db, client } = createDb(dbUrl);
   await initDatabase(client);
@@ -25,13 +28,13 @@ async function bootstrap() {
   // Start polling in background
   poller.start();
 
-  const api = createApi({ db, storage, poller, queue, settingsService });
+  const api = createApi({ db, storage, poller, queue, settingsService, logsDir });
   const app = new Hono();
 
   // Mount API
   app.route('/', api);
 
-  const webDistPath = new URL('../../web/dist', import.meta.url).pathname;
+  const webDistPath = fileURLToPath(new URL('../../web/dist', import.meta.url));
 
   // Serve static UI assets if built
   try {

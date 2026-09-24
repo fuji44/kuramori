@@ -1,6 +1,7 @@
 import { eq, and } from 'drizzle-orm';
 import type { AppDatabase } from './db/index.ts';
-import { reviewReportsTable, reviewRuleResultsTable } from './db/schema.ts';
+import { reviewJobsTable, reviewReportsTable, reviewRuleResultsTable } from './db/schema.ts';
+import { ReviewReportDataSchema } from '@review-base/core';
 import type {
   ReportStorage,
   ReviewReportData,
@@ -53,6 +54,7 @@ export async function aggregateRuleResults(
   }
 
   const ruleResults: RuleResult[] = [];
+  const reviewReportsByRule = new Map<string, ReviewReportData>();
   for (const row of latestByRule.values()) {
     let findings: RuleResultFinding[] = [];
     try {
@@ -67,6 +69,12 @@ export async function aggregateRuleResults(
         metadata = JSON.parse(row.metadata);
       } catch {
         // ignore
+      }
+    }
+    if (metadata && typeof metadata === 'object' && 'reviewReport' in metadata) {
+      const parsedReport = ReviewReportDataSchema.safeParse(metadata.reviewReport);
+      if (parsedReport.success) {
+        reviewReportsByRule.set(row.ruleId, parsedReport.data);
       }
     }
 
@@ -100,6 +108,7 @@ export async function aggregateRuleResults(
 
   // 2. 指摘の統合
   const comments: ReviewComment[] = [];
+  const aggregateCommentIdsByRule = new Map<string, Map<string, string>>();
   let commentIndex = 1;
 
   for (const ruleResult of ruleResults) {
@@ -127,17 +136,24 @@ export async function aggregateRuleResults(
       }
 
       const commentId = `C${commentIndex++}`;
-      comments.push({
-        id: commentId,
-        path: f.path,
-        line: f.line && f.line > 0 ? f.line : 1,
-        side: 'RIGHT',
-        severity,
-        category,
-        title: `[${ruleResult.ruleName}] ${f.title}`,
-        body: f.body,
-        suggestion: f.suggestion ? { snippet: f.suggestion } : undefined,
-      });
+      const commentIds = aggregateCommentIdsByRule.get(ruleResult.ruleId) ?? new Map<string, string>();
+      commentIds.set(f.id, commentId);
+      aggregateCommentIdsByRule.set(ruleResult.ruleId, commentIds);
+
+      const sourceComment = reviewReportsByRule.get(ruleResult.ruleId)?.comments.find((comment) => comment.id === f.id);
+      comments.push(sourceComment
+        ? { ...sourceComment, id: commentId, title: `[${ruleResult.ruleName}] ${sourceComment.title}` }
+        : {
+            id: commentId,
+            path: f.path,
+            line: f.line && f.line > 0 ? f.line : 1,
+            side: 'RIGHT',
+            severity,
+            category,
+            title: `[${ruleResult.ruleName}] ${f.title}`,
+            body: f.body,
+            suggestion: f.suggestion ? { snippet: f.suggestion } : undefined,
+          });
     }
   }
 
@@ -145,20 +161,67 @@ export async function aggregateRuleResults(
   const summaries = ruleResults.map((r) => `【${r.ruleName}】${r.verdict}: ${r.summary}`).join('\n');
   const reportId = `report-${requestId.replace(/[^a-zA-Z0-9_-]/g, '_')}-${Date.now()}`;
   const now = new Date().toISOString();
+  const representativeRule = ruleResults
+    .filter((ruleResult) => reviewReportsByRule.has(ruleResult.ruleId))
+    .sort((left, right) => (right.createdAt ?? '').localeCompare(left.createdAt ?? ''))[0];
+  const representativeReport = representativeRule
+    ? reviewReportsByRule.get(representativeRule.ruleId)
+    : undefined;
+  const representativeCommentIds = representativeRule
+    ? aggregateCommentIdsByRule.get(representativeRule.ruleId)
+    : undefined;
+  const diagram = representativeReport?.diagram
+    ? {
+        ...representativeReport.diagram,
+        nodes: representativeReport.diagram.nodes.map((node) => ({
+          ...node,
+          commentId: node.commentId ? representativeCommentIds?.get(node.commentId) : undefined,
+          commentIds: node.commentIds?.flatMap((id) => {
+            const mappedId = representativeCommentIds?.get(id);
+            return mappedId ? [mappedId] : [];
+          }),
+        })),
+      }
+    : undefined;
+  const callFlow = representativeReport?.callFlow
+    ? {
+        ...representativeReport.callFlow,
+        steps: representativeReport.callFlow.steps.map((step) => ({
+          ...step,
+          commentId: step.commentId ? representativeCommentIds?.get(step.commentId) : undefined,
+        })),
+      }
+    : undefined;
+  const metrics = representativeReport?.metrics
+    ? {
+        ...representativeReport.metrics,
+        findingsCount: comments.length,
+        p1Count: comments.filter((comment) => comment.severity === 'P1').length,
+        p2Count: comments.filter((comment) => comment.severity === 'P2').length,
+        p3Count: comments.filter((comment) => comment.severity === 'P3').length,
+      }
+    : undefined;
 
   const reportData: ReviewReportData = {
+    ...representativeReport,
     verdict: overallVerdict,
     summary: {
-      brief: {
+      ...representativeReport?.summary,
+      brief: representativeReport?.summary.brief ?? {
         problem: summaries,
-        approach: `Executed ${ruleResults.length} rules (${ruleResults.map((r) => r.ruleName).join(', ')}).`,
-        blastRadius: `Head SHA: ${headSha}`,
+        approach: '詳細レポートに修正方針の記載がありません。',
+        blastRadius: '影響範囲の記載がありません。',
       },
-      changedCode: [],
-      reachPaths: [],
+      changedCode: representativeReport?.summary.changedCode ?? [],
+      reachPaths: [...new Set(ruleResults.flatMap((ruleResult) =>
+        reviewReportsByRule.get(ruleResult.ruleId)?.summary.reachPaths ?? []
+      ))],
     },
     comments,
     createdAt: now,
+    diagram,
+    callFlow,
+    metrics,
   };
 
   // DB の review_reports に保存
@@ -171,6 +234,11 @@ export async function aggregateRuleResults(
     verdict: overallVerdict,
     createdAt: now,
   });
+
+  await db
+    .update(reviewJobsTable)
+    .set({ reportId })
+    .where(eq(reviewJobsTable.id, jobId));
 
   // Storage に保存（Web UI からの取得用）
   await storage.saveReportData(reportId, reportData);

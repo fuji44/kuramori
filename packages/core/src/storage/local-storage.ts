@@ -1,4 +1,4 @@
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import type { ReportStorage } from '../interfaces/report-storage.ts';
 import type { ReviewReportData } from '../schema/review-report.ts';
 
@@ -6,7 +6,7 @@ export class LocalFileReportStorage implements ReportStorage {
   private readonly baseDir: string;
 
   constructor(baseDir: string) {
-    this.baseDir = baseDir;
+    this.baseDir = resolve(baseDir);
   }
 
   async saveReport(reportId: string, htmlContent: string): Promise<string> {
@@ -89,4 +89,3 @@ export class LocalFileReportStorage implements ReportStorage {
     }
   }
 }
-

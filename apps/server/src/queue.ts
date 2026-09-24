@@ -1,5 +1,5 @@
 import { eq, or, and } from 'drizzle-orm';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import type { AppDatabase } from './db/index.ts';
 import {
   reviewJobsTable,
@@ -110,10 +110,10 @@ export class ReviewQueue {
     this.vcsProvider = options?.vcsProvider;
     this.defaultEngine = options?.defaultEngine;
     this.settingsService = options?.settingsService;
-    this.reportsDir = options?.reportsDir ?? './data/reports';
+    this.reportsDir = resolve(options?.reportsDir ?? './data/reports');
     this.worktreeManager = new WorktreeManager(
-      options?.cacheDir ?? './data/cache',
-      options?.worktreeDir ?? './.worktrees'
+      resolve(options?.cacheDir ?? './data/cache'),
+      resolve(options?.worktreeDir ?? './.worktrees')
     );
     this.recoverStaleJobs().catch((err) => {
       console.error('Failed to recover stale jobs on startup', { error: String(err) });
@@ -706,6 +706,10 @@ export class ReviewQueue {
       if (result.success) {
         // RuleResult の永続化
         if (result.ruleResult && job.ruleId) {
+          const metadata = {
+            ...result.ruleResult.metadata,
+            ...(result.reportData ? { reviewReport: result.reportData } : {}),
+          };
           await this.db.insert(reviewRuleResultsTable).values({
             id: crypto.randomUUID(),
             jobId,
@@ -717,7 +721,7 @@ export class ReviewQueue {
             verdict: result.ruleResult.verdict,
             summary: result.ruleResult.summary,
             findings: JSON.stringify(result.ruleResult.findings),
-            metadata: result.ruleResult.metadata ? JSON.stringify(result.ruleResult.metadata) : null,
+            metadata: Object.keys(metadata).length > 0 ? JSON.stringify(metadata) : null,
             createdAt: completedAt,
           });
         }

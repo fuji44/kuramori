@@ -1,4 +1,4 @@
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import type {
   CodexSandboxMode,
   EngineEnvironment,
@@ -9,6 +9,7 @@ import type {
 import { getReviewReportJsonSchema } from '@review-base/core';
 import { executePreFlight, buildReviewPrompt, executePostFlight } from '../pipeline/runner-pipeline.ts';
 import { resolveEngineEnvironment } from './environment.ts';
+import { prepareCodexOutputSchema } from './codex-schema.ts';
 
 export interface CodexEngineOptions {
   codexBinaryPath?: string;
@@ -66,10 +67,11 @@ export class CodexEngine implements ReviewEngine {
       }
 
       await executePreFlight(context, log);
-      const prompt = await buildReviewPrompt(context, this.systemPrompt);
-      const schemaPath = join(context.outputDir, 'codex-review-schema.json');
-      const finalMessagePath = join(context.outputDir, 'codex-final-message.txt');
-      await Deno.writeTextFile(schemaPath, JSON.stringify(getReviewReportJsonSchema()));
+      const outputSchema = prepareCodexOutputSchema(getReviewReportJsonSchema());
+      const prompt = await buildReviewPrompt(context, this.systemPrompt, outputSchema.schema);
+      const schemaPath = resolve(context.outputDir, 'codex-review-schema.json');
+      const finalMessagePath = resolve(context.outputDir, 'codex-final-message.txt');
+      await Deno.writeTextFile(schemaPath, JSON.stringify(outputSchema.schema));
 
       const args = [
         'exec',
@@ -138,25 +140,49 @@ export class CodexEngine implements ReviewEngine {
 
       const stdout = new TextDecoder().decode(output.stdout);
       const stderr = new TextDecoder().decode(output.stderr).trim();
-      const eventTypes = stdout.split('\n').flatMap((line) => {
+      const events = stdout.split('\n').flatMap((line) => {
         try {
           const event = JSON.parse(line);
-          return typeof event.type === 'string' ? [event.type] : [];
+          return typeof event === 'object' && event !== null ? [event] : [];
         } catch {
           return [];
         }
       });
+      const eventTypes = events.flatMap((event) =>
+        typeof event.type === 'string' ? [event.type] : []
+      );
       await log(`[Engine] codex finished with code ${output.code}; JSONL events: ${eventTypes.length}`);
 
       if (!output.success) {
+        const eventErrors = events.flatMap((event) => {
+          if (event.type !== 'error' && event.type !== 'turn.failed') {
+            return [];
+          }
+          const error = event.error;
+          if (typeof error === 'string') {
+            return [error];
+          }
+          if (typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string') {
+            return [error.message];
+          }
+          return typeof event.message === 'string' ? [event.message] : [];
+        });
+        const error = stderr || eventErrors.join('\n') || `Codex CLI exited with status ${output.code}`;
         return {
           success: false,
-          error: stderr || `Codex CLI exited with status ${output.code}`,
+          error,
         };
       }
 
       const finalMessage = await Deno.readTextFile(finalMessagePath);
-      return await executePostFlight(context, log, finalMessage);
+      let normalizedFinalMessage = finalMessage;
+      try {
+        const parsed = JSON.parse(finalMessage);
+        normalizedFinalMessage = JSON.stringify(outputSchema.normalizeOutput(parsed));
+      } catch {
+        // Let post-flight report invalid JSON using its normal error path.
+      }
+      return await executePostFlight(context, log, normalizedFinalMessage);
     } catch (err) {
       const errorMsg = `Review execution encountered an error: ${err}`;
       await log(`[FATAL] ${errorMsg}`);

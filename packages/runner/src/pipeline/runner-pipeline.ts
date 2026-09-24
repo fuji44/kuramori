@@ -1,4 +1,4 @@
-import { join, dirname } from 'node:path';
+import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   type ReviewExecutionContext,
@@ -48,10 +48,11 @@ export async function executePreFlight(
   };
 
   const contextJsonStr = JSON.stringify(fullPreFlight, null, 2);
-  const worktreeContextPath = join(context.worktreePath, 'context.json');
-  const outputContextPath = join(context.outputDir, 'context.json');
+  const worktreeContextPath = resolve(context.worktreePath, 'context.json');
+  const outputContextPath = resolve(context.outputDir, 'context.json');
 
   await Deno.writeTextFile(worktreeContextPath, contextJsonStr);
+  await Deno.writeTextFile(outputContextPath, contextJsonStr);
   await log(`[Pre-flight] context.json written to worktree and output dir.`);
 }
 
@@ -60,7 +61,8 @@ export async function executePreFlight(
  */
 export async function buildReviewPrompt(
   context: ReviewExecutionContext,
-  systemPrompt?: string
+  systemPrompt?: string,
+  outputSchema?: unknown
 ): Promise<string> {
   let skillInstructions = '';
   try {
@@ -82,7 +84,7 @@ ${context.rule.instructions}
 `;
   }
 
-  const jsonSchema = JSON.stringify(getReviewReportJsonSchema(), null, 2);
+  const jsonSchema = JSON.stringify(outputSchema ?? getReviewReportJsonSchema(), null, 2);
 
   return `
 You are an autonomous senior code reviewer performing a deep review of Pull Request ${context.repository}#${context.number}.
@@ -115,7 +117,7 @@ export async function executePostFlight(
   await log(`[Post-flight] Gatekeeper auditing structured review output...`);
 
   let rawJsonText: string | null = null;
-  const primaryJsonPath = join(context.outputDir, 'review.json');
+  const primaryJsonPath = resolve(context.outputDir, 'review.json');
 
   // 1. 標準出力からの JSON 抽出を第1優先
   if (stdout) {
@@ -128,7 +130,7 @@ export async function executePostFlight(
 
   // 2. ディスク上のファイル（下位互換性およびデバッグ用）をフォールバックとして探索
   if (!rawJsonText) {
-    const fallbackJsonPath = join(context.worktreePath, 'review.json');
+    const fallbackJsonPath = resolve(context.worktreePath, 'review.json');
     try {
       rawJsonText = await Deno.readTextFile(primaryJsonPath);
     } catch {
@@ -136,9 +138,9 @@ export async function executePostFlight(
         rawJsonText = await Deno.readTextFile(fallbackJsonPath);
       } catch {
         try {
-          for await (const entry of Deno.readDir(context.worktreePath)) {
+          for await (const entry of Deno.readDir(resolve(context.worktreePath))) {
             if (entry.name === 'review.json') {
-              const foundPath = join(context.worktreePath, entry.name);
+              const foundPath = resolve(context.worktreePath, entry.name);
               rawJsonText = await Deno.readTextFile(foundPath);
               break;
             }
@@ -186,7 +188,7 @@ export async function executePostFlight(
 
   // 差分ファイルのアンカー検証
   try {
-    const contextJsonPath = join(context.outputDir, 'context.json');
+    const contextJsonPath = resolve(context.outputDir, 'context.json');
     const contextContent = await Deno.readTextFile(contextJsonPath);
     const preFlight = JSON.parse(contextContent);
     const diffText = preFlight.diff as string;
@@ -224,7 +226,7 @@ export async function executePostFlight(
   }
 
   // スタンドアロン HTML レポートの自動生成・保存
-  const htmlReportPath = join(context.outputDir, 'report.html');
+  const htmlReportPath = resolve(context.outputDir, 'report.html');
   const standaloneHtml = generateStandaloneReviewHtml(reportData, {
     repo: context.repository,
     prNumber: context.number,
