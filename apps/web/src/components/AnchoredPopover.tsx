@@ -65,11 +65,33 @@ export function AnchoredPopover({
     observer.observe(anchor);
     observer.observe(popover);
     window.addEventListener('resize', updatePosition);
-    window.addEventListener('scroll', updatePosition, true);
+    let animationFrame: number | undefined;
+    let stopTrackingTimer: number | undefined;
+    const stopTracking = () => {
+      if (animationFrame !== undefined) {
+        cancelAnimationFrame(animationFrame);
+        animationFrame = undefined;
+      }
+    };
+    const trackDuringScroll = () => {
+      updatePosition();
+      if (animationFrame === undefined) {
+        const track = () => {
+          updatePosition();
+          animationFrame = requestAnimationFrame(track);
+        };
+        animationFrame = requestAnimationFrame(track);
+      }
+      window.clearTimeout(stopTrackingTimer);
+      stopTrackingTimer = window.setTimeout(stopTracking, 120);
+    };
+    window.addEventListener('scroll', trackDuringScroll, { capture: true, passive: true });
     return () => {
       observer.disconnect();
       window.removeEventListener('resize', updatePosition);
-      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('scroll', trackDuringScroll, true);
+      stopTracking();
+      window.clearTimeout(stopTrackingTimer);
     };
   }, [anchorRef, maxPanelHeight, placement]);
 

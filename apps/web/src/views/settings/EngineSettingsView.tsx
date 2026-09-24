@@ -144,7 +144,7 @@ function EngineTestButton({ isTesting, onTest, disabled = false }: EngineTestBut
           anchorRef={dropdownRef}
           placement="bottom-end"
           onDismiss={() => setIsOpen(false)}
-          className="w-64 max-w-[calc(100vw-16px)] bg-[#1c2128] border border-[#30363d] rounded-xl shadow-2xl z-[1000] p-1.5 text-xs flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-100"
+          className="w-64 max-w-[calc(100vw-16px)] bg-[#1c2128] border border-[#30363d] rounded-xl shadow-2xl z-[1000] p-1.5 text-xs flex flex-col gap-1"
         >
           <button
             type="button"

@@ -405,7 +405,7 @@ export function PrCard({
               placement="top-end"
               onDismiss={() => setIsDropdownOpen(false)}
               onClick={(e) => e.stopPropagation()}
-              className="w-80 max-w-[calc(100vw-16px)] bg-[#1c2128] border border-[#30363d] rounded-xl shadow-2xl z-[1000] p-3 text-xs flex flex-col gap-2.5 animate-in fade-in zoom-in-95 duration-100"
+              className="w-80 max-w-[calc(100vw-16px)] bg-[#1c2128] border border-[#30363d] rounded-xl shadow-2xl z-[1000] p-3 text-xs flex flex-col gap-2.5"
             >
               <div className="flex items-center justify-between pb-2 border-b border-[#30363d]">
                 <span className="font-semibold text-white">ルール選択実行</span>
