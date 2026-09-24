@@ -21,6 +21,8 @@ interface GhSearchPrItem {
   headRefName?: string;
   baseRefName?: string;
   headRefOid?: string;
+  additions?: number;
+  deletions?: number;
   state?: string;
 }
 
@@ -57,6 +59,8 @@ export class GitHubProvider implements VCSProvider {
               headRefName
               baseRefName
               headRefOid
+              additions
+              deletions
             }
           }
         }
@@ -101,6 +105,8 @@ export class GitHubProvider implements VCSProvider {
       headRefName: node.headRefName || '',
       baseRefName: node.baseRefName || '',
       headRefOid: node.headRefOid || '',
+      additions: node.additions,
+      deletions: node.deletions,
     }));
   }
 
@@ -216,6 +222,8 @@ export class GitHubProvider implements VCSProvider {
         sourceBranch: item.headRefName || '',
         targetBranch: item.baseRefName || '',
         headSha: item.headRefOid || '',
+        additions: item.additions,
+        deletions: item.deletions,
         isDraft: item.isDraft,
         isOwn,
         state: (item.state || 'open').toLowerCase() as ReviewRequest['state'],
@@ -239,7 +247,7 @@ export class GitHubProvider implements VCSProvider {
         '--repo',
         repository,
         '--json',
-        'number,title,author,url,isDraft,state,createdAt,updatedAt,headRefName,baseRefName,headRefOid,labels,milestone,assignees',
+        'number,title,author,url,isDraft,state,createdAt,updatedAt,headRefName,baseRefName,headRefOid,additions,deletions,labels,milestone,assignees',
       ],
       stdout: 'piped',
       stderr: 'piped',
@@ -277,6 +285,8 @@ export class GitHubProvider implements VCSProvider {
       sourceBranch: data.headRefName || '',
       targetBranch: data.baseRefName || '',
       headSha: data.headRefOid || '',
+      additions: data.additions,
+      deletions: data.deletions,
       isDraft: data.isDraft,
       isOwn,
       state: (data.state || 'OPEN').toLowerCase() as ReviewRequest['state'],

@@ -319,6 +319,13 @@ export function PrCard({
             </span>
           )}
 
+          {item.additions != null && item.deletions != null && (
+            <span className="flex items-center gap-1.5 shrink-0 font-mono" title="差分行数">
+              <span className="text-emerald-400">+{item.additions}</span>
+              <span className="text-rose-400">−{item.deletions}</span>
+            </span>
+          )}
+
           {/* PR Updated At */}
           <span className="shrink-0 text-neutral-500 flex items-center gap-1.5 font-mono">
             <span>PR更新: {new Date(item.updatedAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>

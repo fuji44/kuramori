@@ -9,6 +9,8 @@ export interface ReviewItem {
   sourceBranch: string;
   targetBranch: string;
   headSha: string;
+  additions?: number | null;
+  deletions?: number | null;
   isDraft: boolean;
   isOwn?: boolean;
   state: string;

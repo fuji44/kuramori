@@ -12,6 +12,8 @@ export const reviewRequestsTable = sqliteTable('review_requests', {
   sourceBranch: text('source_branch').notNull().default(''),
   targetBranch: text('target_branch').notNull().default(''),
   headSha: text('head_sha').notNull().default(''),
+  additions: integer('additions'),
+  deletions: integer('deletions'),
   isDraft: integer('is_draft', { mode: 'boolean' }).notNull().default(false),
   isOwn: integer('is_own', { mode: 'boolean' }).notNull().default(false),
   state: text('state').notNull().default('open'),

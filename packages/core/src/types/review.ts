@@ -23,6 +23,8 @@ export interface ReviewRequest {
   sourceBranch: string;
   targetBranch: string;
   headSha: string;
+  additions?: number;
+  deletions?: number;
   isDraft: boolean;
   isOwn?: boolean;
   state: ReviewRequestState;

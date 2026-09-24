@@ -70,6 +70,18 @@ export async function initDatabase(client: ReturnType<typeof createClient>) {
     // Column might already exist
   }
 
+  try {
+    await client.execute('ALTER TABLE review_requests ADD COLUMN additions INTEGER;');
+  } catch {
+    // Column might already exist
+  }
+
+  try {
+    await client.execute('ALTER TABLE review_requests ADD COLUMN deletions INTEGER;');
+  } catch {
+    // Column might already exist
+  }
+
   await client.execute(`
     CREATE TABLE IF NOT EXISTS review_rules (
       id TEXT PRIMARY KEY,
