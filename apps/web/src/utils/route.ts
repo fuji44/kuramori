@@ -6,7 +6,7 @@ import { parseUrlParams, buildUrlSearch, FilterUrlParams } from './url-params.ts
 
 export type AppRoute =
   | { view: 'dashboard' }
-  | { view: 'reviews'; params: FilterUrlParams }
+  | { view: 'reviews'; params: FilterUrlParams; filterId?: string }
   | { view: 'reports' }
   | { view: 'report'; reportId: string }
   | { view: 'settings'; subview: 'general' | 'engines' | 'rules' | 'triggers' };
@@ -43,7 +43,16 @@ export function parseRoute(pathname: string, search: string): AppRoute {
     return { view: 'reports' };
   }
 
-  if (cleanPath === '/reviews' || cleanPath === '/pulls') {
+  const savedFilterMatch = cleanPath.match(/^\/pulls\/filters\/([^/]+)$/);
+  if (savedFilterMatch) {
+    return {
+      view: 'reviews',
+      params: parseUrlParams(search),
+      filterId: decodeURIComponent(savedFilterMatch[1]),
+    };
+  }
+
+  if (cleanPath === '/pulls') {
     return { view: 'reviews', params: parseUrlParams(search) };
   }
 
@@ -54,7 +63,7 @@ export function parseRoute(pathname: string, search: string): AppRoute {
   }
 
   // Legacy fallback: /?q=... -> reviews view
-  if (legacyParams.q !== undefined || legacyParams.status !== undefined || legacyParams.repo !== undefined || legacyParams.includeOwn !== undefined) {
+  if (legacyParams.q !== undefined) {
     return { view: 'reviews', params: legacyParams };
   }
 
@@ -67,7 +76,10 @@ export function buildRouteUrl(route: AppRoute): string {
       return '/';
     case 'reviews': {
       const search = buildUrlSearch(route.params);
-      return `/reviews${search}`;
+      const basePath = route.filterId
+        ? `/pulls/filters/${encodeURIComponent(route.filterId)}`
+        : '/pulls';
+      return `${basePath}${search}`;
     }
     case 'reports':
       return '/reports';

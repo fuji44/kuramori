@@ -50,18 +50,44 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
     const poller = new GitHubPoller(mockVcs, db, queue, settingsService);
     const api = createApi({ db, storage, poller, queue, settingsService });
 
-    // 1. Initial GET /api/reviews -> empty
-    const res1 = await api.request('/api/reviews');
+    const emptyFiltersResponse = await api.request('/api/pulls/filters');
+    assertEquals(emptyFiltersResponse.status, 200);
+    assertEquals((await emptyFiltersResponse.json()).filters.length, 0);
+
+    const createFilterResponse = await api.request('/api/pulls/filters', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Open PRs', description: 'PRs awaiting review', query: 'is:open' }),
+    });
+    assertEquals(createFilterResponse.status, 201);
+    const createdFilter = (await createFilterResponse.json()).filter;
+    assertEquals(createdFilter.name, 'Open PRs');
+    assertEquals(createdFilter.query, 'is:open');
+
+    const updateFilterResponse = await api.request(`/api/pulls/filters/${createdFilter.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'My open PRs', description: 'Assigned for review', query: 'is:open author:me' }),
+    });
+    assertEquals(updateFilterResponse.status, 200);
+    assertEquals((await updateFilterResponse.json()).filter.query, 'is:open author:me');
+
+    const deleteFilterResponse = await api.request(`/api/pulls/filters/${createdFilter.id}`, { method: 'DELETE' });
+    assertEquals(deleteFilterResponse.status, 200);
+    assertEquals((await (await api.request('/api/pulls/filters')).json()).filters.length, 0);
+
+    // 1. Initial GET /api/pulls -> empty
+    const res1 = await api.request('/api/pulls');
     assertEquals(res1.status, 200);
     const data1 = await res1.json();
     assertEquals(data1.items.length, 0);
 
-    // 2. Trigger POST /api/reviews/refresh -> should poll and insert mockPr
-    const resRefresh = await api.request('/api/reviews/refresh', { method: 'POST' });
+    // 2. Trigger POST /api/pulls/refresh -> should poll and insert mockPr
+    const resRefresh = await api.request('/api/pulls/refresh', { method: 'POST' });
     assertEquals(resRefresh.status, 200);
 
-    // 3. GET /api/reviews -> should contain 1 item
-    const res2 = await api.request('/api/reviews');
+    // 3. GET /api/pulls -> should contain 1 item
+    const res2 = await api.request('/api/pulls');
     assertEquals(res2.status, 200);
     const data2 = await res2.json();
     assertEquals(data2.items.length, 1);
@@ -122,10 +148,9 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
     assertEquals(dataSettings3.autoQueueIncludeOwn, true);
     assertEquals(dataSettings3.reviewEngine, 'mock');
 
-    // 7. Test poller with isOwn filtering:
-    // With autoQueue: true and autoQueueIncludeOwn: false, own PR should NOT be queued,
-    // while review requested PR SHOULD be queued.
-    await settingsService.updateSettings({ autoQueue: true, autoQueueIncludeOwn: false });
+    // 7. Test poller auto-queuing:
+    // With autoQueue: true, both own PR and review requested PR are queued.
+    await settingsService.updateSettings({ autoQueue: true });
 
     const ownPr: ReviewRequest = {
       id: 'github:test/repo#2',
@@ -184,46 +209,8 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
     const testPoller = new GitHubPoller(testVcs, db, testQueue, settingsService);
     await testPoller.poll();
 
-    // Only reviewRequestedPr (#3) should be auto-queued, ownPr (#2) should not
     assertEquals(queuedIds.includes('github:test/repo#3'), true);
-    assertEquals(queuedIds.includes('github:test/repo#2'), false);
-
-    // Now enable autoQueueIncludeOwn: true and poll with a new own PR (#4)
-    await settingsService.updateSettings({ autoQueueIncludeOwn: true });
-    queuedIds = [];
-
-    const ownPr4: ReviewRequest = {
-      id: 'github:test/repo#4',
-      userId: 'default',
-      provider: 'github',
-      repository: 'test/repo',
-      number: 4,
-      title: 'feat: another own pull request',
-      author: 'me',
-      url: 'https://github.com/test/repo/pull/4',
-      sourceBranch: 'feat/own-4',
-      targetBranch: 'main',
-      headSha: '4444abc',
-      isDraft: false,
-      isOwn: true,
-      state: 'open',
-      createdAt: '2026-09-18T04:00:00Z',
-      updatedAt: '2026-09-18T04:00:00Z',
-    };
-
-    const testVcs2: VCSProvider = {
-      name: 'mock',
-      listReviewRequests: () => Promise.resolve([ownPr4]),
-      getReviewRequest: () => Promise.resolve(ownPr4),
-      getDiff: () => Promise.resolve('diff'),
-      getCloneUrl: () => Promise.resolve(''),
-    };
-
-    const testPoller2 = new GitHubPoller(testVcs2, db, testQueue, settingsService);
-    await testPoller2.poll();
-
-    // Now ownPr4 should be auto-queued because autoQueueIncludeOwn is true
-    assertEquals(queuedIds.includes('github:test/repo#4'), true);
+    assertEquals(queuedIds.includes('github:test/repo#2'), true);
 
     // 9. Test diagram compilation endpoint
     const resCompile = await api.request('/api/diagram/compile', {
@@ -315,7 +302,7 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
     assertEquals(settingsData.globalMaxConcurrency, 2);
 
     // 11. Test Triggering review with specific ruleIds
-    const resRunRule = await api.request('/api/reviews/github%3Atest%2Frepo%231/run', {
+    const resRunRule = await api.request('/api/pulls/github%3Atest%2Frepo%231/run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ruleIds: ['preset-correctness'] }),
@@ -329,7 +316,7 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
     await new Promise((resolve) => setTimeout(resolve, 1200));
 
     // 12. Test rule results API
-    const resRuleResults = await api.request('/api/reviews/github%3Atest%2Frepo%231/rule-results');
+    const resRuleResults = await api.request('/api/pulls/github%3Atest%2Frepo%231/rule-results');
     assertEquals(resRuleResults.status, 200);
     const ruleResultsData = await resRuleResults.json();
     assertEquals(Array.isArray(ruleResultsData.results), true);

@@ -30,7 +30,7 @@ export function DashboardView({
   // Statistics calculations
   const stats = useMemo(() => {
     const unreviewed = items.filter(
-      (item) => item.latestJob?.status !== 'completed' && !item.isOwn
+      (item) => item.latestJob?.status !== 'completed'
     ).length;
     const completed = items.filter(
       (item) => item.latestJob?.status === 'completed'
@@ -47,7 +47,7 @@ export function DashboardView({
   // Recent pending PRs (max 4)
   const pendingPrs = useMemo(() => {
     return items
-      .filter((item) => item.latestJob?.status !== 'completed' && !item.isOwn)
+      .filter((item) => item.latestJob?.status !== 'completed')
       .slice(0, 4);
   }, [items]);
 

@@ -10,17 +10,26 @@ Deno.test('route - parseRoute identifies dashboard path', () => {
 });
 
 Deno.test('route - parseRoute identifies reviews path and query', () => {
-  const route = parseRoute('/reviews', '?status=unreviewed&repo=owner/repo&own=true');
+  const route = parseRoute('/pulls', '?q=is:open');
   assertEquals(route.view, 'reviews');
   if (route.view === 'reviews') {
-    assertEquals(route.params.status, 'unreviewed');
-    assertEquals(route.params.repo, 'owner/repo');
-    assertEquals(route.params.includeOwn, true);
+    assertEquals(route.params.q, 'is:open');
   }
 
-  // Alias /pulls
-  const aliasRoute = parseRoute('/pulls', '');
-  assertEquals(aliasRoute.view, 'reviews');
+});
+
+Deno.test('route - /reviews is not a PR list route', () => {
+  assertEquals(parseRoute('/reviews', '').view, 'dashboard');
+});
+
+Deno.test('route - saved filters have a dedicated URL', () => {
+  const route = parseRoute('/pulls/filters/filter-123', '?q=is:open');
+  assertEquals(route.view, 'reviews');
+  if (route.view === 'reviews') {
+    assertEquals(route.filterId, 'filter-123');
+    assertEquals(route.params.q, 'is:open');
+  }
+  assertEquals(buildRouteUrl({ view: 'reviews', filterId: 'filter-123', params: { q: 'is:open' } }), '/pulls/filters/filter-123?q=is%3Aopen');
 });
 
 Deno.test('route - parseRoute identifies report path', () => {
@@ -88,8 +97,8 @@ Deno.test('route - parseRoute identifies settings paths', () => {
 Deno.test('route - buildRouteUrl formats paths accurately', () => {
   assertEquals(buildRouteUrl({ view: 'dashboard' }), '/');
   assertEquals(
-    buildRouteUrl({ view: 'reviews', params: { status: 'unreviewed' } }),
-    '/reviews?status=unreviewed'
+    buildRouteUrl({ view: 'reviews', params: { q: 'is:open' } }),
+    '/pulls?q=is%3Aopen'
   );
   assertEquals(buildRouteUrl({ view: 'reports' }), '/reports');
   assertEquals(

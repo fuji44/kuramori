@@ -96,7 +96,7 @@ export default function App() {
 
   const fetchReviews = async () => {
     try {
-      const res = await fetch('/api/reviews');
+      const res = await fetch('/api/pulls');
       if (!res.ok) {
         throw new Error(`HTTP error ${res.status}`);
       }
@@ -195,7 +195,7 @@ export default function App() {
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      const res = await fetch('/api/reviews/refresh', { method: 'POST' });
+      const res = await fetch('/api/pulls/refresh', { method: 'POST' });
       if (!res.ok) {
         throw new Error(`Refresh failed: HTTP ${res.status}`);
       }
@@ -219,7 +219,7 @@ export default function App() {
       if (engine && engine !== 'default') {
         payload.engine = engine;
       }
-      const res = await fetch(`/api/reviews/${encodeURIComponent(id)}/run`, {
+      const res = await fetch(`/api/pulls/${encodeURIComponent(id)}/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -388,7 +388,7 @@ export default function App() {
   };
 
   const unreviewedCount = items.filter(
-    (item) => item.latestJob?.status !== 'completed' && !item.isOwn
+    (item) => item.latestJob?.status !== 'completed'
   ).length;
 
   const reportCount = items.filter((item) => Boolean(item.report?.id)).length;
@@ -494,7 +494,7 @@ export default function App() {
             settings={settings}
             onNavigateToReviews={(anchorId) => {
               if (typeof anchorId === 'string' && anchorId.trim() !== '') {
-                navigateTo(`/reviews#${anchorId}`);
+                navigateTo(`/pulls#${anchorId}`);
               } else {
                 navigate({ view: 'reviews', params: {} });
               }
@@ -513,7 +513,9 @@ export default function App() {
             loading={loading}
             refreshing={refreshing}
             params={route.params}
-            onParamsChange={(newParams) => navigate({ view: 'reviews', params: newParams }, true)}
+            activeFilterId={route.filterId}
+            onParamsChange={(newParams) => navigate({ view: 'reviews', params: newParams, filterId: route.filterId }, true)}
+            onSelectFilter={(filterId, filterParams) => navigate({ view: 'reviews', params: filterParams, filterId })}
             onOpenLog={openJobLog}
             onRunReview={handleRunReview}
             onSelectReport={(reportId) => navigate({ view: 'report', reportId })}
@@ -529,7 +531,7 @@ export default function App() {
             onSelectReport={(reportId, prTitle) => navigate({ view: 'report', reportId })}
             onNavigateToReviews={(anchorId) => {
               if (typeof anchorId === 'string' && anchorId.trim() !== '') {
-                navigateTo(`/reviews#${anchorId}`);
+                navigateTo(`/pulls#${anchorId}`);
               } else {
                 navigate({ view: 'reviews', params: {} });
               }

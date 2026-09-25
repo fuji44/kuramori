@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { RefreshCw, CheckCircle2, Filter, Link2, CheckSquare, Square } from 'lucide-react';
+import { RefreshCw, CheckCircle2, Link2, Inbox, Plus, Bookmark, Trash2 } from 'lucide-react';
 import { EngineProfile, ReviewItem, ReviewRule } from '../types.ts';
 import { SearchQueryBar } from '../components/SearchQueryBar.tsx';
 import { PrCard } from '../components/PrCard.tsx';
@@ -15,6 +15,8 @@ interface PrListViewProps {
   refreshing?: boolean;
   params: FilterUrlParams;
   onParamsChange: (newParams: FilterUrlParams) => void;
+  activeFilterId: string | undefined;
+  onSelectFilter: (filterId: string | undefined, params: FilterUrlParams) => void;
   onOpenLog: (e: React.MouseEvent, jobId: string, error?: string | null) => void;
   onRunReview: (e: React.MouseEvent, id: string, ruleIds?: string[], engine?: string) => void;
   onSelectReport: (reportId: string, prTitle: string) => void;
@@ -22,6 +24,13 @@ interface PrListViewProps {
   onRefresh?: () => void;
   onShowSuccess: (msg: string) => void;
   onShowError: (msg: string) => void;
+}
+
+interface SavedFilter {
+  id: string;
+  name: string;
+  description: string;
+  query: string;
 }
 
 export function PrListView({
@@ -32,6 +41,8 @@ export function PrListView({
   refreshing,
   params,
   onParamsChange,
+  activeFilterId,
+  onSelectFilter,
   onOpenLog,
   onRunReview,
   onSelectReport,
@@ -41,9 +52,25 @@ export function PrListView({
   onShowError,
 }: PrListViewProps) {
   const searchQuery = params.q ?? '';
-  const statusFilter = params.status ?? 'all';
-  const repoFilter = params.repo ?? 'all';
-  const includeOwn = params.includeOwn ?? false;
+  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
+  const [filterName, setFilterName] = useState('');
+  const [filterDescription, setFilterDescription] = useState('');
+  const [showSaveForm, setShowSaveForm] = useState(false);
+
+  useEffect(() => {
+    const loadFilters = async () => {
+      try {
+        const response = await fetch('/api/pulls/filters');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        setSavedFilters(data.filters ?? []);
+      } catch (error) {
+        console.error('Failed to fetch pull filters', error);
+        onShowError('保存済みフィルタの取得に失敗しました');
+      }
+    };
+    loadFilters();
+  }, []);
 
   const [highlightedAnchor, setHighlightedAnchor] = useState<string | null>(null);
   const highlightTimeoutRef = useRef<number | null>(null);
@@ -123,25 +150,57 @@ export function PrListView({
     return Array.from(set).sort();
   }, [items]);
 
-  const ownPrCount = useMemo(() => {
-    return items.filter((item) => Boolean(item.isOwn)).length;
-  }, [items]);
-
-  const baseItems = useMemo(() => {
-    if (includeOwn) return items;
-    return items.filter((item) => !item.isOwn);
-  }, [items, includeOwn]);
-
   const filteredItems = useMemo(() => {
-    const queryMatched = filterByGitHubQuery(items, searchQuery);
-    return queryMatched.filter((item) => {
-      if (!includeOwn && item.isOwn) return false;
-      if (statusFilter === 'unreviewed' && item.latestJob?.status === 'completed') return false;
-      if (statusFilter === 'completed' && item.latestJob?.status !== 'completed') return false;
-      if (repoFilter !== 'all' && item.repository !== repoFilter) return false;
-      return true;
-    });
-  }, [items, searchQuery, statusFilter, repoFilter, includeOwn]);
+    return filterByGitHubQuery(items, searchQuery);
+  }, [items, searchQuery]);
+
+  const openFilter = (filter: SavedFilter | null) => {
+    const nextParams = filter ? { q: filter.query || undefined } : {};
+    onSelectFilter(filter?.id, nextParams);
+  };
+
+  const saveFilter = async () => {
+    const name = filterName.trim();
+    if (!name) return;
+    const existing = activeFilterId ? savedFilters.find((filter) => filter.id === activeFilterId) : undefined;
+    const values = {
+      name,
+      description: filterDescription.trim(),
+      query: searchQuery,
+    };
+    try {
+      const response = await fetch(existing ? `/api/pulls/filters/${encodeURIComponent(existing.id)}` : '/api/pulls/filters', {
+        method: existing ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      const nextFilter: SavedFilter = data.filter;
+      setSavedFilters((current) => existing
+        ? current.map((filter) => filter.id === existing.id ? nextFilter : filter)
+        : [...current, nextFilter]);
+      onSelectFilter(nextFilter.id, { q: nextFilter.query || undefined });
+      setShowSaveForm(false);
+      onShowSuccess(existing ? 'フィルタを更新しました' : 'フィルタを保存しました');
+    } catch (error) {
+      console.error('Failed to save pull filter', error);
+      onShowError('フィルタの保存に失敗しました');
+    }
+  };
+
+  const deleteFilter = async (filter: SavedFilter) => {
+    try {
+      const response = await fetch(`/api/pulls/filters/${encodeURIComponent(filter.id)}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      setSavedFilters((current) => current.filter((item) => item.id !== filter.id));
+      if (activeFilterId === filter.id) onSelectFilter(undefined, {});
+      onShowSuccess('フィルタを削除しました');
+    } catch (error) {
+      console.error('Failed to delete pull filter', error);
+      onShowError('フィルタの削除に失敗しました');
+    }
+  };
 
   const handleCopyFilterUrl = async () => {
     try {
@@ -153,7 +212,36 @@ export function PrListView({
   };
 
   return (
-    <main className="flex-1 flex flex-col overflow-y-auto p-6 max-w-6xl mx-auto w-full">
+    <div className="flex flex-1 min-h-0 w-full">
+      <aside className="w-60 shrink-0 border-r border-[#30363d] bg-[#0d1117] p-3 overflow-y-auto max-sm:w-14 max-sm:px-2">
+        <p className="px-3 pt-2 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6e7681] max-sm:hidden">ワークスペース</p>
+        <button type="button" onClick={() => openFilter(null)} className={`w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm text-left ${!activeFilterId ? 'bg-[#1f2937] text-white' : 'text-[#8b949e] hover:bg-[#161b22] hover:text-white'}`}>
+          <Inbox className="h-4 w-4 shrink-0" /><span className="flex-1 max-sm:hidden">Inbox</span>
+        </button>
+        <div className="mt-7 flex items-center justify-between px-3 pb-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6e7681] max-sm:hidden">保存済みフィルタ</p>
+          <button type="button" onClick={() => { onSelectFilter(undefined, params); setFilterName(''); setFilterDescription(''); setShowSaveForm(true); }} title="フィルタを新規作成" className="rounded p-1 text-[#8b949e] hover:bg-[#21262d] hover:text-white"><Plus className="h-4 w-4" /></button>
+        </div>
+        <nav className="space-y-1">
+          {savedFilters.map((filter) => (
+            <div key={filter.id} className={`group flex items-center rounded-md ${activeFilterId === filter.id ? 'bg-[#1f2937]' : 'hover:bg-[#161b22]'}`}>
+              <button type="button" onClick={() => openFilter(filter)} title={filter.name} className={`min-w-0 flex-1 truncate px-3 py-2 text-left text-sm ${activeFilterId === filter.id ? 'text-white' : 'text-[#8b949e] group-hover:text-white'}`}><Bookmark className="mr-2 inline h-3.5 w-3.5" />{filter.name}</button>
+              <button type="button" title="フィルタを削除" onClick={() => deleteFilter(filter)} className="mr-2 hidden rounded p-1 text-[#6e7681] hover:text-red-300 group-hover:block"><Trash2 className="h-3.5 w-3.5" /></button>
+            </div>
+          ))}
+          {savedFilters.length === 0 && <p className="px-3 py-2 text-xs text-[#6e7681] max-sm:hidden">フィルタはまだありません</p>}
+        </nav>
+      </aside>
+      <main className="flex-1 min-w-0 flex flex-col overflow-y-auto p-6 max-w-6xl mx-auto w-full">
+      {activeFilterId ? (() => {
+        const activeFilter = savedFilters.find((filter) => filter.id === activeFilterId);
+        return activeFilter ? <section className="mb-5 border-b border-[#30363d] pb-4">
+          <div className="flex items-start justify-between gap-4"><div><h2 className="text-xl font-semibold text-white">{activeFilter.name}</h2><p className="mt-1 text-sm text-[#8b949e]">{activeFilter.description || '説明はありません'}</p></div><button type="button" onClick={() => { setFilterName(activeFilter.name); setFilterDescription(activeFilter.description); setShowSaveForm(true); }} className="rounded-md border border-[#30363d] px-3 py-1.5 text-xs text-[#c9d1d9] hover:bg-[#161b22]">編集</button></div>
+        </section> : null;
+      })() : <section className="mb-5 rounded-lg border border-[#30363d] bg-[#111820] p-4">
+        <div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex items-center gap-2"><Inbox className="h-4 w-4 text-sky-400"/><h2 className="text-lg font-semibold text-white">Inbox</h2></div><p className="mt-1 text-sm text-[#8b949e]">確認が必要なPRをまとめて表示します。</p></div><div className="flex gap-5 text-sm"><div><span className="block text-xl font-semibold text-white">{items.length}</span><span className="text-xs text-[#8b949e]">すべて</span></div><div><span className="block text-xl font-semibold text-amber-300">{items.filter((item) => item.latestJob?.status !== 'completed').length}</span><span className="text-xs text-[#8b949e]">未完了</span></div><div><span className="block text-xl font-semibold text-emerald-300">{items.filter((item) => item.latestJob?.status === 'completed').length}</span><span className="text-xs text-[#8b949e]">レビュー済み</span></div></div></div>
+      </section>}
+      {showSaveForm && <section className="mb-4 rounded-lg border border-sky-800/70 bg-[#111820] p-4"><div className="grid gap-3 sm:grid-cols-2"><label className="text-xs text-[#8b949e]">フィルタ名<input autoFocus value={filterName} onChange={(event) => setFilterName(event.target.value)} className="mt-1 w-full rounded-md border border-[#30363d] bg-[#0d1117] px-3 py-2 text-sm text-white outline-none focus:border-sky-500" placeholder="例: 自分の担当リポジトリ" /></label><label className="text-xs text-[#8b949e]">説明文<input value={filterDescription} onChange={(event) => setFilterDescription(event.target.value)} className="mt-1 w-full rounded-md border border-[#30363d] bg-[#0d1117] px-3 py-2 text-sm text-white outline-none focus:border-sky-500" placeholder="このフィルタで見つかるPR" /></label></div><p className="mt-2 text-xs text-[#6e7681]">クエリ: <code className="text-sky-300">{searchQuery || '（条件なし）'}</code></p><div className="mt-3 flex justify-end gap-2"><button type="button" onClick={() => setShowSaveForm(false)} className="px-3 py-1.5 text-xs text-[#8b949e]">キャンセル</button><button type="button" onClick={saveFilter} disabled={!filterName.trim()} className="rounded-md bg-sky-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40">保存</button></div></section>}
       {/* Search Query Bar with Autocomplete Suggestions & Copy URL */}
       <div className="mb-4 flex items-center gap-2">
         <SearchQueryBar
@@ -163,6 +251,8 @@ export function PrListView({
           repositories={repositories}
           branches={branches}
         />
+        {activeFilterId && <button type="button" onClick={() => { const selected = savedFilters.find((filter) => filter.id === activeFilterId); if (selected) { setFilterName(selected.name); setFilterDescription(selected.description); setShowSaveForm(true); } }} title="このフィルタを更新" className="shrink-0 rounded-lg border border-[#30363d] px-3 py-2 text-xs text-[#8b949e] hover:text-white"><Bookmark className="inline h-3.5 w-3.5 sm:mr-1.5"/><span className="hidden sm:inline">保存</span></button>}
+        {!activeFilterId && <button type="button" onClick={() => { setFilterName(''); setFilterDescription(''); setShowSaveForm(true); }} title="現在のクエリを保存" className="shrink-0 rounded-lg border border-[#30363d] px-3 py-2 text-xs text-[#8b949e] hover:text-white"><Bookmark className="inline h-3.5 w-3.5 sm:mr-1.5"/><span className="hidden sm:inline">フィルタを保存</span></button>}
         <button
           type="button"
           onClick={handleCopyFilterUrl}
@@ -186,81 +276,7 @@ export function PrListView({
         )}
       </div>
 
-      {/* Filters Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Status Toggle */}
-          <div className="flex items-center bg-[#161b22] p-1 rounded-lg border border-[#30363d] text-xs">
-            <button
-              type="button"
-              onClick={() => setParam('status', 'all')}
-              className={`px-3 py-1 rounded-md transition-colors ${statusFilter === 'all' ? 'bg-[#21262d] text-white font-medium' : 'text-[#8b949e] hover:text-[#c9d1d9]'}`}
-            >
-              すべて ({baseItems.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setParam('status', 'unreviewed')}
-              className={`px-3 py-1 rounded-md transition-colors ${statusFilter === 'unreviewed' ? 'bg-[#21262d] text-white font-medium' : 'text-[#8b949e] hover:text-[#c9d1d9]'}`}
-            >
-              未完了 ({baseItems.filter((i) => i.latestJob?.status !== 'completed').length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setParam('status', 'completed')}
-              className={`px-3 py-1 rounded-md transition-colors ${statusFilter === 'completed' ? 'bg-[#21262d] text-white font-medium' : 'text-[#8b949e] hover:text-[#c9d1d9]'}`}
-            >
-              レポートあり ({baseItems.filter((i) => i.latestJob?.status === 'completed').length})
-            </button>
-          </div>
-
-          {/* Repository Filter Dropdown */}
-          {repositories.length > 1 && (
-            <div className="flex items-center gap-1.5 bg-[#161b22] border border-[#30363d] rounded-lg px-2.5 py-1 text-xs text-[#8b949e]">
-              <Filter className="w-3.5 h-3.5 text-sky-400" />
-              <select
-                value={repoFilter}
-                onChange={(e) => setParam('repo', e.target.value === 'all' ? undefined : e.target.value)}
-                className="bg-transparent text-white focus:outline-none cursor-pointer"
-              >
-                <option value="all" className="bg-[#161b22] text-white">全リポジトリ</option>
-                {repositories.map((repo) => (
-                  <option key={repo} value={repo} className="bg-[#161b22] text-white">
-                    {repo}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* 自分のPRを含むトグル */}
-          <button
-            type="button"
-            role="checkbox"
-            aria-checked={includeOwn}
-            onClick={() => setParam('includeOwn', !includeOwn ? true : undefined)}
-            className={`flex items-center gap-1.5 border rounded-lg px-2.5 py-1 text-xs cursor-pointer select-none transition-all ${
-              includeOwn
-                ? 'bg-sky-950/40 border-sky-800 text-white font-medium shadow-xs'
-                : 'bg-[#161b22] border-[#30363d] text-[#8b949e] hover:border-[#8b949e] hover:text-[#c9d1d9]'
-            }`}
-          >
-            <span className="shrink-0 text-sky-400">
-              {includeOwn ? (
-                <CheckSquare className="w-3.5 h-3.5" />
-              ) : (
-                <Square className="w-3.5 h-3.5 text-[#8b949e]" />
-              )}
-            </span>
-            <span>自作PRを含む</span>
-            {ownPrCount > 0 && (
-              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-purple-950/60 text-purple-300 border border-purple-800/60">
-                {ownPrCount}
-              </span>
-            )}
-          </button>
-        </div>
-
+      <div className="flex items-center justify-end mb-4">
         <span className="text-xs text-[#8b949e]">
           表示中: {filteredItems.length} 件
         </span>
@@ -299,6 +315,7 @@ export function PrListView({
           })}
         </div>
       )}
-    </main>
+      </main>
+    </div>
   );
 }

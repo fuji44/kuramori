@@ -61,11 +61,10 @@ export class GitHubPoller {
         ? await this.settingsService.getAllSettings()
         : null;
       const autoQueue = settings?.autoQueue ?? true;
-      const autoQueueIncludeOwn = settings?.autoQueueIncludeOwn ?? false;
 
       for (const pr of prs) {
         const isOwn = pr.isOwn ?? false;
-        const isEligibleForAutoReview = autoQueue && !pr.isDraft && (!isOwn || autoQueueIncludeOwn);
+        const isEligibleForAutoReview = autoQueue && !pr.isDraft;
 
         const existing = await this.db
           .select()

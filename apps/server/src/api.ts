@@ -3,7 +3,7 @@ import { cors } from 'hono/cors';
 import { desc, eq } from 'drizzle-orm';
 import { resolve } from 'node:path';
 import type { AppDatabase } from './db/index.ts';
-import { reviewJobsTable, reviewReportsTable, reviewRequestsTable, reviewRulesTable, reviewRuleResultsTable, reviewTriggersTable } from './db/schema.ts';
+import { pullFiltersTable, reviewJobsTable, reviewReportsTable, reviewRequestsTable, reviewRulesTable, reviewRuleResultsTable, reviewTriggersTable } from './db/schema.ts';
 
 import type { EngineEnvironment, ReportStorage } from '@review-base/core';
 import type { GitHubPoller } from './poller.ts';
@@ -76,7 +76,7 @@ export function createApi(deps: ApiDependencies) {
   app.use('*', cors());
 
   // List all review requests with their latest review status and report info
-  app.get('/api/reviews', async (c) => {
+  app.get('/api/pulls', async (c) => {
     const stateParam = c.req.query('state');
     const baseQuery = deps.db.select().from(reviewRequestsTable);
     const requests = stateParam
@@ -137,13 +137,67 @@ export function createApi(deps: ApiDependencies) {
   });
 
   // Manual refresh / poll
-  app.post('/api/reviews/refresh', async (c) => {
+  app.post('/api/pulls/refresh', async (c) => {
     await deps.poller.poll();
     return c.json({ success: true, message: 'Polled successfully' });
   });
 
+  app.get('/api/pulls/filters', async (c) => {
+    const filters = await deps.db.select().from(pullFiltersTable).orderBy(desc(pullFiltersTable.updatedAt));
+    return c.json({ filters });
+  });
+
+  app.post('/api/pulls/filters', async (c) => {
+    const body = await c.req.json().catch(() => null);
+    if (typeof body?.name !== 'string' || body.name.trim() === '' ||
+      typeof body?.description !== 'string' || typeof body?.query !== 'string') {
+      return c.json({ error: 'name, description, and query are required' }, 400);
+    }
+
+    const now = new Date().toISOString();
+    const filter = {
+      id: crypto.randomUUID(),
+      name: body.name.trim(),
+      description: body.description.trim(),
+      query: body.query.trim(),
+      createdAt: now,
+      updatedAt: now,
+    };
+    await deps.db.insert(pullFiltersTable).values(filter);
+    return c.json({ filter }, 201);
+  });
+
+  app.put('/api/pulls/filters/:id', async (c) => {
+    const id = decodeURIComponent(c.req.param('id'));
+    const body = await c.req.json().catch(() => null);
+    if (typeof body?.name !== 'string' || body.name.trim() === '' ||
+      typeof body?.description !== 'string' || typeof body?.query !== 'string') {
+      return c.json({ error: 'name, description, and query are required' }, 400);
+    }
+
+    const existing = await deps.db.select().from(pullFiltersTable).where(eq(pullFiltersTable.id, id)).limit(1);
+    if (existing.length === 0) return c.json({ error: 'Filter not found' }, 404);
+
+    const updates = {
+      name: body.name.trim(),
+      description: body.description.trim(),
+      query: body.query.trim(),
+      updatedAt: new Date().toISOString(),
+    };
+    await deps.db.update(pullFiltersTable).set(updates).where(eq(pullFiltersTable.id, id));
+    return c.json({ filter: { ...existing[0], ...updates } });
+  });
+
+  app.delete('/api/pulls/filters/:id', async (c) => {
+    const id = decodeURIComponent(c.req.param('id'));
+    const existing = await deps.db.select().from(pullFiltersTable).where(eq(pullFiltersTable.id, id)).limit(1);
+    if (existing.length === 0) return c.json({ error: 'Filter not found' }, 404);
+    await deps.db.delete(pullFiltersTable).where(eq(pullFiltersTable.id, id));
+    return c.json({ success: true });
+  });
+
   // Trigger review manually for a specific PR (supports optional ruleId or ruleIds)
-  app.post('/api/reviews/:id/run', async (c) => {
+  app.post('/api/pulls/:id/run', async (c) => {
     const id = decodeURIComponent(c.req.param('id'));
     let ruleIds: string[] | undefined;
     let engine: string | undefined;
@@ -166,7 +220,7 @@ export function createApi(deps: ApiDependencies) {
   });
 
   // Get all rule results for a PR
-  app.get('/api/reviews/:id/rule-results', async (c) => {
+  app.get('/api/pulls/:id/rule-results', async (c) => {
     const id = decodeURIComponent(c.req.param('id'));
     const rows = await deps.db
       .select()

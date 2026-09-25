@@ -347,11 +347,6 @@ export function ReportListView({
                     <span className="text-[11px] px-1.5 py-0.2 rounded bg-neutral-800 text-neutral-400">
                       @{item.author}
                     </span>
-                    {item.isOwn && (
-                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-800">
-                        自分のPR
-                      </span>
-                    )}
                   </div>
 
                   <div className="flex items-center gap-2">
