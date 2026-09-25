@@ -1,0 +1,161 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ReviewRuleProfilerOutput",
+  "description": "Output schema for review-rule-profiler skill, defining rules and triggers for review-base",
+  "type": "object",
+  "required": ["repository", "rules", "triggers"],
+  "additionalProperties": false,
+  "properties": {
+    "repository": {
+      "type": "string",
+      "description": "Target repository identifier, e.g. 'owner/repo'",
+      "pattern": "^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$"
+    },
+    "rules": {
+      "type": "array",
+      "description": "List of path-specific review rules to be registered in review-base",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/ReviewRuleDefinition"
+      }
+    },
+    "triggers": {
+      "type": "array",
+      "description": "List of review triggers binding repository file paths to specific rule IDs",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/ReviewTriggerDefinition"
+      }
+    }
+  },
+  "definitions": {
+    "RuleTriggerConfig": {
+      "type": "object",
+      "description": "Trigger condition configuration for a review rule",
+      "additionalProperties": false,
+      "properties": {
+        "types": {
+          "type": "array",
+          "description": "PR event types that trigger this rule",
+          "items": {
+            "type": "string",
+            "enum": ["opened", "synchronize", "reopened", "ready_for_review"]
+          },
+          "default": ["opened", "synchronize", "ready_for_review"]
+        },
+        "paths": {
+          "type": "array",
+          "description": "Glob patterns for files that trigger this rule when changed",
+          "items": { "type": "string" }
+        },
+        "pathsIgnore": {
+          "type": "array",
+          "description": "Glob patterns for files that should be ignored (e.g. tests, fixtures)",
+          "items": { "type": "string" }
+        },
+        "draft": {
+          "type": "boolean",
+          "description": "If false, the rule will not trigger on draft PRs",
+          "default": false
+        },
+        "labels": {
+          "type": "array",
+          "description": "Optional list of PR labels required to trigger this rule",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "ReviewRuleDefinition": {
+      "type": "object",
+      "description": "A single specialized review rule definition",
+      "required": ["id", "name", "description", "category", "instructions"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the rule (kebab-case, e.g. 'rule-repo-api-security')",
+          "pattern": "^rule-[a-z0-9_-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable display name of the rule",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "description": "Brief description of the rule's focus and purpose"
+        },
+        "category": {
+          "type": "string",
+          "description": "Classification category based on standard code review domains",
+          "enum": ["security", "integrity", "correctness", "architecture", "frontend", "general"]
+        },
+        "engine": {
+          "type": "string",
+          "description": "Execution engine ('default', 'antigravity', 'claude-code', or 'codex')",
+          "default": "default"
+        },
+        "instructions": {
+          "type": "string",
+          "description": "Detailed Markdown instructions for the AI reviewer (must contain the 4 standard blocks)",
+          "minLength": 30
+        },
+        "trigger": {
+          "$ref": "#/definitions/RuleTriggerConfig"
+        },
+        "triggerJson": {
+          "type": "string",
+          "description": "Serialized JSON string of RuleTriggerConfig (used for direct DB seeding or legacy payloads)"
+        },
+        "enabled": {
+          "type": ["boolean", "integer"],
+          "description": "Whether the rule is enabled (true/1 or false/0)",
+          "default": true
+        }
+      }
+    },
+    "ReviewTriggerDefinition": {
+      "type": "object",
+      "description": "A trigger configuration linking repository paths to one or more rule IDs",
+      "required": ["id", "name", "repository", "ruleIds"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the trigger (e.g. 'trigger-repo-api')",
+          "pattern": "^trigger-[a-z0-9_-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable display name for the trigger"
+        },
+        "repository": {
+          "type": "string",
+          "description": "Target repository or '*' for global",
+          "pattern": "^([a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+|\\*)$"
+        },
+        "paths": {
+          "type": "array",
+          "description": "Glob patterns of files monitored by this trigger",
+          "items": { "type": "string" }
+        },
+        "pathsIgnore": {
+          "type": "array",
+          "description": "Glob patterns of files excluded from this trigger",
+          "items": { "type": "string" }
+        },
+        "ruleIds": {
+          "type": "array",
+          "description": "List of rule IDs to execute when this trigger fires",
+          "minItems": 1,
+          "items": { "type": "string" }
+        },
+        "enabled": {
+          "type": ["boolean", "integer"],
+          "description": "Whether this trigger is active",
+          "default": true
+        }
+      }
+    }
+  }
+}
