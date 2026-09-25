@@ -7,10 +7,17 @@ export interface QueryMatchablePR {
   sourceBranch?: string;
   targetBranch?: string;
   headSha?: string;
+  additions?: number | null;
+  deletions?: number | null;
   isDraft: boolean;
+  isOwn?: boolean;
   state: string;
   createdAt?: string;
   updatedAt?: string;
+  labels?: Array<{ name: string; color?: string; description?: string }>;
+  milestone?: string | null;
+  assignees?: Array<{ login: string; avatarUrl?: string }>;
+  requestedReviewers?: Array<{ login: string; isTeam?: boolean }>;
   latestJob?: {
     status?: string;
   } | null;
@@ -108,6 +115,54 @@ export function matchesDateCondition(itemDateStr: string | undefined, condition:
   return itemTimestamp >= min && itemTimestamp <= max;
 }
 
+export function matchesNumberCondition(value: number | undefined | null, condition: string): boolean {
+  if (value === undefined || value === null) {
+    return false;
+  }
+
+  const trimmed = condition.trim();
+
+  // Range syntax: MIN..MAX
+  if (trimmed.includes('..')) {
+    const parts = trimmed.split('..');
+    const minStr = parts[0]?.trim();
+    const maxStr = parts[1]?.trim();
+
+    const min = minStr === '*' || minStr === '' ? undefined : Number(minStr);
+    const max = maxStr === '*' || maxStr === '' ? undefined : Number(maxStr);
+
+    if (min !== undefined && (Number.isNaN(min) || value < min)) {
+      return false;
+    }
+    if (max !== undefined && (Number.isNaN(max) || value > max)) {
+      return false;
+    }
+    return true;
+  }
+
+  // Comparison syntax
+  if (trimmed.startsWith('>=')) {
+    const num = Number(trimmed.slice(2));
+    return !Number.isNaN(num) && value >= num;
+  }
+  if (trimmed.startsWith('>')) {
+    const num = Number(trimmed.slice(1));
+    return !Number.isNaN(num) && value > num;
+  }
+  if (trimmed.startsWith('<=')) {
+    const num = Number(trimmed.slice(2));
+    return !Number.isNaN(num) && value <= num;
+  }
+  if (trimmed.startsWith('<')) {
+    const num = Number(trimmed.slice(1));
+    return !Number.isNaN(num) && value < num;
+  }
+
+  // Exact number
+  const num = Number(trimmed);
+  return !Number.isNaN(num) && value === num;
+}
+
 function evaluateQualifier(item: QueryMatchablePR, qualifier: string, value: string): boolean {
   switch (qualifier) {
     case 'is': {
@@ -130,6 +185,13 @@ function evaluateQualifier(item: QueryMatchablePR, qualifier: string, value: str
           return item.latestJob?.status === 'completed';
         case 'unreviewed':
           return item.latestJob?.status !== 'completed';
+        case 'approved':
+          return item.report?.verdict?.toUpperCase() === 'APPROVE';
+        case 'changes-requested':
+        case 'changes_requested':
+          return item.report?.verdict?.toUpperCase() === 'REQUEST_CHANGES';
+        case 'archived':
+          return false;
         default:
           return false;
       }
@@ -163,15 +225,147 @@ function evaluateQualifier(item: QueryMatchablePR, qualifier: string, value: str
         case 'approved':
           return item.report?.verdict?.toUpperCase() === 'APPROVE';
         case 'changes_requested':
+        case 'changes-requested':
           return item.report?.verdict?.toUpperCase() === 'REQUEST_CHANGES';
         default:
           return false;
       }
     }
 
+    case 'review-requested':
+    case 'user-review-requested': {
+      if (value === '@me' || value === 'me') {
+        if (item.requestedReviewers && item.requestedReviewers.length > 0) {
+          return item.requestedReviewers.some((r) => r.login.toLowerCase() === '@me' || r.login.toLowerCase() === 'me') || !item.isOwn;
+        }
+        return item.isOwn === false;
+      }
+      if (item.requestedReviewers && item.requestedReviewers.length > 0) {
+        return item.requestedReviewers.some((r) => r.login.toLowerCase().includes(value));
+      }
+      return !item.isOwn;
+    }
+
+    case 'team-review-requested': {
+      if (item.requestedReviewers) {
+        return item.requestedReviewers.some((r) => r.isTeam && r.login.toLowerCase().includes(value));
+      }
+      return false;
+    }
+
+    case 'reviewed-by': {
+      if (value === '@me' || value === 'me') {
+        return item.latestJob?.status === 'completed';
+      }
+      return item.latestJob?.status === 'completed';
+    }
+
+    case 'review-involves': {
+      if (value === '@me' || value === 'me') {
+        return item.isOwn === false || item.latestJob?.status === 'completed';
+      }
+      const matchesReviewer = item.requestedReviewers?.some((r) => r.login.toLowerCase().includes(value)) ?? false;
+      return matchesReviewer;
+    }
+
+    case 'assignee': {
+      if (value === '*') {
+        return (item.assignees?.length ?? 0) > 0;
+      }
+      if (value === 'none') {
+        return (item.assignees?.length ?? 0) === 0;
+      }
+      if (value === '@me' || value === 'me') {
+        return item.assignees?.some((a) => a.login.toLowerCase() === 'me' || a.login.toLowerCase() === '@me') ?? false;
+      }
+      return item.assignees?.some((a) => a.login.toLowerCase().includes(value)) ?? false;
+    }
+
+    case 'label': {
+      if (!item.labels || item.labels.length === 0) {
+        return false;
+      }
+      const targetLabels = value.split(',').map((l) => l.trim().toLowerCase()).filter(Boolean);
+      return item.labels.some((l) =>
+        targetLabels.some((target) => l.name.toLowerCase() === target || l.name.toLowerCase().includes(target))
+      );
+    }
+
+    case 'milestone': {
+      if (!item.milestone) {
+        return false;
+      }
+      if (value === '*') {
+        return true;
+      }
+      return item.milestone.toLowerCase().includes(value);
+    }
+
+    case 'no': {
+      switch (value) {
+        case 'assignee':
+          return (item.assignees?.length ?? 0) === 0;
+        case 'label':
+          return (item.labels?.length ?? 0) === 0;
+        case 'milestone':
+          return !item.milestone;
+        case 'project':
+          return true;
+        default:
+          return false;
+      }
+    }
+
+    case 'has': {
+      switch (value) {
+        case 'assignee':
+          return (item.assignees?.length ?? 0) > 0;
+        case 'label':
+          return (item.labels?.length ?? 0) > 0;
+        case 'milestone':
+          return Boolean(item.milestone);
+        default:
+          return false;
+      }
+    }
+
+    case 'involves': {
+      if (value === '@me' || value === 'me') {
+        return true;
+      }
+      const matchesAuthor = item.author.toLowerCase().includes(value);
+      const matchesAssignee = item.assignees?.some((a) => a.login.toLowerCase().includes(value)) ?? false;
+      const matchesReviewer = item.requestedReviewers?.some((r) => r.login.toLowerCase().includes(value)) ?? false;
+      return matchesAuthor || matchesAssignee || matchesReviewer;
+    }
+
+    case 'mentions':
+    case 'commenter': {
+      const matchesAuthor = item.author.toLowerCase().includes(value);
+      const matchesAssignee = item.assignees?.some((a) => a.login.toLowerCase().includes(value)) ?? false;
+      return matchesAuthor || matchesAssignee;
+    }
+
     case 'author': {
+      if (value === '@me' || value === 'me') {
+        return item.isOwn === true || item.author.toLowerCase() === 'me';
+      }
       const targetUser = value.startsWith('app/') ? value.slice(4) : value;
       return item.author.toLowerCase().includes(targetUser);
+    }
+
+    case 'additions': {
+      return matchesNumberCondition(item.additions, value);
+    }
+
+    case 'deletions': {
+      return matchesNumberCondition(item.deletions, value);
+    }
+
+    case 'lines':
+    case 'size': {
+      const totalLines = (item.additions ?? 0) + (item.deletions ?? 0);
+      return matchesNumberCondition(totalLines, value);
     }
 
     case 'repo': {
@@ -217,7 +411,20 @@ function evaluateQualifier(item: QueryMatchablePR, qualifier: string, value: str
       return matchesDateCondition(item.updatedAt, value);
     }
 
+    case 'closed': {
+      if (item.state !== 'closed' && item.state !== 'merged') return false;
+      return matchesDateCondition(item.updatedAt, value);
+    }
+
+    case 'merged': {
+      if (item.state !== 'merged') return false;
+      return matchesDateCondition(item.updatedAt, value);
+    }
+
     case 'status': {
+      if (value === 'queued') {
+        return item.latestJob?.status?.toLowerCase() === 'pending' || item.latestJob?.status?.toLowerCase() === 'queued';
+      }
       return item.latestJob?.status?.toLowerCase() === value;
     }
 
@@ -244,7 +451,24 @@ export function filterByGitHubQuery<T extends QueryMatchablePR>(items: T[], quer
     'state',
     'draft',
     'review',
+    'review-requested',
+    'user-review-requested',
+    'team-review-requested',
+    'reviewed-by',
+    'review-involves',
     'author',
+    'assignee',
+    'label',
+    'milestone',
+    'no',
+    'has',
+    'involves',
+    'mentions',
+    'commenter',
+    'additions',
+    'deletions',
+    'lines',
+    'size',
     'repo',
     'user',
     'org',
@@ -253,6 +477,8 @@ export function filterByGitHubQuery<T extends QueryMatchablePR>(items: T[], quer
     'sha',
     'created',
     'updated',
+    'closed',
+    'merged',
     'status',
     'verdict',
   ]);

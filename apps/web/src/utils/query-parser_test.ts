@@ -11,10 +11,17 @@ const testItems = [
     sourceBranch: 'feature/auth',
     targetBranch: 'main',
     headSha: '0eff326d6213c456',
+    additions: 150,
+    deletions: 20,
     isDraft: false,
+    isOwn: false,
     state: 'open',
     createdAt: '2026-09-18T10:00:00Z',
     updatedAt: '2026-09-18T12:00:00Z',
+    labels: [{ name: 'feature', color: 'blue' }, { name: 'backend', color: 'gray' }],
+    milestone: 'v1.0',
+    assignees: [{ login: 'charlie' }],
+    requestedReviewers: [{ login: 'reviewer-user' }],
     latestJob: { status: 'completed' },
     report: { verdict: 'APPROVE' },
   },
@@ -27,10 +34,17 @@ const testItems = [
     sourceBranch: 'fix/billing',
     targetBranch: 'main',
     headSha: 'e1109ab789123456',
+    additions: 30,
+    deletions: 5,
     isDraft: true,
+    isOwn: true,
     state: 'open',
     createdAt: '2026-09-12T08:00:00Z',
     updatedAt: '2026-09-15T09:00:00Z',
+    labels: [{ name: 'bug', color: 'red' }],
+    milestone: null,
+    assignees: [],
+    requestedReviewers: [],
     latestJob: { status: 'pending' },
     report: null,
   },
@@ -43,10 +57,17 @@ const testItems = [
     sourceBranch: 'refactor/db',
     targetBranch: 'develop',
     headSha: 'a4b5c6d7e8f90123',
+    additions: 500,
+    deletions: 400,
     isDraft: false,
+    isOwn: false,
     state: 'merged',
     createdAt: '2026-09-01T00:00:00Z',
     updatedAt: '2026-09-05T10:00:00Z',
+    labels: [],
+    milestone: 'v2.0-beta',
+    assignees: [{ login: 'alice' }],
+    requestedReviewers: [{ login: 'team-leads', isTeam: true }],
     latestJob: { status: 'completed' },
     report: { verdict: 'REQUEST_CHANGES' },
   },
@@ -121,4 +142,54 @@ Deno.test('filterByGitHubQuery - in:title and compound queries', () => {
   assertEquals(filterByGitHubQuery(testItems, 'is:open is:pr -is:draft author:alice').length, 1);
   assertEquals(filterByGitHubQuery(testItems, 'type:pr is:merged review:changes_requested').length, 1);
   assertEquals(filterByGitHubQuery(testItems, 'type:issue').length, 0);
+});
+
+Deno.test('filterByGitHubQuery - review-requested and reviewer qualifiers', () => {
+  assertEquals(filterByGitHubQuery(testItems, 'review-requested:reviewer-user').length, 1);
+  assertEquals(filterByGitHubQuery(testItems, 'user-review-requested:@me').length, 2);
+  assertEquals(filterByGitHubQuery(testItems, 'team-review-requested:team-leads').length, 1);
+  assertEquals(filterByGitHubQuery(testItems, 'reviewed-by:alice').length, 2);
+  assertEquals(filterByGitHubQuery(testItems, 'review-involves:reviewer-user').length, 1);
+  assertEquals(filterByGitHubQuery(testItems, 'is:approved').length, 1);
+  assertEquals(filterByGitHubQuery(testItems, 'is:changes-requested').length, 1);
+});
+
+Deno.test('filterByGitHubQuery - assignee qualifiers', () => {
+  assertEquals(filterByGitHubQuery(testItems, 'assignee:charlie').length, 1);
+  assertEquals(filterByGitHubQuery(testItems, 'assignee:alice').length, 1);
+  assertEquals(filterByGitHubQuery(testItems, 'assignee:*').length, 2);
+  assertEquals(filterByGitHubQuery(testItems, 'no:assignee').length, 1);
+  assertEquals(filterByGitHubQuery(testItems, 'has:assignee').length, 2);
+});
+
+Deno.test('filterByGitHubQuery - label qualifiers', () => {
+  assertEquals(filterByGitHubQuery(testItems, 'label:feature').length, 1);
+  assertEquals(filterByGitHubQuery(testItems, 'label:bug').length, 1);
+  assertEquals(filterByGitHubQuery(testItems, 'label:feature,bug').length, 2);
+  assertEquals(filterByGitHubQuery(testItems, '-label:bug').length, 2);
+  assertEquals(filterByGitHubQuery(testItems, 'no:label').length, 1);
+  assertEquals(filterByGitHubQuery(testItems, 'has:label').length, 2);
+});
+
+Deno.test('filterByGitHubQuery - milestone qualifiers', () => {
+  assertEquals(filterByGitHubQuery(testItems, 'milestone:v1.0').length, 1);
+  assertEquals(filterByGitHubQuery(testItems, 'milestone:*').length, 2);
+  assertEquals(filterByGitHubQuery(testItems, 'no:milestone').length, 1);
+  assertEquals(filterByGitHubQuery(testItems, 'has:milestone').length, 2);
+});
+
+Deno.test('filterByGitHubQuery - additions, deletions and lines', () => {
+  assertEquals(filterByGitHubQuery(testItems, 'additions:>100').length, 2);
+  assertEquals(filterByGitHubQuery(testItems, 'additions:<50').length, 1);
+  assertEquals(filterByGitHubQuery(testItems, 'additions:100..200').length, 1);
+  assertEquals(filterByGitHubQuery(testItems, 'deletions:>100').length, 1);
+  assertEquals(filterByGitHubQuery(testItems, 'lines:>150').length, 2);
+  assertEquals(filterByGitHubQuery(testItems, 'size:<50').length, 1);
+});
+
+Deno.test('filterByGitHubQuery - author:@me and involves', () => {
+  assertEquals(filterByGitHubQuery(testItems, 'author:@me').length, 1);
+  assertEquals(filterByGitHubQuery(testItems, '-author:@me').length, 2);
+  assertEquals(filterByGitHubQuery(testItems, 'involves:alice').length, 2);
+  assertEquals(filterByGitHubQuery(testItems, 'involves:charlie').length, 1);
 });
