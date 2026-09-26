@@ -4,18 +4,48 @@ This document defines operational commands, directory layouts, and diagnostic pr
 
 ---
 
-## 1. Service Management Commands
+## 1. Service Management & Verification Commands
 
-### Start Server and Background Workers
+### Core Development & Verification
 ```bash
-# Build frontend web assets
+# TypeScript type check across monorepo
+deno task check
+
+# Execute full test suite
+deno task test
+
+# Start backend development server with file watching
+deno task dev:server
+
+# Start frontend Vite HMR development server
+deno task dev:web
+```
+
+### Production Build & Execution
+```bash
+# Build frontend web assets (Vite)
 deno task build
 
-# Start server, background poller, and job queue
+# Start production server, background poller, and job queue
 deno task start
 ```
-- Default port: `3456` (override via `PORT` environment variable)
-- Default database: `data/kuramori.db` (override via `DATABASE_URL` environment variable)
+
+### Standalone Review Execution (CLI)
+```bash
+deno task runner --repo <owner/repo> --pr <number>
+```
+
+### Configuration Environment Variables
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `PORT` | `3456` | HTTP listening port for server |
+| `DATABASE_URL` | `file:data/kuramori.db` | SQLite database file location |
+| `REPORTS_DIR` | `./data/reports` | Directory where HTML and JSON review reports are stored |
+| `AUTO_QUEUE` | `true` | Automatically enqueue review jobs for newly detected PRs |
+| `AUTO_QUEUE_INCLUDE_OWN` | `false` | Automatically enqueue review jobs for own PRs (`author: @me`) |
+| `REVIEW_ENGINE` | `antigravity` | Default fallback engine type if not configured in settings |
+| `AGY_BIN` | `agy` | Custom binary path for Google Antigravity CLI |
+| `CLAUDE_BIN` | `claude` | Custom binary path for Anthropic Claude Code CLI |
 
 ### Background Daemon Execution
 ```bash
@@ -78,7 +108,7 @@ git worktree prune
    curl -s -X POST "http://localhost:3456/api/pulls/refresh"
    ```
 3. **Verify matching criteria**:
-   - Check `gh pr list --search "review-requested:@me"` and `gh pr list --author "@me"`. Only matching PRs are tracked.
+   - Check `gh search prs --review-requested=@me` and `gh search prs --author=@me`. Only matching open PRs across accessible repositories are tracked.
 
 ### 3.4 Database Reset (Development)
 To reset database state completely:

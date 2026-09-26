@@ -20,19 +20,23 @@ This document catalogs the REST API provided by `kuramori`, interactive document
 ### 2.1 Pull Requests & Triage
 | Method | Path | Description |
 | :--- | :--- | :--- |
-| `GET` | `/api/pulls` | List all tracked PRs with their latest review status and report verdicts |
+| `GET` | `/api/pulls` | List tracked PRs (supports `?state=open` or `?state=closed` query parameters) |
 | `POST` | `/api/pulls/refresh` | Trigger manual poll from GitHub |
 | `GET` | `/api/pulls/filters` | List saved search query filters |
 | `POST` | `/api/pulls/filters` | Save a new search query filter |
+| `PUT` | `/api/pulls/filters/:id` | Update a saved search query filter |
+| `DELETE` | `/api/pulls/filters/:id` | Delete a saved search query filter |
 
 ### 2.2 Review Execution & Reports
 | Method | Path | Description |
 | :--- | :--- | :--- |
-| `POST` | `/api/pulls/:id/run` | Enqueue a review job for a PR (supports optional `ruleId` or `ruleIds`) |
+| `POST` | `/api/pulls/:id/run` | Enqueue a review job for a PR (supports optional `ruleId`, `ruleIds`, and `engine` profile ID/type) |
 | `GET` | `/api/jobs/:id/log` | Fetch raw execution logs for a review job |
-| `GET` | `/api/reports/:id/data` | Fetch structured review report JSON (comments, D2 diagrams, metrics) |
+| `GET` | `/api/reports/:id/data` | Fetch structured review report JSON (comments, D2 diagrams, metrics, `appliedRules`) |
 | `GET` | `/api/reports/:id/html` | Fetch standalone HTML review report preview |
+| `GET` | `/api/reports/:id/export.html` | Download standalone HTML review report as an attachment (`Content-Disposition: attachment`) |
 | `GET` | `/api/pulls/:id/rule-results` | Fetch evaluation results for all rules applied to a PR |
+| `POST` | `/api/diagram/compile` | Compile D2 source code to SVG on demand (`d2Source`, optional `layout`: `tala`, `elk`, `dagre`) |
 
 ### 2.3 Rules & Triggers Management
 | Method | Path | Description |
@@ -52,7 +56,7 @@ This document catalogs the REST API provided by `kuramori`, interactive document
 | :--- | :--- | :--- |
 | `GET` | `/api/settings` | Get application settings (secrets masked) |
 | `POST` | `/api/settings` | Update settings (engine profiles, concurrency limits) |
-| `POST` | `/api/engines/:engine/test` | Test connectivity, version, or inference for a specific engine |
+| `POST` | `/api/engines/:engine/test` | Test connectivity, version, or inference for an engine type or profile ID (supports `model`, `effort`, `customEnv`) |
 
 ---
 

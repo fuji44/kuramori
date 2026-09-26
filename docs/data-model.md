@@ -43,7 +43,7 @@ erDiagram
         text id PK "UUID"
         text request_id FK
         text user_id
-        text status "pending | running | completed | failed"
+        text status "pending | queued | running | completed | failed"
         text engine "Profile ID or Engine Type (e.g., default-claude, antigravity)"
         text started_at
         text completed_at
@@ -56,7 +56,7 @@ erDiagram
     }
 
     review_reports {
-        text id PK "UUID"
+        text id PK "Format: report-<requestId>-<timestamp>"
         text job_id FK
         text request_id FK
         text user_id
@@ -148,7 +148,7 @@ stateDiagram-v2
 ```
 
 ### State Definitions
-- **`pending`**: Queued, awaiting an available concurrency slot (`globalMaxConcurrency`).
+- **`pending` / `queued`**: Enqueued, awaiting an available concurrency slot (`globalMaxConcurrency`).
 - **`running`**: Slot acquired; worktree initialized and AI inference executing.
 - **`completed`**: Inference succeeded, Gatekeeper verified, HTML/JSON reports generated, and rule results aggregated.
 - **`failed`**: Halted due to CLI error, timeout, or schema failure (details stored in `review_jobs.error` and `data/logs/<jobId>.log`).
@@ -163,8 +163,11 @@ Review artifacts are persisted in both the database and file storage (`LocalFile
    - Stores metadata (`verdict`, `summary`, finding counts).
    - Enables fast filtering, sorting, and dashboard querying.
 2. **File Storage (`data/reports/<reportId>.json`, `<reportId>.html`)**:
-   - Stores complete report structures with D2 vector SVG sources, CallFlow steps, and unified diff line markers.
-   - Provides standalone exportable HTML files.
+   - Stores complete report structures including:
+     - `appliedRules`: Structured execution summaries (ruleId, ruleName, category, verdict, summary, findingsCount, completedAt) for each applied rule.
+     - D2 vector SVG sources (module dependencies, blast radius, StepFlow).
+     - CallFlow steps and unified diff line markers.
+   - Provides standalone exportable HTML files (`<reportId>.html`).
 
 ---
 
@@ -206,7 +209,8 @@ flowchart LR
 - **`isDefault`**: Flag indicating the system-wide fallback profile when rules specify `engine = 'default'`.
 
 ### Resolution Strategy (`resolveRuleEngineProfile`)
-1. **Exact Profile ID match**: If `rule.engine` matches `profile.id` (e.g., `default-claude`), that profile is selected.
-2. **Engine Type match**: If `rule.engine` matches an `engineType` (e.g., `claude-code`), the matching profile (or its default instance) is selected.
-3. **Default Fallback**: If `rule.engine` is `'default'` or unspecified, the profile designated by `defaultEngineProfileId` (or `isDefault === true`) is used. When no engine profiles are defined yet, the system falls back to the system default engine (`settings.reviewEngine`, e.g., `antigravity`) and its base CLI settings.
-4. **Concurrency Tracking**: Regardless of whether a job was scheduled with a profile ID (`default-claude`) or a legacy engine name (`claude-code`), active concurrency slots are grouped and limited by the resolved `engineType`.
+1. **Active Profiles Requirement**: At least one active profile must be registered in settings. If no profiles exist, the queue throws an explicit error rather than silently executing unconfigured runners.
+2. **Exact Profile ID match**: If `rule.engine` matches `profile.id` (e.g., `default-claude`), that profile is selected.
+3. **Engine Type match**: If `rule.engine` matches an `engineType` (e.g., `claude-code`), the matching enabled profile (or its default instance) is selected.
+4. **Default Fallback**: If `rule.engine` is `'default'` or unspecified, the profile designated by `defaultEngineProfileId` (or `isDefault === true`) is used. If the referenced profile does not exist, an explicit error is thrown.
+5. **Concurrency Tracking**: Regardless of whether a job was scheduled with a profile ID (`default-claude`) or an engine name (`claude-code`), active concurrency slots are grouped and limited by the resolved `engineType`.

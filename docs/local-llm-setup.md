@@ -39,28 +39,31 @@ deno task verify:local-llm --url http://localhost:11434 --model ornith-1.5:9b
 ## 3. Running Reviews
 
 ### Standalone CLI Execution
+Pass `ANTHROPIC_BASE_URL` as an environment variable to point Claude Code to the local Ollama instance:
 ```bash
-deno task runner \
+ANTHROPIC_BASE_URL=http://localhost:11434 deno task runner \
   --repo <owner/repo> \
   --pr <number> \
   --engine claude-code \
-  --model ornith-1.5:9b \
-  --api-base-url http://localhost:11434
+  --model ornith-1.5:9b
 ```
 
 With max-turns limit:
 ```bash
-deno task runner \
+ANTHROPIC_BASE_URL=http://localhost:11434 deno task runner \
   --repo <owner/repo> \
   --pr <number> \
   --engine claude-code \
   --model ornith-1.5:9b \
-  --api-base-url http://localhost:11434 \
   --max-turns 15
 ```
 
 ### Web UI Configuration
 1. Open [http://localhost:3456](http://localhost:3456) in your browser.
-2. Navigate to **Settings** ➔ **AI Engines** ➔ **Claude Code**.
-3. Set **Model** to `ornith-1.5:9b` and **API Base URL** to `http://localhost:11434`.
-4. Trigger review from the Pull Request dashboard.
+2. Navigate to **Settings** ➔ **AI Execution Profiles**.
+3. Create or edit an Engine Profile using the **Claude Code** engine type.
+4. Set **Model** to `ornith-1.5:9b`.
+5. Under **Custom Environment Variables**, add:
+   - Key: `ANTHROPIC_BASE_URL`
+   - Value: `http://localhost:11434`
+6. Save the profile and assign it to your review rules or select it when triggering reviews from the Pull Request dashboard.

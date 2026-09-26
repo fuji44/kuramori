@@ -19,7 +19,7 @@ The codebase is organized as a Deno 2 monorepo workspace divided into two distin
 ```mermaid
 flowchart TD
     subgraph AppsArea["apps (Executable Targets)"]
-        ServerApp["apps/server<br>(Hono / Drizzle / Poller / Queue)"]
+        ServerApp["apps/server<br>(Hono / Drizzle / Poller / Queue / Aggregator)"]
         WebApp["apps/web<br>(Vite / React / UI)"]
     end
 
@@ -70,7 +70,7 @@ flowchart TB
 ```
 
 1. **Presentation Layer (`apps/web`)**: Visualizes PR status, review progress, and interactive reports with D2 diagrams and StepFlows.
-2. **Orchestration & Delivery Layer (`apps/server`)**: Monitors VCS, queues review jobs, coordinates concurrency, and delivers reports via REST API and OpenAPI.
+2. **Orchestration & Delivery Layer (`apps/server`)**: Monitors VCS, queues review jobs, coordinates concurrency, aggregates multi-rule results (verdict resolution, finding re-indexing, D2 diagram consolidation, `appliedRules`), and delivers reports via REST API and OpenAPI.
 3. **Review Execution Layer (`packages/runner`)**: Spawns isolated Git worktrees, collects context, executes AI review engines, runs Gatekeeper verification, and renders D2 diagrams.
 4. **Domain Layer (`packages/core`)**: Defines shared data structures, Zod 4 schemas, and boundary contracts.
 

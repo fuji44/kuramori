@@ -21,17 +21,18 @@ flowchart LR
 
 ---
 
-## 2. Path Matching Logic
+## 2. Path Matching Logic & Trigger Resolution
 
 Triggers are evaluated against PR changed files according to these precedence rules ([packages/runner/src/pipeline/rule-matcher.ts](packages/runner/src/pipeline/rule-matcher.ts)):
 
 1. **Repository Match**:
    - `trigger.repository` must match the PR's `owner/repo` exactly, or be the wildcard `*` (matching all repositories).
-2. **Ignore Filter (`pathsIgnore`)**:
-   - If a file matches any glob pattern in `pathsIgnore` (e.g., `**/*.test.ts`, `**/docs/**`), it is excluded from triggering.
-3. **Target Filter (`paths`)**:
-   - If `paths` is omitted or empty, all non-ignored files trigger the rule.
-   - If `paths` is defined, at least one non-ignored changed file must match a glob in `paths` (e.g., `apps/server/**`, `**/auth/**`).
+2. **Target Filter (`paths`)**:
+   - If `paths` is defined and non-empty, at least one changed file must match a glob in `paths` (e.g., `apps/server/**`, `**/auth/**`).
+3. **Ignore Filter (`pathsIgnore`)**:
+   - If `pathsIgnore` is defined and non-empty, the trigger is skipped only if **all** changed files match the ignore patterns (e.g., all changed files are `**/*.test.ts` or `**/docs/**`).
+4. **No Silent Fallback (Explicit Error on Empty Rules)**:
+   - When a PR has no matching rules or enabled triggers, the queue does not silently fall back to default rules. Instead, it throws an explicit error (`実行対象のレビュールールがありません`) to avoid running untracked or unwanted reviews.
 
 ---
 
@@ -64,12 +65,28 @@ Explicitly forbid review feedback that causes fatigue:
 
 ---
 
-## 4. Recommended Review Categories
+## 4. Built-in Preset Rules
 
-| Category | Typical Path Patterns | Key Verification Focus |
-| :--- | :--- | :--- |
-| **`security`** | `**/auth/**`, `**/api/**`, `**/server/**` | Authentication, authorization, IDOR, secrets leakage, input sanitization |
-| **`integrity`** | `**/db/**`, `**/schema/**`, `**/migrations/**` | Transaction boundaries, N+1 queries, schema backward compatibility |
-| **`correctness`** | `**/domain/**`, `**/services/**`, `**/core/**` | Business invariants, edge cases, caller regression, error handling |
-| **`architecture`** | `packages/**`, `apps/**` | Unidirectional layer dependencies, circular import prevention, module coupling |
-| **`frontend`** | `apps/web/**`, `**/components/**` | Unnecessary re-renders, accessibility, state synchronization races |
+The system pre-seeds three foundational rules designed with the 4-block layout:
+
+- **`preset-correctness`** (`correctness`): Verifies business invariants, boundary values, error propagation, and caller compatibility.
+- **`preset-security`** (`security`): Detects authentication/authorization gaps, injection vectors, credentials in code, and secret exposure.
+- **`preset-architecture`** (`architecture`): Enforces boundary contracts between packages and apps, detects circular imports, and verifies layer isolation.
+
+---
+
+## 5. Multi-Rule Aggregation & `appliedRules`
+
+When multiple rules match a PR, `kuramori` executes review jobs concurrently and aggregates the results through `Aggregator` ([apps/server/src/aggregator.ts](apps/server/src/aggregator.ts)):
+
+1. **Overall Verdict Resolution**: `REQUEST_CHANGES` > `COMMENT` > `APPROVE`. If any rule requests changes, the overall PR review requests changes.
+2. **Comment ID Renumbering**: Findings across all rules are merged and sequentially re-indexed (`C1`, `C2`, ...).
+3. **Structured `appliedRules` Record**: The resulting `ReviewReportData` preserves an `appliedRules` array summarizing each executed rule:
+   - `ruleId`: Unique ID of the rule.
+   - `ruleName`: Human-readable name.
+   - `category`: Rule category (`correctness`, `security`, `architecture`, etc.).
+   - `verdict`: Individual verdict produced by that rule.
+   - `summary`: Concise summary of rule findings.
+   - `findingsCount`: Number of comments/issues reported by that rule.
+   - `completedAt`: ISO 8601 completion timestamp.
+4. **Dashboard Badges**: The web UI displays interactive rule badges and individual summaries in the report header.
