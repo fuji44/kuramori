@@ -1,77 +1,102 @@
-# review-base
+# kuramori (蔵守)
 
-レビューコストを極力下げるための自動レビュー管理 Web サービス ＆ ランナー基盤（MVP）。
+> **Pre-emptive, deep AI code reviews before humans read the PR. Visualized with architectural D2 vector diagrams and structured actionable reports.**
 
-## 主な特徴
-
-- 🚀 **PR の自動検出**: `gh` CLI の認証を使い、自分がレビューを依頼されたオープン PR と、自分が作成したオープン PR を検出して管理。
-- 🔄 **ルールベースのレビュー実行**: PR や変更ファイルに応じてルールを選び、ジョブキューで並列数を制御しながらレビューを実行。
-- 🛠️ **分離されたレビューランナー**: 一時 Git worktree を作成・クリーンアップし、メインの作業ツリーから分離して AI レビューを実行。
-- 🧩 **実行先をプロファイルで管理**: Claude Code、Antigravity、Codex の実行設定をプロファイルとして登録し、レビューに使う実行先を選択。
-- 🖥️ **レビュー管理 Web UI**: PR のレビュー状態を確認し、生成されたレポートをアプリ内で表示。
+`kuramori` is an automated code review platform that monitors GitHub Pull Requests, launches autonomous AI agents (Claude Code, Google Antigravity, OpenAI Codex, Local LLMs) inside isolated Git worktrees, and serves structured review reports with interactive dependency diagrams and StepFlows.
 
 ---
 
-## プロジェクト構成
+## 🌟 Key Features
+
+- 🚀 **Pre-emptive PR Detection**: Uses `gh` CLI credentials to automatically track and triage open review requests and your own PRs in the background.
+- 🛡️ **Isolated Git Worktrees**: Spawns isolated Git worktrees to prevent dirtying your working tree, guaranteeing safe execution and automatic cleanup.
+- 🎯 **Path-Specific Review Rules & Triggers**: Flexible rule definitions triggered by file paths (Glob) and PR events. Standardized 4-block prompts eliminate noise and enforce actionable suggestions.
+- 🧩 **Multi-Engine Orchestration & Profile Management**:
+  - **Claude Code** (`claude -p`)
+  - **Google Antigravity** (`agy`)
+  - **OpenAI Codex** (`codex exec`)
+  - **Local LLMs** (Direct Ollama connection: `ornith-1.5:9b`, etc.)
+  - **Mock Engine** (Instant simulation for testing and verification)
+- 📊 **Visualized Architectural Reports (D2)**: Goes beyond superficial diffs. Automatically renders module relationships, blast radius, and StepFlows using high-fidelity D2 vector diagrams.
+- 🖥️ **Interactive Web Dashboard**: GitHub-style search queries, contextual autocompletion, real-time job execution logs, and inline HTML report viewing.
+- 📖 **OpenAPI 3.1 & Scalar Documentation**: Built-in interactive API reference (`/api/doc`) for dynamic self-discovery and control by AI coding agents.
+
+---
+
+## 🏗️ Project Structure
 
 ```text
-review-base/
-├── deno.json              # Deno 2 ルートワークスペース定義
+kuramori/
+├── deno.json              # Deno 2 workspace root configuration
+├── AGENTS.md              # Operational constitution for AI coding agents
 ├── packages/
-│   ├── core/              # ドメイン型・VCSProvider / ReviewEngine / ReportStorage 抽象IF
-│   └── runner/            # レビュー実行 CLI (Deno/TS, 単一バイナリ化可能)
+│   ├── core/              # Domain entities, schemas, and boundary interfaces
+│   └── runner/            # Review execution CLI & engine harnesses
 ├── apps/
-│   ├── server/            # Hono Web サーバー, Drizzle ORM (SQLite), Poller & ジョブキュー
-│   └── web/               # Vite + React + Tailwind CSS + Lucide Icons ダッシュボード
-└── data/                  # SQLite DB (review-base.db), 生成された HTML レポート
+│   ├── server/            # Hono server, Drizzle ORM (SQLite), Poller & Queue
+│   └── web/               # Vite + React + Tailwind CSS + Lucide dashboard
+├── docs/                  # Project specifications & architecture (SSOT)
+└── data/                  # SQLite DB (kuramori.db), review reports, job logs
 ```
 
 ---
 
-## 使い方
+## 🚀 Quickstart
 
-### 1. サービスの起動（ワンコマンド）
+### 1. Launch Service (One Command)
 
 ```bash
-# Web フロントエンドのビルド
+# Build frontend web assets
 deno task build
 
-# サーバー・常駐ワーカーの起動
+# Start backend server and background workers
 deno task start
 ```
 
-ブラウザで [http://localhost:3456](http://localhost:3456) を開きます。
+Open [http://localhost:3456](http://localhost:3456) in your browser.
+Interactive API documentation is available at [http://localhost:3456/api/doc](http://localhost:3456/api/doc).
 
-### 2. 開発モード
+### 2. Development Mode
 
 ```bash
-# バックエンドサーバーの監視起動
+# Start backend server with file watcher
 deno task dev:server
 
-# フロントエンド Vite HMR サーバーの起動
+# Start frontend Vite HMR development server
 deno task dev:web
 ```
 
-### 3. レビューランナーの単体実行 (CLI)
+### 3. Standalone Review Runner (CLI)
 
 ```bash
-# スクリプト直接実行
+# Direct task execution
 deno task runner --repo owner/repo --pr 1234
 
-# または単一バイナリのビルド
+# Or build single binary executable
 deno task --cwd packages/runner compile
-./packages/runner/bin/review-runner --repo owner/repo --pr 1234
+./packages/runner/bin/kuramori --repo owner/repo --pr 1234
 ```
 
-### 4. ローカル LLM（Ollama 等）での実行
-
-RTX 5080（16GB VRAM）等のローカル GPU 環境で `ornith-1.5:9b` などのオープンソースモデルを用いてレビューを実行できます。
-詳細は [ローカル LLM 連携ガイド](docs/local-llm-setup.md) をご覧ください。
+### 4. Quality Verification
 
 ```bash
-# 推論エンドポイントの接続確認（Ollama 直結）
-deno task verify:local-llm --url http://localhost:11434 --model ornith-1.5:9b
+# TypeScript type check
+deno task check
 
-# ローカル推論サーバーを指定してレビュー実行
-deno task runner --repo owner/repo --pr 1234 --engine claude-code --model ornith-1.5:9b --api-base-url http://localhost:11434
+# Execute full test suite
+deno task test
 ```
+
+---
+
+## 📚 Documentation Index
+
+All architectural guidelines and domain specifications are cataloged in [docs/README.md](docs/README.md).
+
+- **[Core Concepts & Background](docs/concept.md)**: Product philosophy, problems solved, and pre-emptive review model.
+- **[Architecture Design](docs/architecture.md)**: Monorepo boundaries, 4-tier layer responsibilities, and boundary contracts.
+- **[Data Model](docs/data-model.md)**: SQLite database schema, entity relationships, and job lifecycle.
+- **[AI Engine Specifications](docs/engines.md)**: Harness execution for Claude Code, Antigravity, Codex, and local LLMs.
+- **[Rules & Triggers Guide](docs/rules-and-triggers.md)**: Glob path matching, 4-block instructions, and noise filtering.
+- **[REST API Reference](docs/api.md)**: Endpoint catalog, OpenAPI 3.1 specification, and Scalar docs.
+- **[Operations & Troubleshooting](docs/operations.md)**: Service management, log inspection, and worktree cleanup.

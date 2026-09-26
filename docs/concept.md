@@ -1,65 +1,52 @@
-# コンセプト仕様書
+# Concept Specification (kuramori)
 
-## 1. 背景と課題
+## 1. Background & Problem Statement
 
-ソフトウェア開発においてコードレビューは品質担保の要だが、レビュー担当者には以下の運用上の負荷が存在する。
+Code reviews are essential for software quality, but reviewers face several operational burdens:
 
-1. **レビュー順序の判断コスト**: 複数のレビュー依頼が同時に存在する場合、どれから着手すべきか（差分量、更新日時、ブロッカー度など）を判断する手間が生じる。
-2. **関連 PR の文脈・前後関係の把握コスト**: 依存し合う複数の PR（スタック PR や関連機能の分割 PR）をレビューする際、全体の依存関係や変更順序の把握に時間がかかる。
-3. **単一 PR のレビュー時間**: 差分を細部まで読み解き、仕様や設計の妥当性を検証する行為そのものに時間がかかる。
-4. **AI レビューの実行・管理の手間**: AI エージェントによる一次レビューや HTML レポート生成スキルが存在しても、実行を手動でトリガーしたり、特定の PR に対してレポートが作成済みかを確認したりする管理コストが残り、十分に活用されない。
+1. **Review Prioritization Overhead**: When multiple review requests arrive simultaneously, deciding which one to tackle first (based on diff size, update time, or blocker severity) requires non-trivial manual effort.
+2. **Context & Dependency Grasping**: Reviewing interdependent PRs (stacked PRs or split feature branches) requires significant time to trace dependencies and sequence.
+3. **Single PR Review Time**: Reading diffs thoroughly to verify logic, specification alignment, and architectural invariants is inherently time-consuming.
+4. **Friction in Running AI Reviews**: Even when automated review prompts exist, manually triggering them and tracking whether reports have been generated for specific PRs adds administrative friction, preventing widespread adoption.
 
-## 2. 目的
+---
 
-レビュー担当者のコストを最小化するため、レビュー依頼の検知から AI レビューの先行実行、レポート生成、ダッシュボードでの可視化を一気通貫で自動化する Web サービスおよびランナー基盤を提供する。
+## 2. Objective
 
-## 3. コアコンセプト
+To minimize human review costs, `kuramori` provides an integrated web platform and runner system that automates the entire lifecycle: detecting review requests, pre-emptively executing AI reviews in isolated environments, generating structured reports with architectural diagrams, and presenting them via an intuitive dashboard.
 
-### 3.1 キューイング制御（自動 / 手動切替）
-ユーザー宛てのオープンなレビュー依頼をバックグラウンドで自動検知し、未レビューの PR を管理する。
-ダッシュボード上のトグルスイッチまたは設定により、以下のモードを自在に切り替えられる：
-- **自動キューイング (ON)**: PR 検知時に即座にレビューキューへ自動投入し、バックグラウンドで順次レビューを実行する。
-- **手動キューイング (OFF)**: PR は一覧に「未レビュー」として収集・可視化されるのみとし、ユーザーが画面上の「レビュー開始」ボタンを押した任意のタイミングでキューに投入する。安全に確認しながら進めたい場合や LLM リソースを節約したい場合に最適。
+---
 
-### 3.2 独立したレビューランナーと作業ツリー分離
-レビュー実行時にユーザーのローカル作業ツリーやブランチを汚さないよう、専用の一時 Git worktree を自動生成して分離された環境でレビューを実行し、完了後に安全にクリーンアップする。ランナーは単一バイナリとしてコンパイル可能であり、Web サービス経由でもターミナル単体でも同一の挙動を保証する。
+## 3. Core Concepts
 
-### 3.3 抽象化による拡張性
-- **VCS 抽象化 (`VCSProvider`)**: GitHub 前提で開始するが、GitLab や Pure Git（ローカル Git リポジトリのみ）への差し替えが可能なインターフェース境界を定義する。
-- **レビューエンジン抽象化 (`ReviewEngine`)**: 
-  - `antigravity`: Google Antigravity CLI (`agy`) による非対話 autopilot 実行
-  - `claude-code`: Claude Code CLI (`claude -p`) による autopilot 実行
-  - `mock`: 高速テスト・動作確認用のダミー生成
-  - UI の設定画面からいつでもエンジンを動的に切り替え可能。将来的な LLM API 直接呼び出しエンジンへの移行も容易。
-- **レポートストレージ抽象化 (`ReportStorage`)**: ローカルファイルシステムから S3 / Cloud Storage 等のオブジェクトストレージへの透過的な移行を可能にする。
+### 3.1 Flexible Queueing Modes (Auto vs. Manual)
+Detects open review requests assigned to the user in the background. Users can toggle between two modes:
+- **Auto Queueing (ON)**: Enqueues detected PRs immediately and executes reviews sequentially in the background.
+- **Manual Queueing (OFF)**: Pull requests are collected and displayed as "Unreviewed" on the dashboard; reviews are queued only when the user explicitly clicks "Run Review". Ideal for controlled token consumption and cautious workflows.
 
-### 3.4 シームレスなプレビュー体験 ＆ インテリジェントクエリ検索
-- **GitHub風クエリ構文による即時フィルタ**: 
-  - `author:<username>` (作成者で絞り込み)
-  - `repo:<repository>` (リポジトリで絞り込み)
-  - `is:draft` / `-is:draft` (ドラフトPR / 通常PR)
-  - `is:reviewed` / `is:unreviewed` (AIレビュー完了 / 未完了)
-  - `status:running` / `status:failed` (ジョブ状態)
-  - 自由キーワード検索（タイトル、PR番号、ブランチ名）
-- **コンテキスト連動型動的サジェスト**:
-  - 検索窓フォーカス時や入力トークン（`author:`, `repo:`, `is:` 等）に応じて、現在画面に存在する実際のユーザー名やリポジトリ名がドロップダウン候補として即座に表示される。
-  - キーボード操作（`↓` `↑` 移動、`Tab` / `Enter` 確定、`Esc` 閉じる）に完全対応。
-- **インラインレポート閲覧**:
-  - レビュー依頼 PR 一覧と、生成された HTML レポートのインラインプレビューを統合した 2 ペイン構成の Web ダッシュボード。コンテキストを切り替えることなく、素早く内容を確認できる。
+### 3.2 Isolated Review Runner & Worktree Separation
+To prevent polluting the user's local working directory, `kuramori` spawns an isolated temporary Git worktree for each review run and reliably cleans it up upon completion. The runner can be compiled into a standalone binary, ensuring identical behavior via the web server or terminal CLI.
 
-## 4. MVP のスコープ境界
+### 3.3 Extensibility through Abstraction
+- **VCS Abstraction (`VCSProvider`)**: Begins with GitHub (`gh` CLI zero-config auth) but provides clean boundaries for GitLab or pure local Git repositories.
+- **Engine Abstraction (`ReviewEngine`)**:
+  - `antigravity`: Google Antigravity CLI (`agy`) non-interactive execution.
+  - `claude-code`: Claude Code CLI (`claude -p`) execution.
+  - `codex`: OpenAI Codex CLI (`codex exec`) in secure sandboxes.
+  - `mock`: Instant simulation for testing.
+  - Easily switch engines dynamically via settings or per-rule configuration.
+- **Report Storage Abstraction (`ReportStorage`)**: Enables seamless migration from local filesystem storage to S3 or Google Cloud Storage.
 
-### MVP に含むもの
-- GitHub からの自分宛てレビュー依頼（`review-requested:@me`）の自動検出（`gh` CLI によるゼロコンフィグ認証）
-- SQLite による PR メタデータ、レビュージョブ、レポート情報の永続化
-- 並列数制御（concurrency: 1）を備えたバックグラウンドジョブキュー
-- 一時 Git worktree の自動生成と安全なクリーンアップ
-- 既存の autopilot スキルを呼び出すレビューエンジンの実行
-- 生成された HTML レポートの保存と配信
-- Web ダッシュボード（PR 一覧、ステータスバッジ、レポートのインラインプレビュー、別タブ展開、手動再実行）
-
-### 将来フェーズに回すもの
-- PR 間の派生関係・スタック依存関係の自動ツリー可視化
-- 変更規模や依存関係に基づく優先度自動スコアリング
-- GitLab / Pure Git アダプタの実装
-- クラウド・サーバーデプロイ（マルチテナント認証、GitHub App / Webhook 連携、S3 ストレージ連携）
+### 3.4 Seamless Preview & Intelligent Search Queries
+- **GitHub-Style Query Syntax**:
+  - `author:<username>`
+  - `repo:<repository>`
+  - `is:draft` / `-is:draft`
+  - `is:reviewed` / `is:unreviewed`
+  - `status:running` / `status:failed`
+  - Free-text search (title, PR number, branch name)
+- **Context-Aware Dynamic Suggestions**:
+  - Displays instant dropdown suggestions matching existing usernames and repositories when typing qualifiers (`author:`, `repo:`, `is:`).
+  - Full keyboard navigation support (`↓`, `↑`, `Tab`, `Enter`, `Esc`).
+- **Inline Report Viewing**:
+  - Integrated two-pane web dashboard combining PR list with interactive reports (D2 diagrams, StepFlows, and code diffs) to eliminate context switching.
