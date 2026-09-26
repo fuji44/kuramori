@@ -497,15 +497,27 @@ export default function App() {
           <DashboardView
             items={items}
             settings={settings}
-            onNavigateToReviews={(anchorId) => {
-              if (typeof anchorId === 'string' && anchorId.trim() !== '') {
-                navigateTo(`/pulls#${anchorId}`);
+            rules={rules}
+            triggers={triggers}
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            onNavigateToReviews={(filterOrAnchorId) => {
+              if (
+                filterOrAnchorId?.startsWith('is:') ||
+                filterOrAnchorId?.startsWith('status:') ||
+                filterOrAnchorId?.startsWith('repo:')
+              ) {
+                navigate({ view: 'reviews', params: { q: filterOrAnchorId } });
+              } else if (typeof filterOrAnchorId === 'string' && filterOrAnchorId.trim() !== '') {
+                navigateTo(`/pulls#${filterOrAnchorId}`);
               } else {
                 navigate({ view: 'reviews', params: {} });
               }
             }}
             onNavigateToReports={() => navigate({ view: 'reports' })}
             onSelectReport={(reportId) => navigate({ view: 'report', reportId })}
+            onNavigateToSettings={(subview) => navigate({ view: 'settings', subview: subview ?? 'general' })}
+            onOpenLog={openJobLog}
           />
         )}
 
