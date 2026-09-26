@@ -50,6 +50,23 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
     const poller = new GitHubPoller(mockVcs, db, queue, settingsService);
     const api = createApi({ db, storage, poller, queue, settingsService });
 
+    // Test OpenAPI and Swagger UI endpoints
+    const resOpenApi = await api.request('/api/openapi.json');
+    assertEquals(resOpenApi.status, 200);
+    const openapiJson = await resOpenApi.json();
+    assertEquals(openapiJson.openapi, '3.1.0');
+    assertEquals(Boolean(openapiJson.paths['/api/rules']), true);
+    assertEquals(Boolean(openapiJson.paths['/api/triggers']), true);
+
+    const resDoc = await api.request('/api/doc');
+    assertEquals(resDoc.status, 200);
+    const docHtml = await resDoc.text();
+    assertEquals(docHtml.includes('swagger-ui'), true);
+
+    // Test redirect from legacy /openapi.json
+    const resLegacyRedirect = await api.request('/openapi.json');
+    assertEquals(resLegacyRedirect.status, 302);
+
     const emptyFiltersResponse = await api.request('/api/pulls/filters');
     assertEquals(emptyFiltersResponse.status, 200);
     assertEquals((await emptyFiltersResponse.json()).filters.length, 0);
