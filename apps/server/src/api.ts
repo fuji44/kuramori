@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { desc, eq } from 'drizzle-orm';
-import { resolve } from 'node:path';
+import { resolve } from '@std/path';
 import type { AppDatabase } from './db/index.ts';
 import { pullFiltersTable, reviewJobsTable, reviewReportsTable, reviewRequestsTable, reviewRulesTable, reviewRuleResultsTable, reviewTriggersTable } from './db/schema.ts';
 

@@ -1,4 +1,4 @@
-import { assertEquals } from 'jsr:@std/assert@^1.0.11';
+import { assertEquals } from '@std/assert';
 import { filterByGitHubQuery } from './query-parser.ts';
 
 const testItems = [

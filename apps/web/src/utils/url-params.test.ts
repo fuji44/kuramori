@@ -1,4 +1,4 @@
-import { assertEquals } from 'jsr:@std/assert@^1.0.11';
+import { assertEquals } from '@std/assert';
 import { buildUrlSearch, parseUrlParams } from './url-params.ts';
 
 Deno.test('url-params - parseUrlParams parses query string accurately', () => {

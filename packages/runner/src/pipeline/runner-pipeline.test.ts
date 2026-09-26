@@ -1,4 +1,4 @@
-import { assertEquals } from 'jsr:@std/assert';
+import { assertEquals } from '@std/assert';
 import { extractChangedFilesFromDiff, buildReviewPrompt, executePostFlight } from './runner-pipeline.ts';
 
 Deno.test('extractChangedFilesFromDiff - correctly extracts modified file paths', () => {

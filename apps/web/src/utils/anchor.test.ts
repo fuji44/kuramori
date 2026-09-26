@@ -1,4 +1,4 @@
-import { assertEquals } from 'jsr:@std/assert@^1.0.11';
+import { assertEquals } from '@std/assert';
 import { getPrAnchorId } from './anchor.ts';
 
 Deno.test('anchor - getPrAnchorId formats slugified anchor id', () => {

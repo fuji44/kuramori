@@ -1,4 +1,4 @@
-import { join, resolve } from 'node:path';
+import { join, resolve } from '@std/path';
 import type { ReportStorage } from '../interfaces/report-storage.ts';
 import type { ReviewReportData } from '../schema/review-report.ts';
 

@@ -1,4 +1,4 @@
-import { globToRegExp } from 'jsr:@std/path/glob-to-regexp';
+import { globToRegExp } from '@std/path';
 import type { ReviewRule, ReviewTrigger } from '@kuramori/core';
 
 export interface PrEvaluationEvent {

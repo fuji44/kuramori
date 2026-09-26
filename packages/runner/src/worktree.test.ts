@@ -1,5 +1,5 @@
-import { assertEquals } from 'jsr:@std/assert@^1.0.11';
-import { join } from 'node:path';
+import { assertEquals } from '@std/assert';
+import { join } from '@std/path';
 import { WorktreeManager } from './worktree.ts';
 
 Deno.test('WorktreeManager - prepareWorktree and cleanup with local bare repo', async () => {

@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "exports": "./src/index.ts",
   "imports": {
-    "@kuramori/core": "../core/src/index.ts"
+    "@kuramori/core": "../core/src/index.ts",
+    "@d2lang/d2": "npm:@d2lang/d2@^0.1.34"
   },
   "tasks": {
     "compile": "deno compile --allow-all -o bin/kuramori src/cli.ts"

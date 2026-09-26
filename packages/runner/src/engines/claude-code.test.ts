@@ -1,4 +1,4 @@
-import { assertEquals } from 'jsr:@std/assert';
+import { assertEquals } from '@std/assert';
 import { ClaudeCodeEngine } from './claude-code.ts';
 
 Deno.test('ClaudeCodeEngine - initializes with connection and turn options', () => {

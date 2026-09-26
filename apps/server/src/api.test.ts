@@ -1,4 +1,4 @@
-import { assertEquals } from 'jsr:@std/assert@^1.0.11';
+import { assertEquals } from '@std/assert';
 import { createDb, initDatabase } from './db/index.ts';
 import { reviewRequestsTable, reviewReportsTable, reviewJobsTable } from './db/schema.ts';
 import { createApi } from './api.ts';

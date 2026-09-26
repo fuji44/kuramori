@@ -1,4 +1,4 @@
-import { assertEquals } from 'jsr:@std/assert@^1.0.11';
+import { assertEquals } from '@std/assert';
 import { parseRoute, buildRouteUrl } from './route.ts';
 
 Deno.test('route - parseRoute identifies dashboard path', () => {

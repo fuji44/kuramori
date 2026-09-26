@@ -1,5 +1,5 @@
-import { assertEquals } from 'jsr:@std/assert@^1.0.11';
-import { join } from 'node:path';
+import { assertEquals } from '@std/assert';
+import { join } from '@std/path';
 import { LocalFileReportStorage } from './local-storage.ts';
 
 Deno.test('LocalFileReportStorage - save, retrieve and check existence', async () => {

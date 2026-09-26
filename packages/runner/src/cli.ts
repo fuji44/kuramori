@@ -1,5 +1,5 @@
-import { parseArgs } from 'jsr:@std/cli@^1.0.9/parse-args';
-import { join, resolve } from 'node:path';
+import { parseArgs } from '@std/cli/parse-args';
+import { join, resolve } from '@std/path';
 import { WorktreeManager } from './worktree.ts';
 import { ClaudeCodeEngine } from './engines/claude-code.ts';
 import { AntigravityEngine } from './engines/antigravity.ts';

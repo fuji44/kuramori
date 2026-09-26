@@ -1,5 +1,5 @@
-import { assertEquals, assertStringIncludes } from 'jsr:@std/assert';
-import { join } from 'node:path';
+import { assertEquals, assertStringIncludes } from '@std/assert';
+import { join } from '@std/path';
 import { CodexEngine } from './codex.ts';
 
 Deno.test('CodexEngine - runs exec with structured output, profile options, and profile environment', async () => {

@@ -1,5 +1,5 @@
 import type { Diagram, DiagramNode, DiagramEdge } from '@kuramori/core';
-import { D2 } from 'npm:@d2lang/d2';
+import { D2 } from '@d2lang/d2';
 
 /**
  * D2 ソースコードを JS ラッパー (@d2lang/d2) を使ってインメモリ SVG にコンパイルする

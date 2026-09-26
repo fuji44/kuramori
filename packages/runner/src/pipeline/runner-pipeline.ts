@@ -1,5 +1,4 @@
-import { join, dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { dirname, fromFileUrl, join, resolve } from '@std/path';
 import {
   type ReviewExecutionContext,
   type ReviewExecutionResult,
@@ -19,7 +18,7 @@ import {
 import { compileD2ToSvg, generateD2FromDiagram } from '../diagram/d2-compiler.ts';
 import { generateStandaloneReviewHtml } from '../report/html-generator.ts';
 
-const __filename = fileURLToPath(import.meta.url);
+const __filename = fromFileUrl(import.meta.url);
 const __dirname = dirname(__filename);
 const SKILL_MD_PATH = join(__dirname, '../../skills/pr-review/SKILL.md');
 

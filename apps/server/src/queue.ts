@@ -1,5 +1,5 @@
 import { eq, or, and } from 'drizzle-orm';
-import { join, resolve } from 'node:path';
+import { join, resolve } from '@std/path';
 import type { AppDatabase } from './db/index.ts';
 import {
   reviewJobsTable,

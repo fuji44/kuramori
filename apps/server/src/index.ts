@@ -1,6 +1,5 @@
 import { Hono } from 'hono';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { dirname, fromFileUrl, join, resolve } from '@std/path';
 import { createDb, initDatabase } from './db/index.ts';
 import { LocalFileReportStorage, GitHubProvider } from '@kuramori/core';
 import { ReviewQueue } from './queue.ts';
@@ -34,7 +33,7 @@ async function bootstrap() {
   // Mount API
   app.route('/', api);
 
-  const webDistPath = fileURLToPath(new URL('../../web/dist', import.meta.url));
+  const webDistPath = fromFileUrl(new URL('../../web/dist', import.meta.url));
 
   // Serve static UI assets if built
   try {

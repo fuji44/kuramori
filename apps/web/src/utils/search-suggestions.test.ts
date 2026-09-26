@@ -1,4 +1,4 @@
-import { assertEquals, assert } from 'jsr:@std/assert';
+import { assertEquals, assert } from '@std/assert';
 import { getSearchSuggestions, ALL_BASE_SUGGESTIONS } from './search-suggestions.ts';
 
 Deno.test('getSearchSuggestions - returns all base suggestions when token is empty', () => {

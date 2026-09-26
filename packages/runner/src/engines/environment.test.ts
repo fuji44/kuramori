@@ -1,4 +1,4 @@
-import { assertEquals } from 'jsr:@std/assert';
+import { assertEquals } from '@std/assert';
 import { resolveEngineEnvironment } from './environment.ts';
 
 Deno.test('resolveEngineEnvironment - layers profile values over inherited and engine defaults', () => {

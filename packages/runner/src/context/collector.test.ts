@@ -1,4 +1,4 @@
-import { assertEquals } from "jsr:@std/assert";
+import { assertEquals } from "@std/assert";
 import { extractIssueReferences } from "./collector.ts";
 
 Deno.test("extractIssueReferences - extracts full GitHub issue URLs", () => {

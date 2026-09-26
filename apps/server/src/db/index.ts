@@ -1,6 +1,6 @@
 import { createClient } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';
-import { dirname } from 'node:path';
+import { dirname } from '@std/path';
 import * as schema from './schema.ts';
 
 export function createDb(dbUrl: string = 'file:data/kuramori.db') {
