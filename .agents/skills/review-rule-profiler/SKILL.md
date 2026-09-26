@@ -18,7 +18,7 @@ allowed-tools:
 
 ## Overview
 
-This skill autonomously profiles a target repository's codebase (languages, runtimes, frameworks, directory layout, configurations, and existing conventions) and generates **path-specific review rules (`ReviewRule`)** and **binding triggers (`ReviewTrigger`)** optimized for **review-base**.
+This skill autonomously profiles a target repository's codebase (languages, runtimes, frameworks, directory layout, configurations, and existing conventions) and generates **path-specific review rules (`ReviewRule`)** and **binding triggers (`ReviewTrigger`)** registered directly into **review-base via its REST API**.
 
 Following market best practices (inspired by CodeRabbit's `path_instructions`, Qodo/PR-Agent, and Anthropic's agent skills), it avoids vague one-sentence prompts. Instead, it generates structured, multi-dimensional instructions tailored to specific file paths (`glob`), complete with key failure modes, active verification protocols, and strict noise filters.
 
@@ -28,25 +28,50 @@ Following market best practices (inspired by CodeRabbit's `path_instructions`, Q
 
 ---
 
-## Workflow (5 Phases)
+## Workflow (6 Phases)
 
 ```
+[Phase 0: Target Resolution & Context Alignment (User Confirmation)]
+                                 ↓
 [Phase 1: Detect Tech Stack & Directory Architecture]
-                         ↓
+                                 ↓
 [Phase 2: Extract Existing Invariants & Conventions]
-                         ↓
+                                 ↓
 [Phase 3: Map Path-Based Rules & Review Categories]
-                         ↓
+                                 ↓
 [Phase 4: Synthesize 4-Block Structured Instructions]
-                         ↓
-[Phase 5: Validate Against JSON Schema & Output]
+                                 ↓
+[Phase 5: Validate & Register via review-base REST API]
 ```
+
+---
+
+## Phase 0: Target Resolution & Context Alignment
+
+Do NOT blindly assume the target repository. Match the user's intent against one of the following patterns, identify the target repository identifier and local filesystem path, and **confirm with the user before proceeding to Phase 1**:
+
+### Recognized Target Patterns
+
+1. **Current Working Directory (CWD)**:
+   - *Example user phrasing*: "Create rules for this repository", "Analyze current directory".
+   - *Resolution*: Use current working directory as the target path. Resolve `owner/repo` from `git remote get-url origin` or project manifests.
+2. **Specific GitHub Repository (`owner/repo`)**:
+   - *Example user phrasing*: "Create rules for github.com/foo/bar", "Set up review rules for org/service-b".
+   - *Resolution*: Check if a local clone exists (e.g., in adjacent directories or cache). If found, use that path; if not, ask the user for the local path or permission to clone/read.
+3. **Review-Requested PR Repository**:
+   - *Example user phrasing*: "Create rules for the repo I was asked to review", "Match the repository of PR #123".
+   - *Resolution*: Query review-base API (`GET /api/pulls`) or `gh pr list` to identify the repository name and worktree path.
+4. **Explicit Local Path**:
+   - *Example user phrasing*: "Profile `/path/to/another-project`".
+   - *Resolution*: Use the specified filesystem path directly.
+
+> **Confirmation Step**: State the resolved repository identifier (e.g., `luupsc/luup-server`) and directory path (e.g., `/home/user/git/luup-server`) to the user. Proceed to Phase 1 once aligned.
 
 ---
 
 ## Phase 1: Detect Tech Stack & Directory Architecture
 
-Inspect the target repository root to identify runtime, tools, and structural boundaries:
+Inspect the confirmed target directory to identify runtime, tools, and structural boundaries:
 
 1. **Manifests & Monorepo Structure**:
    - Check `deno.json`, `package.json`, `pnpm-workspace.yaml`, `go.mod`, `Cargo.toml`, `pyproject.toml`, etc.
@@ -66,7 +91,7 @@ Inspect the target repository root to identify runtime, tools, and structural bo
 
 ## Phase 2: Extract Existing Invariants & Conventions
 
-Search existing project documentation and configuration files for team-specific constraints:
+Search existing project documentation and configuration files inside the target directory for team-specific constraints:
 
 1. **Documentation Search**:
    - `README.md`, `CONTRIBUTING.md`, `ARCHITECTURE.md`, `docs/**/*.md`
@@ -126,23 +151,60 @@ Explicitly forbid review feedback that causes fatigue:
 
 ---
 
-## Phase 5: Validate Against JSON Schema & Output
+## Phase 5: Dynamic API Discovery & Registration via review-base OpenAPI
 
-Before presenting the result, strictly validate the generated payload against [references/output-schema.json](references/output-schema.json).
+Direct registration into review-base using live OpenAPI specifications is the **primary operating mode**.
 
-### Validation Checklist
-- [ ] Root object adheres to [references/output-schema.json](references/output-schema.json).
-- [ ] Each rule `id` matches `^rule-[a-z0-9_-]+$` (e.g., `rule-luup-api-security`).
-- [ ] Each trigger `id` matches `^trigger-[a-z0-9_-]+$` (e.g., `trigger-luup-api`).
-- [ ] `instructions` contains all 4 standard blocks (`SCOPE`, `KEY SMELLS`, `VERIFICATION PROTOCOL`, `NOISE FILTER`).
-- [ ] `triggerJson` is valid JSON and mirrors the trigger configuration.
-- [ ] `pathsIgnore` properly excludes test and fixture patterns.
+### 1. Dynamic OpenAPI Specification Discovery
+Before dispatching requests, inspect the running review-base instance to discover exact endpoint contracts and schema definitions:
+```bash
+curl -s "${REVIEW_BASE_URL:-http://localhost:3456}/api/openapi.json"
+```
+- Verify the server is online and inspect `paths['/api/rules'].post` and `paths['/api/triggers'].post`.
+- Note expected input schemas (`components.schemas.CreateRuleInput` and `components.schemas.CreateTriggerInput`).
 
-### Output Presentation
-Present the final valid JSON to the user, and explain how to apply it:
-1. **Web UI**: Paste into review-base Settings (Rules / Triggers).
-2. **REST API**:
+### 2. Schema Validation
+Ensure the synthesized payload conforms to both the live OpenAPI spec and [references/output-schema.json](references/output-schema.json):
+- Root object contains `repository`, `rules`, and `triggers`.
+- Rule IDs match `^rule-[a-z0-9_-]+$`.
+- Trigger IDs match `^trigger-[a-z0-9_-]+$`.
+- `instructions` contains all 4 standard blocks.
+
+### 3. API Registration Execution
+Post each rule and trigger using the contracts retrieved from OpenAPI:
+
+1. **Register Rules (`POST /api/rules`)**:
+   Iterate over each rule in `rules` and POST the payload:
    ```bash
-   curl -X POST http://localhost:3456/api/rules -H "Content-Type: application/json" -d '<RULE_JSON>'
-   curl -X POST http://localhost:3456/api/triggers -H "Content-Type: application/json" -d '<TRIGGER_JSON>'
+   curl -s -X POST "${REVIEW_BASE_URL:-http://localhost:3456}/api/rules" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "id": "rule-...",
+       "name": "...",
+       "description": "...",
+       "category": "...",
+       "instructions": "...",
+       "trigger": { ... },
+       "enabled": true
+     }'
    ```
+2. **Register Triggers (`POST /api/triggers`)**:
+   Iterate over each trigger in `triggers` and POST the payload:
+   ```bash
+   curl -s -X POST "${REVIEW_BASE_URL:-http://localhost:3456}/api/triggers" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "id": "trigger-...",
+       "name": "...",
+       "repository": "owner/repo",
+       "paths": [...],
+       "pathsIgnore": [...],
+       "ruleIds": ["rule-..."],
+       "enabled": true
+     }'
+   ```
+
+### 4. Verification & Fallback
+- Verify the HTTP status code (200 / 201). If review-base returns success, report the newly registered rules and triggers with their IDs.
+- Inform the user that registered rules and live OpenAPI docs can be inspected in the browser at `${REVIEW_BASE_URL:-http://localhost:3456}/api/doc` (Swagger UI).
+- If the review-base server is currently offline or unreachable, output the validated JSON along with the exact `curl` commands so the user can register them once the server is up.
