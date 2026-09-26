@@ -35,30 +35,50 @@ async function bootstrap() {
 
   const webDistPath = fromFileUrl(new URL('../../web/dist', import.meta.url));
 
+  const MIME_TYPES: Record<string, string> = {
+    css: 'text/css; charset=utf-8',
+    js: 'application/javascript; charset=utf-8',
+    svg: 'image/svg+xml',
+    png: 'image/png',
+    ico: 'image/x-icon',
+    json: 'application/json',
+    html: 'text/html; charset=utf-8',
+    woff2: 'font/woff2',
+    woff: 'font/woff',
+    ttf: 'font/ttf',
+  };
+
   // Serve static UI assets if built
   try {
     const distStat = await Deno.stat(webDistPath);
     if (distStat.isDirectory) {
-      // Serve static files in dist/assets
-      app.get('/assets/*', async (c) => {
-        const filePath = `${webDistPath}${c.req.path}`;
-        try {
-          const content = await Deno.readFile(filePath);
-          const ext = filePath.split('.').pop() ?? '';
-          const contentType = ext === 'css' ? 'text/css' : ext === 'js' ? 'application/javascript' : 'application/octet-stream';
-          return c.body(content, 200, { 'Content-Type': contentType });
-        } catch {
-          return c.text('Not found', 404);
-        }
-      });
-
-      // Fallback for SPA routing
       app.get('*', async (c) => {
         if (c.req.path.startsWith('/api/')) {
           return c.text('API not found', 404);
         }
+
+        // Prevent path traversal
+        const normalizedPath = resolve(join(webDistPath, c.req.path.slice(1)));
+        if (!normalizedPath.startsWith(webDistPath)) {
+          return c.text('Forbidden', 403);
+        }
+
+        // 1. Try serving requested static file (assets, favicon, icons, etc.)
         try {
-          const html = await Deno.readTextFile(`${webDistPath}/index.html`);
+          const stat = await Deno.stat(normalizedPath);
+          if (stat.isFile) {
+            const content = await Deno.readFile(normalizedPath);
+            const ext = normalizedPath.split('.').pop()?.toLowerCase() ?? '';
+            const contentType = MIME_TYPES[ext] ?? 'application/octet-stream';
+            return c.body(content, 200, { 'Content-Type': contentType });
+          }
+        } catch {
+          // File does not exist, fall through to SPA fallback
+        }
+
+        // 2. Fallback to index.html for SPA routing
+        try {
+          const html = await Deno.readTextFile(join(webDistPath, 'index.html'));
           return c.html(html);
         } catch {
           return c.text('UI not found', 404);

@@ -6,7 +6,7 @@ import { ReviewQueue } from './queue.ts';
 import { GitHubPoller } from './poller.ts';
 import { createApi } from './api.ts';
 import { SettingsService } from './settings.ts';
-import { fromFileUrl } from '@std/path';
+import { fromFileUrl, join } from '@std/path';
 
 Deno.test('Server E2E - start HTTP server and verify endpoints via fetch', async () => {
   const port = 3555;
@@ -28,6 +28,15 @@ Deno.test('Server E2E - start HTTP server and verify endpoints via fetch', async
   const app = new Hono();
   app.route('/', api);
 
+  const MIME_TYPES: Record<string, string> = {
+    css: 'text/css; charset=utf-8',
+    js: 'application/javascript; charset=utf-8',
+    svg: 'image/svg+xml',
+    png: 'image/png',
+    ico: 'image/x-icon',
+    html: 'text/html; charset=utf-8',
+  };
+
   // Serve static UI if built
   const webDistPath = fromFileUrl(new URL('../../web/dist', import.meta.url));
   try {
@@ -37,8 +46,17 @@ Deno.test('Server E2E - start HTTP server and verify endpoints via fetch', async
         if (c.req.path.startsWith('/api/')) {
           return c.text('API not found', 404);
         }
+        const normalizedPath = join(webDistPath, c.req.path.slice(1));
         try {
-          const html = await Deno.readTextFile(`${webDistPath}/index.html`);
+          const stat = await Deno.stat(normalizedPath);
+          if (stat.isFile) {
+            const content = await Deno.readFile(normalizedPath);
+            const ext = normalizedPath.split('.').pop()?.toLowerCase() ?? '';
+            return c.body(content, 200, { 'Content-Type': MIME_TYPES[ext] ?? 'application/octet-stream' });
+          }
+        } catch {}
+        try {
+          const html = await Deno.readTextFile(join(webDistPath, 'index.html'));
           return c.html(html);
         } catch {
           return c.text('UI not found', 404);
@@ -122,6 +140,17 @@ Deno.test('Server E2E - start HTTP server and verify endpoints via fetch', async
     assertEquals(rootRes.status, 200);
     const rootHtml = await rootRes.text();
     assertStringIncludes(rootHtml, 'kuramori');
+
+    // 8. Test Favicon & Brand Icons
+    const faviconRes = await fetch(`${baseUrl}/favicon.svg`);
+    assertEquals(faviconRes.status, 200);
+    assertEquals(faviconRes.headers.get('Content-Type'), 'image/svg+xml');
+    const faviconSvg = await faviconRes.text();
+    assertStringIncludes(faviconSvg, '<svg');
+
+    const icoRes = await fetch(`${baseUrl}/favicon.ico`);
+    assertEquals(icoRes.status, 200);
+    assertEquals(icoRes.headers.get('Content-Type'), 'image/x-icon');
   } finally {
     // Graceful shutdown
     await server.shutdown();

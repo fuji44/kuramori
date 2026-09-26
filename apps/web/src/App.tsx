@@ -404,9 +404,11 @@ export default function App() {
             className="flex items-center gap-2.5 cursor-pointer group"
             title="ダッシュボードへ"
           >
-            <div className="p-1 bg-[#21262d] rounded-lg border border-[#30363d] group-hover:border-sky-500/50 transition-colors flex items-center justify-center">
-              <img src="/favicon.svg" alt="kuramori" className="w-5 h-5" />
-            </div>
+            <img
+              src="/favicon.svg"
+              alt="kuramori"
+              className="w-8 h-8 shrink-0 select-none"
+            />
             <div className="flex items-center gap-2">
               <h1 className="text-base font-bold text-white tracking-tight">kuramori</h1>
               <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-sky-950 text-sky-400 border border-sky-800/80 font-mono">
