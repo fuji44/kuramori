@@ -263,24 +263,22 @@ export class SettingsService {
       };
     }
 
-    let engineProfiles: EngineProfile[];
+    let engineProfiles: EngineProfile[] = [];
     const engineProfilesVal = map.get('engine_profiles');
     if (engineProfilesVal !== undefined) {
       try {
         const parsed = JSON.parse(engineProfilesVal);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           engineProfiles = parsed;
-        } else {
-          engineProfiles = this.createDefaultProfiles(engineSettings, agyBin, claudeBin);
         }
       } catch {
-        engineProfiles = this.createDefaultProfiles(engineSettings, agyBin, claudeBin);
+        engineProfiles = [];
       }
-    } else {
-      engineProfiles = this.createDefaultProfiles(engineSettings, agyBin, claudeBin);
     }
 
-    const defaultEngineProfileId = map.get('default_engine_profile_id') ?? engineProfiles[0]?.id;
+    const defaultEngineProfileId = map.get('default_engine_profile_id')
+      ?? engineProfiles.find((p) => p.isDefault)?.id
+      ?? engineProfiles[0]?.id;
 
     return {
       autoQueue,
@@ -298,55 +296,6 @@ export class SettingsService {
       engineSettings,
       engineProfiles,
     };
-  }
-
-  private createDefaultProfiles(
-    engineSettings: EngineSettingsMap,
-    agyBin: string,
-    claudeBin: string
-  ): EngineProfile[] {
-    return [
-      {
-        id: 'default-agy',
-        name: 'Antigravity (Default)',
-        description: 'Google Antigravity CLI エンジン',
-        isDefault: true,
-        engineType: 'antigravity',
-        config: {
-          ...engineSettings.antigravity,
-          binPath: engineSettings.antigravity.binPath || agyBin,
-        },
-      },
-      {
-        id: 'default-claude',
-        name: 'Claude Code (Default)',
-        description: 'Anthropic Claude Code CLI エンジン',
-        isDefault: false,
-        engineType: 'claude-code',
-        config: {
-          ...engineSettings.claudeCode,
-          binPath: engineSettings.claudeCode.binPath || claudeBin,
-        },
-      },
-      {
-        id: 'default-codex',
-        name: 'Codex (Default)',
-        description: 'OpenAI Codex CLI エンジン',
-        isDefault: false,
-        engineType: 'codex',
-        config: { ...engineSettings.codex },
-      },
-      {
-        id: 'default-mock',
-        name: 'Mock Engine',
-        description: 'テスト用のモックエンジン',
-        isDefault: false,
-        engineType: 'mock',
-        config: {
-          ...engineSettings.mock,
-        },
-      },
-    ];
   }
 
   async updateSettings(updates: Partial<AppSettings>): Promise<AppSettings> {

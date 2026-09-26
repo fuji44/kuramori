@@ -479,7 +479,7 @@ export class ReviewQueue {
       );
       const resolvedEngine = selectedProfile?.id
         ?? ruleProfile?.id
-        ?? defaultEngine;
+        ?? (rule.engine && rule.engine !== 'default' ? rule.engine : defaultEngine);
 
       const jobId = crypto.randomUUID();
       await this.db.insert(reviewJobsTable).values({

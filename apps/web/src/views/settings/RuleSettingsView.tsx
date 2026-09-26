@@ -296,6 +296,11 @@ export function RuleSettingsView({
                 </option>
               ))}
             </select>
+            {(!settings?.engineProfiles || settings.engineProfiles.length === 0) && (
+              <p className="text-[11px] text-amber-400/80 mt-1">
+                ※ 実行プロファイルが登録されていません。「AI 実行設定」からプロファイルを追加するか、システム既定（{settings?.reviewEngine ?? '未設定'}）が適用されます。
+              </p>
+            )}
           </div>
 
           <SettingFormFooter

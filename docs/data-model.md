@@ -208,5 +208,5 @@ flowchart LR
 ### Resolution Strategy (`resolveRuleEngineProfile`)
 1. **Exact Profile ID match**: If `rule.engine` matches `profile.id` (e.g., `default-claude`), that profile is selected.
 2. **Engine Type match**: If `rule.engine` matches an `engineType` (e.g., `claude-code`), the matching profile (or its default instance) is selected.
-3. **Default Fallback**: If `rule.engine` is `'default'` or unspecified, the profile designated by `defaultEngineProfileId` (or `isDefault === true`) is used.
+3. **Default Fallback**: If `rule.engine` is `'default'` or unspecified, the profile designated by `defaultEngineProfileId` (or `isDefault === true`) is used. When no engine profiles are defined yet, the system falls back to the system default engine (`settings.reviewEngine`, e.g., `antigravity`) and its base CLI settings.
 4. **Concurrency Tracking**: Regardless of whether a job was scheduled with a profile ID (`default-claude`) or a legacy engine name (`claude-code`), active concurrency slots are grouped and limited by the resolved `engineType`.

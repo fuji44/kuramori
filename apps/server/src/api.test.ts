@@ -439,7 +439,7 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
 
     // 17. Test engineProfiles in settings and profile test endpoint
     assertEquals(Array.isArray(settingsBeforeData.engineProfiles), true);
-    assertEquals(settingsBeforeData.engineProfiles.length >= 3, true);
+    assertEquals(settingsBeforeData.engineProfiles.length, 0);
 
     const customProfile = {
       id: 'prof-local-ollama',
