@@ -44,7 +44,7 @@ erDiagram
         text request_id FK
         text user_id
         text status "pending | running | completed | failed"
-        text engine "claude-code | antigravity | codex | mock"
+        text engine "Profile ID or Engine Type (e.g., default-claude, antigravity)"
         text started_at
         text completed_at
         text error
@@ -70,7 +70,7 @@ erDiagram
         text name
         text description
         text category "correctness | security | architecture etc."
-        text engine "default | claude-code etc."
+        text engine "default | Profile ID (e.g., default-claude) | Engine Type"
         text instructions "4-block prompt instructions"
         text trigger_json "Trigger event criteria"
         text concurrency_json "Concurrency and cancellation options"
@@ -165,3 +165,48 @@ Review artifacts are persisted in both the database and file storage (`LocalFile
 2. **File Storage (`data/reports/<reportId>.json`, `<reportId>.html`)**:
    - Stores complete report structures with D2 vector SVG sources, CallFlow steps, and unified diff line markers.
    - Provides standalone exportable HTML files.
+
+---
+
+## 4. Engine Profiles and Execution Model
+
+`kuramori` decouples rules and jobs from low-level engine types by introducing **Engine Profiles**:
+
+```mermaid
+flowchart LR
+    subgraph RuleLayer["Rules & Triggers"]
+        Rule1["ReviewRule<br>(engine: 'default-claude')"]
+        Rule2["ReviewRule<br>(engine: 'default')"]
+    end
+
+    subgraph Resolver["Profile Resolver<br>(resolveRuleEngineProfile)"]
+        MatchExact["1. Match profile.id"]
+        MatchEngine["2. Match profile.engineType"]
+        MatchDefault["3. Fallback to defaultEngineProfileId"]
+    end
+
+    subgraph ProfileLayer["Engine Profiles (app_settings.engineProfiles)"]
+        ProfClaude["Profile: default-claude<br>engineType: claude-code<br>model: sonnet"]
+        ProfAgy["Profile: default-agy (isDefault)<br>engineType: antigravity<br>model: gemini-3.1-pro"]
+    end
+
+    subgraph Execution["Runtime Engine & Concurrency"]
+        ClaudeRuntime["ClaudeCodeEngine<br>(concurrency: backendLimits.claudeCode)"]
+        AgyRuntime["AntigravityEngine<br>(concurrency: backendLimits.antigravity)"]
+    end
+
+    Rule1 --> MatchExact --> ProfClaude --> ClaudeRuntime
+    Rule2 --> MatchDefault --> ProfAgy --> AgyRuntime
+```
+
+### Profile Attributes
+- **`id`**: Unique preset identifier (e.g., `default-claude`, `default-agy`, `ollama-local`).
+- **`engineType`**: The underlying AI runner implementation (`antigravity` | `claude-code` | `codex` | `mock`).
+- **`config`**: Engine-specific configurations (binary path, model, effort, timeout, sandbox mode, custom environment variables).
+- **`isDefault`**: Flag indicating the system-wide fallback profile when rules specify `engine = 'default'`.
+
+### Resolution Strategy (`resolveRuleEngineProfile`)
+1. **Exact Profile ID match**: If `rule.engine` matches `profile.id` (e.g., `default-claude`), that profile is selected.
+2. **Engine Type match**: If `rule.engine` matches an `engineType` (e.g., `claude-code`), the matching profile (or its default instance) is selected.
+3. **Default Fallback**: If `rule.engine` is `'default'` or unspecified, the profile designated by `defaultEngineProfileId` (or `isDefault === true`) is used.
+4. **Concurrency Tracking**: Regardless of whether a job was scheduled with a profile ID (`default-claude`) or a legacy engine name (`claude-code`), active concurrency slots are grouped and limited by the resolved `engineType`.

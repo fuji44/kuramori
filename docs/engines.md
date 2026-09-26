@@ -97,3 +97,14 @@ deno task runner \
   --model ornith-1.5:9b \
   --api-base-url http://localhost:11434
 ```
+
+---
+
+## 6. Engine Profiles
+
+Engine Profiles decouple user-facing execution configurations from low-level CLI binaries.
+
+- **Profile ID**: Configured presets (e.g., `default-claude`, `default-agy`, `ollama-ornith`).
+- **Engine Type**: Underlying CLI runtime (`claude-code`, `antigravity`, `codex`, `mock`).
+- **Rule Association**: Review rules assign either an explicit `engineProfileId` (e.g., `default-claude`) or use `default` to inherit the global default profile (`defaultEngineProfileId`). Legacy engine names (e.g., `claude-code`) automatically resolve to the matching default profile for backwards compatibility.
+
