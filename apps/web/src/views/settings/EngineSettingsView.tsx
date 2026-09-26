@@ -255,62 +255,7 @@ export function EngineSettingsView({
     setFormSettings(settings);
   }, [settings]);
 
-  const defaultProfiles: EngineProfile[] = [
-    {
-      id: 'default-agy',
-      name: 'Antigravity (Default)',
-      description: 'Google Antigravity CLI エンジン',
-      isDefault: (formSettings.defaultBackendId || formSettings.reviewEngine || 'antigravity') === 'antigravity',
-      engineType: 'antigravity',
-      config: {
-        binPath: formSettings.agyBin || 'agy',
-        model: 'gemini-3.1-pro',
-        effort: 'high',
-        timeoutSeconds: 900,
-        printTimeout: '',
-        sandbox: false,
-        disableSlashCommands: false,
-      },
-    },
-    {
-      id: 'default-claude',
-      name: 'Claude Code (Default)',
-      description: 'Anthropic Claude Code CLI エンジン',
-      isDefault: (formSettings.defaultBackendId || formSettings.reviewEngine) === 'claude-code',
-      engineType: 'claude-code',
-      config: {
-        binPath: formSettings.claudeBin || 'claude',
-        model: 'sonnet',
-        effort: 'high',
-        timeoutSeconds: 900,
-        allowedTools: '',
-        bare: false,
-        customEnv: {},
-        maxTurns: 15,
-      },
-    },
-    {
-      id: 'default-codex', name: 'Codex (Default)', description: 'OpenAI Codex CLI エンジン',
-      isDefault: (formSettings.defaultBackendId || formSettings.reviewEngine) === 'codex',
-      engineType: 'codex',
-      config: { binPath: 'codex', model: 'gpt-6-sol', effort: 'high', timeoutSeconds: 900, sandboxMode: 'workspace-write', ephemeral: true, customEnv: {} },
-    },
-    {
-      id: 'default-mock',
-      name: 'Mock Engine',
-      description: 'テスト用のモックエンジン',
-      isDefault: (formSettings.defaultBackendId || formSettings.reviewEngine) === 'mock',
-      engineType: 'mock',
-      config: {
-        delayMs: 500,
-      },
-    },
-  ];
-
-  const profiles: EngineProfile[] =
-    formSettings.engineProfiles && formSettings.engineProfiles.length > 0
-      ? formSettings.engineProfiles
-      : defaultProfiles;
+  const profiles: EngineProfile[] = formSettings.engineProfiles ?? [];
 
   const isFormMode = isCreatingProfile || editingProfileId !== null;
 

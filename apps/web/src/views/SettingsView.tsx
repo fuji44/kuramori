@@ -91,9 +91,7 @@ export function SettingsView({
               <span>実行プロファイル</span>
             </div>
             <span className="ml-2 px-1.5 py-0.2 rounded-full bg-[#0d1117] text-sky-400 text-[10px] font-mono border border-sky-900/60">
-              {settings.engineProfiles && settings.engineProfiles.length > 0
-                ? settings.engineProfiles.length
-                : 3}
+              {settings.engineProfiles?.length ?? 0}
             </span>
           </button>
 
