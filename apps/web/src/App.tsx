@@ -18,8 +18,10 @@ import { ReportListView } from './views/ReportListView.tsx';
 import { SettingsView } from './views/SettingsView.tsx';
 import { JobLogModal } from './components/JobLogModal.tsx';
 import { ToastContainer, ToastItem, ToastType } from './components/Toast.tsx';
+import { useI18n } from './i18n/context.tsx';
 
 export default function App() {
+  const { t } = useI18n();
   const [route, navigate] = useAppRoute();
 
   const [items, setItems] = useState<ReviewItem[]>([]);
@@ -104,7 +106,7 @@ export default function App() {
       setItems(data.items);
     } catch (err) {
       console.error('Failed to fetch reviews', err);
-      showError('レビュー一覧の取得に失敗しました。サーバーの稼働状態を確認してください。');
+      showError(t('toast.reviewsFetchError'));
     } finally {
       setLoading(false);
     }
@@ -200,10 +202,10 @@ export default function App() {
         throw new Error(`Refresh failed: HTTP ${res.status}`);
       }
       await fetchReviews();
-      showSuccess('GitHubの最新レビュー依頼を更新しました');
+      showSuccess(t('toast.reviewsRefreshSuccess'));
     } catch (err) {
       console.error('Failed to refresh reviews', err);
-      showError('GitHubの最新状態取得に失敗しました。gh CLIの認証を確認してください。');
+      showError(t('toast.reviewsRefreshError'));
     } finally {
       setRefreshing(false);
     }
@@ -405,7 +407,7 @@ export default function App() {
           <div
             onClick={() => navigate({ view: 'dashboard' })}
             className="flex items-center gap-2.5 cursor-pointer group"
-            title="ダッシュボードへ"
+            title={t('nav.dashboardTooltip')}
           >
             <img
               src="/favicon.svg"
@@ -434,7 +436,7 @@ export default function App() {
               }`}
             >
               <LayoutDashboard className="w-3.5 h-3.5" />
-              <span>ダッシュボード</span>
+              <span>{t('nav.dashboard')}</span>
             </button>
             <button
               type="button"
@@ -446,7 +448,7 @@ export default function App() {
               }`}
             >
               <GitPullRequest className="w-3.5 h-3.5" />
-              <span>PR一覧</span>
+              <span>{t('nav.prs')}</span>
               {unreviewedCount > 0 && (
                 <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-sky-950 text-sky-400 border border-sky-800">
                   {unreviewedCount}
@@ -463,7 +465,7 @@ export default function App() {
               }`}
             >
               <FileText className="w-3.5 h-3.5" />
-              <span>レポート一覧</span>
+              <span>{t('nav.reports')}</span>
               {reportCount > 0 && (
                 <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-emerald-950 text-emerald-300 border border-emerald-800">
                   {reportCount}
@@ -483,10 +485,10 @@ export default function App() {
                 ? 'bg-sky-950 text-sky-400 border-sky-800 font-medium shadow-sm'
                 : 'bg-[#21262d] hover:bg-[#30363d] border-[#30363d] text-[#c9d1d9]'
             }`}
-            title="設定を開く"
+            title={t('nav.openSettingsTooltip')}
           >
             <Settings className={`w-3.5 h-3.5 ${route.view === 'settings' ? 'text-sky-400' : 'text-[#8b949e]'}`} />
-            <span className="hidden sm:inline">設定</span>
+            <span className="hidden sm:inline">{t('nav.settings')}</span>
           </button>
         </div>
       </header>

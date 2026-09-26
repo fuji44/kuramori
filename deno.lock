@@ -37,8 +37,8 @@
     "npm:sharp@*": "0.35.4",
     "npm:tailwind-merge@^2.6.0": "2.6.1",
     "npm:tailwindcss@^3.4.17": "3.4.19",
-    "npm:vite@*": "6.4.3",
-    "npm:vite@^6.1.0": "6.4.3"
+    "npm:vite@*": "6.4.3_jiti@2.7.0",
+    "npm:vite@^6.1.0": "6.4.3_jiti@2.7.0"
   },
   "jsr": {
     "@std/assert@1.0.19": {
@@ -2136,7 +2136,7 @@
     "util-deprecate@1.0.2": {
       "integrity": "sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw=="
     },
-    "vite@6.4.3": {
+    "vite@6.4.3_jiti@2.7.0": {
       "integrity": "sha512-NTKlcQjlAK7MlQoyb6LgaqHc8sso/pVyUJYWMws3jg21uTJw/LddqIFPcPqP6PzpgbIcZyKI85sFE4HBrQDA8A==",
       "dependencies": [
         "esbuild",
