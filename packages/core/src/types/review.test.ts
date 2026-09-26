@@ -1,9 +1,11 @@
 import { assertEquals } from "@std/assert";
 import {
   resolveEngineConfig,
+  resolveRuleEngineProfile,
   type AntigravityEngineConfig,
   type ClaudeCodeEngineConfig,
   type EngineOverrideConfig,
+  type EngineProfile,
 } from './review.ts';
 
 Deno.test('resolveEngineConfig - merges overrides comprehensively', () => {
@@ -147,4 +149,48 @@ Deno.test('EngineProfile - discriminated union guarantees type-safe config acces
   assertEquals(getProfileSummary(claudeProfile), 'ornith-1.5:9b with 1 custom environment variables');
   assertEquals(getProfileSummary(agyProfile), 'gemini-3.1-pro (high)');
   assertEquals(getProfileSummary(mockProfile), 'Mock delay: 300ms');
+});
+
+Deno.test('resolveRuleEngineProfile - resolves by profile ID, engineType, and falls back to default', () => {
+  const profiles: EngineProfile[] = [
+    {
+      id: 'default-agy',
+      name: 'Antigravity (Default)',
+      isDefault: true,
+      engineType: 'antigravity',
+      config: {
+        binPath: 'agy',
+        model: 'gemini-pro',
+        effort: 'high',
+        timeoutSeconds: 900,
+        printTimeout: '600s',
+        sandbox: false,
+        disableSlashCommands: false,
+      },
+    },
+    {
+      id: 'default-claude',
+      name: 'Claude Code (Default)',
+      isDefault: false,
+      engineType: 'claude-code',
+      config: {
+        binPath: 'claude',
+        model: 'sonnet',
+        effort: 'high',
+        timeoutSeconds: 900,
+        bare: false,
+      },
+    },
+  ];
+
+  // 1. Exact profile ID match
+  assertEquals(resolveRuleEngineProfile('default-claude', profiles)?.id, 'default-claude');
+
+  // 2. EngineType match (fallback for raw engine names like 'claude-code')
+  assertEquals(resolveRuleEngineProfile('claude-code', profiles)?.id, 'default-claude');
+
+  // 3. 'default' or undefined/null falls back to default profile
+  assertEquals(resolveRuleEngineProfile('default', profiles)?.id, 'default-agy');
+  assertEquals(resolveRuleEngineProfile(undefined, profiles)?.id, 'default-agy');
+  assertEquals(resolveRuleEngineProfile('non-existent-id', profiles)?.id, 'default-agy');
 });

@@ -26,6 +26,7 @@ import {
   type ReviewRule,
   type ReviewTrigger,
   type RuleResultFinding,
+  resolveRuleEngineProfile,
 } from '@kuramori/core';
 import type { SettingsService, AppSettings } from './settings.ts';
 import { aggregateRuleResults } from './aggregator.ts';
@@ -128,7 +129,11 @@ export class ReviewQueue {
       return this.defaultEngine;
     }
 
-    const matchedProfile = settings.engineProfiles?.find((p) => p.id === engineName);
+    const matchedProfile = resolveRuleEngineProfile(
+      engineName,
+      settings.engineProfiles,
+      settings.defaultEngineProfileId,
+    );
     if (matchedProfile) {
       if (matchedProfile.engineType === 'mock') {
         return new MockReviewEngine({ delayMs: matchedProfile.config.delayMs });
@@ -465,13 +470,16 @@ export class ReviewQueue {
         ?? settings.defaultBackendId
         ?? settings.reviewEngine
         ?? 'antigravity';
-      const ruleProfile = settings.engineProfiles?.find((profile) => profile.id === rule.engine);
+
       const selectedProfile = availableProfiles.find((profile) => profile.id === engineProfileIdParam);
-      const resolvedEngine = selectedProfile
-        ? selectedProfile.id
-        : rule.engine === 'default' || !ruleProfile || ruleProfile.enabled === false
-        ? defaultEngine
-        : rule.engine;
+      const ruleProfile = resolveRuleEngineProfile(
+        rule.engineProfileId ?? rule.engine,
+        availableProfiles,
+        defaultProfile?.id,
+      );
+      const resolvedEngine = selectedProfile?.id
+        ?? ruleProfile?.id
+        ?? defaultEngine;
 
       const jobId = crypto.randomUUID();
       await this.db.insert(reviewJobsTable).values({
@@ -506,10 +514,7 @@ export class ReviewQueue {
 
       const settings = this.settingsService
         ? await this.settingsService.getAllSettings()
-        : {
-            globalMaxConcurrency: 2,
-            backendMaxConcurrency: { antigravity: 2, claudeCode: 1, codex: 1, mock: 5 },
-          };
+        : DEFAULT_APP_SETTINGS;
 
       const globalLimit = settings.globalMaxConcurrency ?? 2;
       const backendLimits = settings.backendMaxConcurrency ?? {
@@ -526,6 +531,16 @@ export class ReviewQueue {
           .from(reviewJobsTable)
           .where(eq(reviewJobsTable.status, 'running'));
 
+        const toEngineType = (engineOrProfileId?: string | null): string => {
+          if (!engineOrProfileId) return 'antigravity';
+          const prof = resolveRuleEngineProfile(
+            engineOrProfileId,
+            settings.engineProfiles,
+            settings.defaultEngineProfileId,
+          );
+          return prof?.engineType ?? engineOrProfileId;
+        };
+
         const runningEngineCount: Record<string, number> = {
           antigravity: 0,
           'claude-code': 0,
@@ -533,8 +548,8 @@ export class ReviewQueue {
           mock: 0,
         };
         for (const j of runningJobs) {
-          const eng = j.engine || 'antigravity';
-          runningEngineCount[eng] = (runningEngineCount[eng] ?? 0) + 1;
+          const engType = toEngineType(j.engine);
+          runningEngineCount[engType] = (runningEngineCount[engType] ?? 0) + 1;
         }
 
         // キューの中で、エンジン枠が空いているジョブを探索
@@ -549,14 +564,14 @@ export class ReviewQueue {
             continue;
           }
 
-          const engine = jobRecord.engine;
+          const engineType = toEngineType(jobRecord.engine);
           let limit = 2;
-          if (engine === 'antigravity') limit = backendLimits.antigravity;
-          else if (engine === 'claude-code') limit = backendLimits.claudeCode;
-          else if (engine === 'codex') limit = backendLimits.codex;
-          else if (engine === 'mock') limit = backendLimits.mock;
+          if (engineType === 'antigravity') limit = backendLimits.antigravity;
+          else if (engineType === 'claude-code') limit = backendLimits.claudeCode;
+          else if (engineType === 'codex') limit = backendLimits.codex;
+          else if (engineType === 'mock') limit = backendLimits.mock;
 
-          const currentRunning = runningEngineCount[engine] ?? 0;
+          const currentRunning = runningEngineCount[engineType] ?? 0;
           if (currentRunning < limit) {
             candidateIndex = i;
             break;

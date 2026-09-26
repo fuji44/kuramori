@@ -218,6 +218,37 @@ export function resolveEngineConfig<T extends object>(
 }
 
 /**
+ * ルールに設定された engine / engineProfileId から実効プロファイルを解決するリゾルバ
+ */
+export function resolveRuleEngineProfile(
+  ruleEngine?: string | null,
+  profiles?: EngineProfile[],
+  defaultProfileId?: string
+): EngineProfile | undefined {
+  if (!profiles || profiles.length === 0) return undefined;
+
+  const defaultProfile = profiles.find((p) => p.id === defaultProfileId)
+    ?? profiles.find((p) => p.isDefault)
+    ?? profiles[0];
+
+  if (!ruleEngine || ruleEngine === 'default') {
+    return defaultProfile;
+  }
+
+  // 1. profile.id での完全一致検索 (例: 'default-claude')
+  const matchedById = profiles.find((p) => p.id === ruleEngine);
+  if (matchedById) return matchedById;
+
+  // 2. engineType での解決 (例: 'claude-code' が指定された場合に該当エンジンのプロファイルを検索)
+  const matchedByType = profiles.find((p) => p.engineType === ruleEngine && p.isDefault)
+    ?? profiles.find((p) => p.engineType === ruleEngine);
+  if (matchedByType) return matchedByType;
+
+  // 3. フォールバック
+  return defaultProfile;
+}
+
+/**
  * レビュールール定義
  */
 export interface ReviewRule {
@@ -226,6 +257,7 @@ export interface ReviewRule {
   description: string;
   category: string;
   engine: string;
+  engineProfileId?: string;
   instructions: string;
   engineOverride?: EngineOverrideConfig;
   trigger?: RuleTrigger;

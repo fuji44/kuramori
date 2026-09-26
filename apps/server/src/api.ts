@@ -404,6 +404,7 @@ export function createApi(deps: ApiDependencies) {
         description: row.description,
         category: row.category,
         engine: row.engine,
+        engineProfileId: row.engine,
         instructions: row.instructions,
         engineOverride,
         trigger,
@@ -425,12 +426,13 @@ export function createApi(deps: ApiDependencies) {
 
       const now = new Date().toISOString();
       const id = body.id || `rule-${crypto.randomUUID().slice(0, 8)}`;
+      const engineValue = body.engineProfileId ?? body.engine;
       const newRule = {
         id,
         name: String(body.name),
         description: body.description ? String(body.description) : '',
         category: body.category ? String(body.category) : 'general',
-        engine: body.engine ? String(body.engine) : 'default',
+        engine: engineValue ? String(engineValue) : 'default',
         instructions: String(body.instructions),
         engineOverrideJson: body.engineOverride ? JSON.stringify(body.engineOverride) : null,
         triggerJson: JSON.stringify(body.trigger ?? { types: ['opened', 'synchronize'] }),
@@ -445,6 +447,7 @@ export function createApi(deps: ApiDependencies) {
         success: true,
         rule: {
           ...newRule,
+          engineProfileId: newRule.engine,
           engineOverride: body.engineOverride,
           trigger: body.trigger ?? { types: ['opened', 'synchronize'] },
           concurrency: body.concurrency,
@@ -492,6 +495,7 @@ export function createApi(deps: ApiDependencies) {
         description: row.description,
         category: row.category,
         engine: row.engine,
+        engineProfileId: row.engine,
         instructions: row.instructions,
         engineOverride,
         trigger,
@@ -518,7 +522,8 @@ export function createApi(deps: ApiDependencies) {
       if (body.name !== undefined) updates.name = String(body.name);
       if (body.description !== undefined) updates.description = String(body.description);
       if (body.category !== undefined) updates.category = String(body.category);
-      if (body.engine !== undefined) updates.engine = String(body.engine);
+      const engineValue = body.engineProfileId ?? body.engine;
+      if (engineValue !== undefined) updates.engine = String(engineValue);
       if (body.instructions !== undefined) updates.instructions = String(body.instructions);
       if (body.engineOverride !== undefined) {
         updates.engineOverrideJson = body.engineOverride ? JSON.stringify(body.engineOverride) : null;
