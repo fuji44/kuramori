@@ -275,6 +275,20 @@ export const ReviewTransparencySchema = z.object({
 export type ReviewTransparency = z.infer<typeof ReviewTransparencySchema>;
 
 /**
+ * レポートに統合された各レビュールールの判定結果サマリ
+ */
+export const AppliedRuleSummarySchema = z.object({
+  ruleId: z.string(),
+  ruleName: z.string(),
+  category: z.string().default('general'),
+  verdict: z.enum(['PASS', 'WARN', 'FAIL']),
+  summary: z.string(),
+  findingsCount: z.number().int().nonnegative().default(0),
+  completedAt: z.string().optional(),
+});
+export type AppliedRuleSummary = z.infer<typeof AppliedRuleSummarySchema>;
+
+/**
  * レビュー合否判定
  */
 export const ReviewVerdictSchema = z.enum(["APPROVE", "COMMENT", "REQUEST_CHANGES"]);
@@ -292,6 +306,7 @@ export const ReviewReportDataSchema = z.object({
   callFlow: CallFlowSchema.optional(),
   metrics: ReviewMetricsSchema.optional(),
   transparency: ReviewTransparencySchema.optional(),
+  appliedRules: z.array(AppliedRuleSummarySchema).optional(),
   createdAt: z.string().datetime().optional(),
 });
 export type ReviewReportData = z.infer<typeof ReviewReportDataSchema>;

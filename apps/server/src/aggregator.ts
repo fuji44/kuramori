@@ -202,17 +202,31 @@ export async function aggregateRuleResults(
       }
     : undefined;
 
+  const appliedRules = ruleResults.map((r) => ({
+    ruleId: r.ruleId,
+    ruleName: r.ruleName,
+    category: r.category,
+    verdict: r.verdict,
+    summary: r.summary,
+    findingsCount: r.findings.filter((f) => f.status !== 'RESOLVED').length,
+    completedAt: r.createdAt,
+  }));
+
+  const rawBrief = representativeReport?.summary?.brief;
+  const briefObj = typeof rawBrief === 'object' && rawBrief !== null ? rawBrief : undefined;
+
   const reportData: ReviewReportData = {
     ...representativeReport,
     verdict: overallVerdict,
+    appliedRules,
     summary: {
       ...representativeReport?.summary,
-      brief: representativeReport?.summary.brief ?? {
+      brief: {
         problem: summaries,
-        approach: '詳細レポートに修正方針の記載がありません。',
-        blastRadius: '影響範囲の記載がありません。',
+        approach: briefObj?.approach ?? '詳細レポートに修正方針の記載がありません。',
+        blastRadius: briefObj?.blastRadius ?? '影響範囲の記載がありません。',
       },
-      changedCode: representativeReport?.summary.changedCode ?? [],
+      changedCode: representativeReport?.summary?.changedCode ?? [],
       reachPaths: [...new Set(ruleResults.flatMap((ruleResult) =>
         reviewReportsByRule.get(ruleResult.ruleId)?.summary.reachPaths ?? []
       ))],

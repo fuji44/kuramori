@@ -257,6 +257,54 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
         </div>
       </header>
 
+      {/* 1.5 適用されたレビュールール一覧 (Applied Review Rules) */}
+      {data.appliedRules && data.appliedRules.length > 0 && (
+        <section className="flex flex-col gap-2.5 w-full">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-[#00AFA8]" />
+              <span>適用されたレビュールール ({data.appliedRules.length} 件マージ済み)</span>
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {data.appliedRules.map((rule) => {
+              const isPass = rule.verdict === 'PASS';
+              const isFail = rule.verdict === 'FAIL';
+              return (
+                <div
+                  key={rule.ruleId}
+                  className="p-3.5 rounded-xl bg-[#161b22] border border-[#30363d] flex flex-col justify-between gap-2"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-xs font-semibold text-gray-200 line-clamp-1" title={rule.ruleName}>
+                      {rule.ruleName}
+                    </span>
+                    <span
+                      className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border shrink-0 ${
+                        isFail
+                          ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                          : isPass
+                          ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                          : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                      }`}
+                    >
+                      {rule.verdict}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 line-clamp-2 leading-relaxed" title={rule.summary}>
+                    {rule.summary}
+                  </p>
+                  <div className="flex items-center justify-between text-[10px] text-gray-400 pt-1 border-t border-[#30363d]/60 font-mono">
+                    <span className="capitalize">{rule.category}</span>
+                    <span>指摘: {rule.findingsCount} 件</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {/* 2. 要約セクション（3つの文章） */}
       <section className="flex flex-col gap-3 w-full">
         <h2 className="text-xs font-bold uppercase tracking-wider text-gray-400">要約</h2>
