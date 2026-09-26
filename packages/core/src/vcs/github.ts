@@ -1,5 +1,5 @@
 import type { ListReviewRequestsOptions, VCSProvider } from '../interfaces/vcs-provider.ts';
-import type { ReviewRequest, ReviewLabel } from '../types/review.ts';
+import type { ReviewRequest, ReviewLabel, VCSUser } from '../types/review.ts';
 
 interface GhSearchPrItem {
   id?: string;
@@ -135,22 +135,30 @@ export class GitHubProvider implements VCSProvider {
     return JSON.parse(new TextDecoder().decode(output.stdout));
   }
 
-  private cachedCurrentUser: string | null = null;
+  private cachedCurrentUser: VCSUser | null = null;
 
-  async getCurrentUser(): Promise<string | null> {
+  async getCurrentUser(): Promise<VCSUser | null> {
     if (this.cachedCurrentUser !== null) {
       return this.cachedCurrentUser;
     }
     try {
       const cmd = new Deno.Command('gh', {
-        args: ['api', 'user', '--jq', '.login'],
+        args: ['api', 'user'],
         stdout: 'piped',
         stderr: 'piped',
       });
       const output = await cmd.output();
       if (output.success) {
-        this.cachedCurrentUser = new TextDecoder().decode(output.stdout).trim();
-        return this.cachedCurrentUser;
+        const data = JSON.parse(new TextDecoder().decode(output.stdout));
+        if (data && typeof data.login === 'string') {
+          this.cachedCurrentUser = {
+            login: data.login,
+            name: typeof data.name === 'string' && data.name.trim() !== '' ? data.name : undefined,
+            email: typeof data.email === 'string' && data.email.trim() !== '' ? data.email : undefined,
+            avatarUrl: typeof data.avatar_url === 'string' && data.avatar_url.trim() !== '' ? data.avatar_url : undefined,
+          };
+          return this.cachedCurrentUser;
+        }
       }
     } catch {
       // Ignore failure to fetch current user
@@ -260,7 +268,7 @@ export class GitHubProvider implements VCSProvider {
 
     const data = JSON.parse(new TextDecoder().decode(output.stdout));
     const currentUser = await this.getCurrentUser();
-    const isOwn = currentUser !== null ? currentUser === data.author.login : false;
+    const isOwn = currentUser !== null ? currentUser.login === data.author.login : false;
 
     const labels: ReviewLabel[] = (data.labels || []).map((l: any) => ({
       name: l.name,

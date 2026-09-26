@@ -11,6 +11,13 @@ export interface ReviewAssignee {
   avatarUrl?: string;
 }
 
+export interface VCSUser {
+  login: string;
+  name?: string;
+  email?: string;
+  avatarUrl?: string;
+}
+
 export interface ReviewRequest {
   id: string;
   userId: string;
