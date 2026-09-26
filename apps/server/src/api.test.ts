@@ -44,11 +44,18 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
       getReviewRequest: () => Promise.resolve(mockPr),
       getDiff: () => Promise.resolve('diff --git a/file b/file'),
       getCloneUrl: () => Promise.resolve('https://github.com/test/repo.git'),
+      getCurrentUser: () =>
+        Promise.resolve({
+          login: 'octocat',
+          name: 'The Octocat',
+          email: 'octocat@github.com',
+          avatarUrl: 'https://avatars.githubusercontent.com/u/583231?v=4',
+        }),
     };
 
     const queue = new ReviewQueue(db, storage, { reportsDir, settingsService });
     const poller = new GitHubPoller(mockVcs, db, queue, settingsService);
-    const api = createApi({ db, storage, poller, queue, settingsService });
+    const api = createApi({ db, storage, poller, queue, settingsService, vcsProvider: mockVcs });
 
     // Test OpenAPI and Scalar API Reference endpoints
     const resOpenApi = await api.request('/api/openapi.json');
@@ -66,6 +73,18 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
     // Test redirect from legacy /openapi.json
     const resLegacyRedirect = await api.request('/openapi.json');
     assertEquals(resLegacyRedirect.status, 302);
+
+    // Test /api/me and /api/user
+    const resUser = await api.request('/api/me');
+    assertEquals(resUser.status, 200);
+    const userData = await resUser.json();
+    assertEquals(userData.user.login, 'octocat');
+    assertEquals(userData.user.name, 'The Octocat');
+    assertEquals(userData.user.email, 'octocat@github.com');
+    assertEquals(userData.user.avatarUrl, 'https://avatars.githubusercontent.com/u/583231?v=4');
+
+    const resUserRedirect = await api.request('/api/user');
+    assertEquals(resUserRedirect.status, 302);
 
     const emptyFiltersResponse = await api.request('/api/pulls/filters');
     assertEquals(emptyFiltersResponse.status, 200);

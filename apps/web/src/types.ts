@@ -223,3 +223,10 @@ export interface AppSettings {
   engineSettings: EngineSettingsMap;
   engineProfiles?: EngineProfile[];
 }
+
+export interface CurrentUser {
+  login: string;
+  name?: string | null;
+  email?: string | null;
+  avatarUrl?: string | null;
+}

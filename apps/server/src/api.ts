@@ -5,7 +5,7 @@ import { resolve } from '@std/path';
 import type { AppDatabase } from './db/index.ts';
 import { pullFiltersTable, reviewJobsTable, reviewReportsTable, reviewRequestsTable, reviewRulesTable, reviewRuleResultsTable, reviewTriggersTable } from './db/schema.ts';
 
-import type { EngineEnvironment, ReportStorage } from '@kuramori/core';
+import type { EngineEnvironment, ReportStorage, VCSProvider } from '@kuramori/core';
 import type { GitHubPoller } from './poller.ts';
 import type { ReviewQueue } from './queue.ts';
 import type { SettingsService } from './settings.ts';
@@ -19,6 +19,7 @@ export interface ApiDependencies {
   poller: GitHubPoller;
   queue: ReviewQueue;
   settingsService: SettingsService;
+  vcsProvider?: VCSProvider;
   logsDir?: string;
 }
 
@@ -88,6 +89,21 @@ export function createApi(deps: ApiDependencies) {
   );
   app.get('/openapi.json', (c) => c.redirect('/api/openapi.json'));
   app.get('/doc', (c) => c.redirect('/api/doc'));
+
+  // Current authenticated user profile
+  app.get('/api/me', async (c) => {
+    if (!deps.vcsProvider?.getCurrentUser) {
+      return c.json({ user: null });
+    }
+    try {
+      const user = await deps.vcsProvider.getCurrentUser();
+      return c.json({ user });
+    } catch (err) {
+      console.error('Failed to get current user', { err });
+      return c.json({ user: null });
+    }
+  });
+  app.get('/api/user', (c) => c.redirect('/api/me'));
 
   // List all review requests with their latest review status and report info
   app.get('/api/pulls', async (c) => {
