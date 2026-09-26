@@ -12,6 +12,7 @@ import type { CurrentUser } from '../types.ts';
 import type { SettingsSubview } from '../utils/route.ts';
 import { AnchoredPopover } from './AnchoredPopover.tsx';
 import { UserAvatar } from './UserAvatar.tsx';
+import { useI18n } from '../i18n/context.tsx';
 
 interface UserMenuPopoverProps {
   user: CurrentUser | null;
@@ -24,6 +25,7 @@ export function UserMenuPopover({
   activeView,
   onNavigateSettings,
 }: UserMenuPopoverProps) {
+  const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -54,7 +56,7 @@ export function UserMenuPopover({
         onClick={() => setIsOpen((prev) => !prev)}
         aria-haspopup="menu"
         aria-expanded={isOpen}
-        title={user ? `${user.name || user.login} のメニュー` : 'ユーザー・設定メニュー'}
+        title={user ? t('userMenu.menuTooltipWithUser', { user: user.name || user.login }) : t('userMenu.menuTooltipGuest')}
         className={`flex items-center gap-1.5 p-1 rounded-full border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
           isOpen || isSettingsActive
             ? 'border-sky-500/80 bg-sky-950/40 ring-2 ring-sky-500/30'
@@ -101,8 +103,8 @@ export function UserMenuPopover({
               <div className="flex items-center gap-3">
                 <UserAvatar user={null} size={36} />
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium text-[#c9d1d9]">GitHub 未接続</div>
-                  <div className="text-[11px] text-[#8b949e]">gh CLI の認証状態を確認してください</div>
+                  <div className="text-xs font-medium text-[#c9d1d9]">{t('userMenu.notConnected')}</div>
+                  <div className="text-[11px] text-[#8b949e]">{t('userMenu.notConnectedDesc')}</div>
                 </div>
               </div>
             )}
@@ -111,7 +113,7 @@ export function UserMenuPopover({
           {/* Navigation Links: Settings */}
           <div className="py-1">
             <div className="px-3 py-1 text-[10px] font-semibold text-[#8b949e] uppercase tracking-wider">
-              設定
+              {t('userMenu.settingsHeader')}
             </div>
             <button
               type="button"
@@ -120,8 +122,8 @@ export function UserMenuPopover({
             >
               <Settings className="w-4 h-4 text-[#8b949e] group-hover:text-sky-400" />
               <div className="flex-1">
-                <div className="font-medium text-[#c9d1d9] group-hover:text-white">一般設定</div>
-                <div className="text-[10px] text-[#8b949e]">自動レビュー・キュー・並列度</div>
+                <div className="font-medium text-[#c9d1d9] group-hover:text-white">{t('userMenu.generalLabel')}</div>
+                <div className="text-[10px] text-[#8b949e]">{t('userMenu.generalDesc')}</div>
               </div>
             </button>
 
@@ -132,8 +134,8 @@ export function UserMenuPopover({
             >
               <Cpu className="w-4 h-4 text-[#8b949e] group-hover:text-sky-400" />
               <div className="flex-1">
-                <div className="font-medium text-[#c9d1d9] group-hover:text-white">AIエンジン設定</div>
-                <div className="text-[10px] text-[#8b949e]">CLI実行パス・モデル・プロファイル</div>
+                <div className="font-medium text-[#c9d1d9] group-hover:text-white">{t('userMenu.enginesLabel')}</div>
+                <div className="text-[10px] text-[#8b949e]">{t('userMenu.enginesDesc')}</div>
               </div>
             </button>
 
@@ -144,8 +146,8 @@ export function UserMenuPopover({
             >
               <ShieldCheck className="w-4 h-4 text-[#8b949e] group-hover:text-sky-400" />
               <div className="flex-1">
-                <div className="font-medium text-[#c9d1d9] group-hover:text-white">レビュー共通ルール</div>
-                <div className="text-[10px] text-[#8b949e]">検査項目・プロンプト・カテゴリ</div>
+                <div className="font-medium text-[#c9d1d9] group-hover:text-white">{t('userMenu.rulesLabel')}</div>
+                <div className="text-[10px] text-[#8b949e]">{t('userMenu.rulesDesc')}</div>
               </div>
             </button>
 
@@ -156,8 +158,8 @@ export function UserMenuPopover({
             >
               <Zap className="w-4 h-4 text-[#8b949e] group-hover:text-sky-400" />
               <div className="flex-1">
-                <div className="font-medium text-[#c9d1d9] group-hover:text-white">自動トリガー設定</div>
-                <div className="text-[10px] text-[#8b949e]">リポジトリ・パス別ルールバインディング</div>
+                <div className="font-medium text-[#c9d1d9] group-hover:text-white">{t('userMenu.triggersLabel')}</div>
+                <div className="text-[10px] text-[#8b949e]">{t('userMenu.triggersDesc')}</div>
               </div>
             </button>
           </div>
@@ -173,7 +175,7 @@ export function UserMenuPopover({
             >
               <div className="flex items-center gap-2.5">
                 <BookOpen className="w-4 h-4 text-[#8b949e] group-hover:text-sky-400" />
-                <span>API ドキュメント (Scalar)</span>
+                <span>{t('userMenu.apiDocs')}</span>
               </div>
               <ExternalLink className="w-3 h-3 opacity-60 group-hover:opacity-100" />
             </a>
@@ -188,7 +190,7 @@ export function UserMenuPopover({
               >
                 <div className="flex items-center gap-2.5">
                   <UserAvatar user={user} size={16} />
-                  <span>GitHub プロフィール</span>
+                  <span>{t('userMenu.githubProfile')}</span>
                 </div>
                 <ExternalLink className="w-3 h-3 opacity-60 group-hover:opacity-100" />
               </a>

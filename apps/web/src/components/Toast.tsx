@@ -1,5 +1,6 @@
 import React from 'react';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
+import { useI18n } from '../i18n/context.tsx';
 
 export type ToastType = 'success' | 'error' | 'info';
 
@@ -15,6 +16,7 @@ interface ToastContainerProps {
 }
 
 export function ToastContainer({ toasts, onDismiss }: ToastContainerProps) {
+  const { t } = useI18n();
   if (toasts.length === 0) return null;
 
   return (
@@ -54,7 +56,7 @@ export function ToastContainer({ toasts, onDismiss }: ToastContainerProps) {
               type="button"
               onClick={() => onDismiss(toast.id)}
               className="p-1 rounded-md text-neutral-400 hover:text-white hover:bg-[#21262d] transition-colors shrink-0 -mr-1 -mt-1"
-              title="閉じる"
+              title={t('common.close')}
             >
               <X className="w-3.5 h-3.5" />
             </button>

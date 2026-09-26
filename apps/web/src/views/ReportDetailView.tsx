@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ReviewItem } from '../types.ts';
 import { ReviewReportView } from '../components/review/ReviewReportView.tsx';
+import { useI18n } from '../i18n/context.tsx';
 
 interface ReportDetailViewProps {
   reportId: string;
@@ -16,6 +17,8 @@ export function ReportDetailView({
   onBack,
   onSelectReport,
 }: ReportDetailViewProps) {
+  const { t } = useI18n();
+
   // List of items that have a report, for prev/next navigation
   const reportItems = useMemo(() => {
     return items.filter((item) => Boolean(item.report?.id));
@@ -41,10 +44,10 @@ export function ReportDetailView({
             type="button"
             onClick={onBack}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#21262d] hover:bg-[#30363d] text-gray-200 text-xs font-medium border border-[#30363d] transition-colors"
-            title="戻る (Esc)"
+            title={t('reportDetail.backTooltip')}
           >
             <ArrowLeft className="w-3.5 h-3.5 text-[#00AFA8]" />
-            <span>一覧に戻る</span>
+            <span>{t('reportDetail.backBtn')}</span>
             <kbd className="hidden sm:inline px-1.5 py-0.5 text-[10px] font-mono bg-[#0d1117] text-gray-400 rounded border border-[#30363d]">
               Esc
             </kbd>
@@ -84,7 +87,7 @@ export function ReportDetailView({
               }
             }}
             className="p-1.5 rounded-lg bg-[#21262d] hover:bg-[#30363d] text-gray-400 hover:text-white border border-[#30363d] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-            title={prevReport ? `前のレポート: #${prevReport.number}` : '前のレポートはありません'}
+            title={prevReport ? t('reportDetail.prevReportTooltip', { number: prevReport.number }) : t('reportDetail.noPrevReportTooltip')}
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -103,7 +106,7 @@ export function ReportDetailView({
               }
             }}
             className="p-1.5 rounded-lg bg-[#21262d] hover:bg-[#30363d] text-gray-400 hover:text-white border border-[#30363d] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-            title={nextReport ? `次のレポート: #${nextReport.number}` : '次のレポートはありません'}
+            title={nextReport ? t('reportDetail.nextReportTooltip', { number: nextReport.number }) : t('reportDetail.noNextReportTooltip')}
           >
             <ChevronRight className="w-4 h-4" />
           </button>

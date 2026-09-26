@@ -5,12 +5,14 @@ import { ReviewSidebar, type FilterState } from './ReviewSidebar.tsx';
 import { ReviewMainContent } from './ReviewMainContent.tsx';
 import { ReviewExportModal } from './ReviewExportModal.tsx';
 import { ReviewJsonModal } from './ReviewJsonModal.tsx';
+import { useI18n } from '../../i18n/context.tsx';
 
 interface ReviewReportViewProps {
   reportId: string;
 }
 
 export const ReviewReportView: React.FC<ReviewReportViewProps> = ({ reportId }) => {
+  const { t, locale } = useI18n();
   const [data, setData] = useState<ReviewReportData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -262,34 +264,34 @@ export const ReviewReportView: React.FC<ReviewReportViewProps> = ({ reportId }) 
     const lines: string[] = [];
     const postComments = data.comments.filter((c) => marks[c.id] === 'post');
 
-    lines.push(`## PR #${data.pr?.number ?? ''} レビュー判断結果`);
-    lines.push(`- 対象: ${data.pr?.repo ?? ''} (${data.pr?.title ?? ''})`);
-    lines.push(`- 投稿予定件数: ${postComments.length} 件 / 全 ${data.comments.length} 件`);
+    lines.push(t('review.exportMarkdown.title', { number: data.pr?.number ?? '' }));
+    lines.push(t('review.exportMarkdown.target', { repo: data.pr?.repo ?? '', title: data.pr?.title ?? '' }));
+    lines.push(t('review.exportMarkdown.plannedCount', { post: postComments.length, total: data.comments.length }));
     lines.push('');
 
     if (postComments.length === 0) {
-      lines.push('（現在「投稿する」マークが付いた指摘はありません）');
+      lines.push(t('review.exportMarkdown.noPosts'));
     } else {
       for (const c of postComments) {
         const memo = memos[c.id];
         lines.push(`### [${c.id}] [${c.tag ?? 'IMO'}] ${c.title}`);
         if (c.path) {
-          lines.push(`- 場所: \`${c.path}${c.line ? `:${c.line}` : ''}\``);
+          lines.push(t('review.exportMarkdown.location', { path: `${c.path}${c.line ? `:${c.line}` : ''}` }));
         }
         if (c.problem) {
-          lines.push(`- **問題**: ${c.problem}`);
+          lines.push(t('review.exportMarkdown.problem', { problem: c.problem }));
         }
         if (c.proposal) {
-          lines.push(`- **提案**: ${c.proposal}`);
+          lines.push(t('review.exportMarkdown.proposal', { proposal: c.proposal }));
         }
         if (memo) {
           if (memo.includes('\n')) {
-            lines.push(`- **メモ**:`);
+            lines.push(t('review.exportMarkdown.note', { note: '' }));
             for (const mLine of memo.split('\n')) {
               lines.push(`  ${mLine}`);
             }
           } else {
-            lines.push(`- **メモ**: ${memo}`);
+            lines.push(t('review.exportMarkdown.note', { note: memo }));
           }
         }
         lines.push('');
@@ -297,13 +299,13 @@ export const ReviewReportView: React.FC<ReviewReportViewProps> = ({ reportId }) 
     }
 
     return lines.join('\n');
-  }, [data, marks, memos]);
+  }, [data, marks, memos, t]);
 
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-12 text-gray-400">
         <Loader2 className="w-8 h-8 animate-spin text-[#00AFA8] mb-3" />
-        <p className="text-sm">レビューレポートを読み込み中...</p>
+        <p className="text-sm">{t('review.sidebar.loadingReport')}</p>
       </div>
     );
   }
@@ -313,14 +315,14 @@ export const ReviewReportView: React.FC<ReviewReportViewProps> = ({ reportId }) 
     return (
       <div className="flex-1 w-full h-full flex flex-col">
         <div className="bg-[#161b22] px-4 py-2 border-b border-[#30363d] flex items-center justify-between text-xs text-gray-400">
-          <span>旧形式 HTML レポートプレビュー</span>
+          <span>{t('review.sidebar.legacyHtmlPreview')}</span>
           <a
             href={`/api/reports/${reportId}/html`}
             target="_blank"
             rel="noreferrer"
             className="hover:text-gray-200 flex items-center gap-1"
           >
-            別タブで開く <ExternalLink className="w-3 h-3" />
+            {t('review.sidebar.openNewTab')} <ExternalLink className="w-3 h-3" />
           </a>
         </div>
         <iframe
@@ -337,7 +339,7 @@ export const ReviewReportView: React.FC<ReviewReportViewProps> = ({ reportId }) 
     return (
       <div className="flex flex-col items-center justify-center h-full p-12 text-gray-400">
         <AlertCircle className="w-8 h-8 text-rose-500 mb-3" />
-        <p className="text-sm">{error || 'レポートデータを取得できませんでした。'}</p>
+        <p className="text-sm">{error || t('review.sidebar.reportLoadError')}</p>
       </div>
     );
   }

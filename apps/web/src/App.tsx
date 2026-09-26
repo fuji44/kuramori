@@ -17,9 +17,11 @@ import { ReportListView } from './views/ReportListView.tsx';
 import { SettingsView } from './views/SettingsView.tsx';
 import { JobLogModal } from './components/JobLogModal.tsx';
 import { ToastContainer, ToastItem, ToastType } from './components/Toast.tsx';
+import { useI18n } from './i18n/context.tsx';
 import { UserMenuPopover } from './components/UserMenuPopover.tsx';
 
 export default function App() {
+  const { t, setPreference } = useI18n();
   const [route, navigate] = useAppRoute();
 
   const [items, setItems] = useState<ReviewItem[]>([]);
@@ -59,6 +61,7 @@ export default function App() {
     defaultBackendId: 'antigravity',
     globalMaxConcurrency: 2,
     backendMaxConcurrency: { antigravity: 2, claudeCode: 1, codex: 1, mock: 5 },
+    displayLanguage: 'auto',
     engineSettings: {
       antigravity: {
         binPath: 'agy',
@@ -105,7 +108,7 @@ export default function App() {
       setItems(data.items);
     } catch (err) {
       console.error('Failed to fetch reviews', err);
-      showError('レビュー一覧の取得に失敗しました。サーバーの稼働状態を確認してください。');
+      showError(t('toast.reviewsFetchError'));
     } finally {
       setLoading(false);
     }
@@ -117,6 +120,9 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         setSettings(data);
+        if (data.displayLanguage !== undefined) {
+          setPreference(data.displayLanguage);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch settings', err);
@@ -215,10 +221,10 @@ export default function App() {
         throw new Error(`Refresh failed: HTTP ${res.status}`);
       }
       await fetchReviews();
-      showSuccess('GitHubの最新レビュー依頼を更新しました');
+      showSuccess(t('toast.reviewsRefreshSuccess'));
     } catch (err) {
       console.error('Failed to refresh reviews', err);
-      showError('GitHubの最新状態取得に失敗しました。gh CLIの認証を確認してください。');
+      showError(t('toast.reviewsRefreshError'));
     } finally {
       setRefreshing(false);
     }
@@ -242,17 +248,17 @@ export default function App() {
       if (!res.ok) {
         const errorData = await res.json().catch(() => null);
         const serverError = typeof errorData?.error === 'string' ? errorData.error : undefined;
-        throw new Error(serverError ?? `AIレビューの実行要求に失敗しました (HTTP ${res.status})`);
+        throw new Error(serverError ?? t('toast.reviewRequestError', { status: `HTTP ${res.status}` }));
       }
       showSuccess(
         ruleIds && ruleIds.length > 0
-          ? `${ruleIds.length} 件のルールをキューに投入しました${engine && engine !== 'default' ? ` (実行プロファイル: ${settings.engineProfiles?.find((profile) => profile.id === engine)?.name ?? engine})` : ''}`
-          : 'AIレビューをキューに投入しました'
+          ? `${t('toast.reviewQueuedWithRules', { count: ruleIds.length })}${engine && engine !== 'default' ? ` (${t('settings.rules.profileBadge', { name: settings.engineProfiles?.find((profile) => profile.id === engine)?.name ?? engine })})` : ''}`
+          : t('toast.reviewQueuedSuccess')
       );
       await fetchReviews();
     } catch (err: unknown) {
       console.error('Failed to trigger review', err);
-      const message = err instanceof Error ? err.message : 'AIレビューの実行要求に失敗しました。';
+      const message = err instanceof Error ? err.message : t('toast.reviewRequestFailed');
       showError(message);
     }
   };
@@ -267,6 +273,9 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         setSettings(data);
+        if (data.displayLanguage !== undefined) {
+          setPreference(data.displayLanguage);
+        }
       } else {
         throw new Error('Failed to save settings');
       }
@@ -396,10 +405,10 @@ export default function App() {
         const text = await res.text();
         setJobLogContent(text);
       } else {
-        setJobLogContent('ログが存在しないか、取得できませんでした。');
+        setJobLogContent(t('jobLog.noLog'));
       }
     } catch {
-      setJobLogContent('ログ取得中にエラーが発生しました。');
+      setJobLogContent(t('jobLog.fetchError'));
     } finally {
       setLoadingLog(false);
     }
@@ -420,7 +429,7 @@ export default function App() {
           <div
             onClick={() => navigate({ view: 'dashboard' })}
             className="flex items-center gap-2.5 cursor-pointer group"
-            title="ダッシュボードへ"
+            title={t('nav.dashboardTooltip')}
           >
             <img
               src="/favicon.svg"
@@ -449,7 +458,7 @@ export default function App() {
               }`}
             >
               <LayoutDashboard className="w-3.5 h-3.5" />
-              <span>ダッシュボード</span>
+              <span>{t('nav.dashboard')}</span>
             </button>
             <button
               type="button"
@@ -461,7 +470,7 @@ export default function App() {
               }`}
             >
               <GitPullRequest className="w-3.5 h-3.5" />
-              <span>PR一覧</span>
+              <span>{t('nav.prs')}</span>
               {unreviewedCount > 0 && (
                 <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-sky-950 text-sky-400 border border-sky-800">
                   {unreviewedCount}
@@ -478,7 +487,7 @@ export default function App() {
               }`}
             >
               <FileText className="w-3.5 h-3.5" />
-              <span>レポート一覧</span>
+              <span>{t('nav.reports')}</span>
               {reportCount > 0 && (
                 <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-emerald-950 text-emerald-300 border border-emerald-800">
                   {reportCount}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowDown, AlertCircle, Sparkles, RefreshCw, CircleDot } from 'lucide-react';
 import type { CallFlow, CallFlowStep } from '@kuramori/core';
+import { useI18n } from '../../i18n/context.tsx';
 
 interface ReviewStepFlowProps {
   callFlow?: CallFlow;
@@ -11,10 +12,12 @@ export const ReviewStepFlow: React.FC<ReviewStepFlowProps> = ({
   callFlow,
   onSelectComment,
 }) => {
+  const { t } = useI18n();
+
   if (!callFlow || !callFlow.steps || callFlow.steps.length === 0) {
     return (
       <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-8 text-center text-gray-400 text-sm">
-        処理シーケンス / ステップフロー情報はありません。
+        {t('review.stepFlow.noStepFlow')}
       </div>
     );
   }
@@ -58,9 +61,9 @@ export const ReviewStepFlow: React.FC<ReviewStepFlowProps> = ({
       <div className="flex items-center justify-between mb-6 pb-3 border-b border-[#30363d]">
         <h3 className="text-base font-semibold text-gray-100 flex items-center gap-2">
           <ArrowDown className="w-5 h-5 text-indigo-400" />
-          処理シーケンス / ステップフロー ({callFlow.steps.length} ステップ)
+          {t('review.stepFlow.title', { count: callFlow.steps.length })}
         </h3>
-        <span className="text-xs text-gray-400">変更点と影響箇所を上から順に可視化</span>
+        <span className="text-xs text-gray-400">{t('review.stepFlow.subtitle')}</span>
       </div>
 
       <div className="relative border-l-2 border-[#30363d] ml-4 pl-6 space-y-6">
@@ -94,7 +97,7 @@ export const ReviewStepFlow: React.FC<ReviewStepFlowProps> = ({
                         onClick={() => onSelectComment?.(step.commentId!)}
                         className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-indigo-400 bg-indigo-500/10 border border-indigo-500/30 px-2 py-0.5 rounded hover:bg-indigo-500/20 transition-colors"
                       >
-                        指摘 {step.commentId} を表示
+                        {t('review.stepFlow.showFinding', { id: step.commentId })}
                       </button>
                     )}
                   </div>

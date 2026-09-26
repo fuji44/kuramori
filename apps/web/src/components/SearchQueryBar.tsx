@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, X, Tag, User, GitPullRequest, Check, CornerDownLeft, GitBranch, Calendar } from 'lucide-react';
 import { AnchoredPopover } from './AnchoredPopover.tsx';
 import { getSearchSuggestions, SuggestionItem } from '../utils/search-suggestions.ts';
+import { useI18n } from '../i18n/context.tsx';
 
 export type { SuggestionItem };
 
@@ -14,6 +15,7 @@ interface SearchQueryBarProps {
 }
 
 export function SearchQueryBar({ query, onSubmit, authors, repositories, branches = [] }: SearchQueryBarProps) {
+  const { t, locale } = useI18n();
   const [draftQuery, setDraftQuery] = useState(query);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -32,8 +34,8 @@ export function SearchQueryBar({ query, onSubmit, authors, repositories, branche
 
   // Compute suggestions based on active token
   const suggestions = useMemo<SuggestionItem[]>(() => {
-    return getSearchSuggestions(activeToken, { authors, repositories, branches });
-  }, [activeToken, authors, repositories, branches]);
+    return getSearchSuggestions(activeToken, { authors, repositories, branches }, locale);
+  }, [activeToken, authors, repositories, branches, locale]);
 
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -114,7 +116,7 @@ export function SearchQueryBar({ query, onSubmit, authors, repositories, branche
           }}
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
-          placeholder="GitHubクエリでフィルタ (例: is:open author:alice -is:draft review:approved)"
+          placeholder={t('searchBar.inputPlaceholder')}
           className="w-full pl-9 pr-8 py-1.5 bg-[#161b22] border border-[#30363d] focus:border-sky-500 focus:ring-1 focus:ring-sky-500 rounded-lg text-xs text-white placeholder-[#8b949e] focus:outline-none transition-colors"
         />
         {draftQuery && (
@@ -125,7 +127,7 @@ export function SearchQueryBar({ query, onSubmit, authors, repositories, branche
               inputRef.current?.focus();
             }}
             className="absolute right-2.5 text-[#8b949e] hover:text-white p-0.5"
-            title="クエリをクリア"
+            title={t('searchBar.clearQueryTooltip')}
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -142,9 +144,9 @@ export function SearchQueryBar({ query, onSubmit, authors, repositories, branche
           className="max-w-[calc(100vw-16px)] bg-[#161b22] border border-[#30363d] rounded-lg shadow-2xl z-[1000] overflow-hidden flex flex-col"
         >
           <div className="px-3 py-1.5 border-b border-[#30363d] bg-[#21262d] flex items-center justify-between text-[11px] text-[#8b949e] shrink-0">
-            <span>候補: ↑↓ 移動・Tab/クリックで挿入 / Enter で検索</span>
+            <span>{t('searchBar.hintHelp')}</span>
             <span className="flex items-center gap-1 font-mono">
-              <CornerDownLeft className="w-3 h-3" /> Search
+              <CornerDownLeft className="w-3 h-3" /> {t('searchBar.searchAction')}
             </span>
           </div>
 

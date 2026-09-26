@@ -8,6 +8,7 @@ import {
   BaseCliEngineConfig,
 } from '../../types.ts';
 import { Checkbox } from '../Checkbox.tsx';
+import { useI18n } from '../../i18n/context.tsx';
 
 export interface AntigravityFieldsProps {
   values: Partial<AntigravityEngineConfig>;
@@ -26,6 +27,7 @@ export function AntigravityFields({
   showAdvanced,
   onToggleAdvanced,
 }: AntigravityFieldsProps) {
+  const { t } = useI18n();
   const [internalShowAdvanced, setInternalShowAdvanced] = useState(false);
   const isAdvancedOpen = showAdvanced !== undefined ? showAdvanced : internalShowAdvanced;
   const toggleAdvanced = onToggleAdvanced ?? (() => setInternalShowAdvanced((prev) => !prev));
@@ -54,20 +56,24 @@ export function AntigravityFields({
       {!isOverride && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="text-xs text-[#8b949e] block mb-1">agy バイナリパス *</label>
+            <label className="text-xs text-[#8b949e] block mb-1">
+              {t('settings.engines.engineBinPath', { engine: 'agy' })}
+            </label>
             <input
               type="text"
               required
               disabled={disabled}
               value={values.binPath ?? ''}
               onChange={(e) => onChange({ binPath: e.target.value })}
-              placeholder="例: agy または /home/user/.local/bin/agy"
+              placeholder={t('settings.engines.binPathPlaceholder')}
               className={inputClass}
             />
           </div>
 
           <div>
-            <label className="text-xs text-[#8b949e] block mb-1">実行タイムアウト (秒)</label>
+            <label className="text-xs text-[#8b949e] block mb-1">
+              {t('settings.engines.timeoutLabel')}
+            </label>
             <input
               type="number"
               min={10}
@@ -105,7 +111,9 @@ export function AntigravityFields({
       {/* 2. 基本設定 (モデル・推論レベル・タイムアウト) */}
       <div className={`grid grid-cols-1 ${isOverride ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-4`}>
         <div>
-          <label className="text-xs text-[#8b949e] block mb-1">モデル (--model)</label>
+          <label className="text-xs text-[#8b949e] block mb-1">
+            {t('settings.engines.modelLabel')}
+          </label>
           <input
             type="text"
             list="agy-model-suggestions"
@@ -114,14 +122,14 @@ export function AntigravityFields({
             onChange={(e) => onChange({ model: e.target.value })}
             placeholder={
               isOverride
-                ? '例: gemini-3.1-pro (未指定時は全体設定を継承)'
-                : '例: gemini-3.1-pro'
+                ? t('settings.engines.modelInheritPlaceholder')
+                : t('settings.engines.modelPlaceholder')
             }
             className={inputClass}
           />
           <datalist id="agy-model-suggestions">
-            <option value="gemini-3.1-pro" label="推奨" />
-            <option value="gemini-3.8-flash" label="高速" />
+            <option value="gemini-3.1-pro" label={t('settings.engines.modelOptionRecommended')} />
+            <option value="gemini-3.8-flash" label={t('settings.engines.modelOptionFast')} />
             <option value="gemini-3.7-flash" />
             <option value="gemini-3.6-flash" />
             <option value="claude-sonnet-4-6" />
@@ -131,7 +139,9 @@ export function AntigravityFields({
         </div>
 
         <div>
-          <label className="text-xs text-[#8b949e] block mb-1">推論レベル (--effort)</label>
+          <label className="text-xs text-[#8b949e] block mb-1">
+            {t('settings.engines.effortLabel')}
+          </label>
           <input
             type="text"
             list="agy-effort-suggestions"
@@ -140,8 +150,8 @@ export function AntigravityFields({
             onChange={(e) => onChange({ effort: e.target.value })}
             placeholder={
               isOverride
-                ? '例: high (未指定時は全体設定を継承)'
-                : '例: high'
+                ? t('settings.engines.effortInheritPlaceholder')
+                : t('settings.engines.effortPlaceholder')
             }
             className={inputClass}
           />
@@ -154,7 +164,9 @@ export function AntigravityFields({
 
         {isOverride && (
           <div>
-            <label className="text-xs text-[#8b949e] block mb-1">タイムアウト (秒)</label>
+            <label className="text-xs text-[#8b949e] block mb-1">
+              {t('settings.engines.timeoutLabel')}
+            </label>
             <input
               type="number"
               min={10}
@@ -173,7 +185,7 @@ export function AntigravityFields({
                   }
                 }
               }}
-              placeholder="例: 900 (未指定時は継承)"
+              placeholder={t('settings.engines.timeoutInheritPlaceholder')}
               className={inputClass}
             />
           </div>
@@ -190,15 +202,15 @@ export function AntigravityFields({
         >
           <div className="flex items-center gap-2">
             <Sliders className="w-3.5 h-3.5 text-sky-400" />
-            <span>高度な設定</span>
+            <span>{t('settings.engines.advancedSettings')}</span>
             {advancedCount > 0 && (
               <span className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-sky-950 text-sky-300 border border-sky-800/80">
-                {advancedCount} 項目設定中
+                {t('settings.engines.advancedCountBadge', { count: advancedCount })}
               </span>
             )}
           </div>
           <div className="flex items-center gap-1.5 text-xs text-[#8b949e]">
-            <span>{isAdvancedOpen ? '閉じる' : '表示する'}</span>
+            <span>{isAdvancedOpen ? t('settings.engines.closeAdvanced') : t('settings.engines.openAdvanced')}</span>
             {isAdvancedOpen ? (
               <ChevronUp className="w-3.5 h-3.5" />
             ) : (
@@ -213,7 +225,7 @@ export function AntigravityFields({
         <div className="space-y-4 pt-1 pl-3 border-l-2 border-sky-800/40">
           <div>
             <label className="text-xs text-[#8b949e] block mb-1">
-              システムプロンプト / インタラクション (System Prompt)
+              {t('settings.engines.systemPromptLabel')}
             </label>
             <textarea
               rows={3}
@@ -222,22 +234,22 @@ export function AntigravityFields({
               onChange={(e) => onChange({ systemPrompt: e.target.value })}
               placeholder={
                 isOverride
-                  ? '例: あなたはセキュリティ監査官です。脆弱性の悪用シナリオと緩和策を厳格に報告してください。(未指定時は全体設定を継承)'
-                  : '例: あなたは建設的で厳格なシニアエンジニアです。指摘事項には理由と具体的な修正案を日本語で添えてください。'
+                  ? t('settings.engines.systemPromptInheritPlaceholder')
+                  : t('settings.engines.systemPromptPlaceholder')
               }
               className={textareaClass}
             />
             <p className="text-[11px] text-[#8b949e] mt-1">
               {isOverride
-                ? '指定した場合、エンジンの全体設定のシステムプロンプトをこの内容で完全に置き換えます。'
-                : 'エージェントのペルソナや振る舞い、共通のレビュー方針を規定します。ルール側で上書きされていない場合に標準として適用されます。'}
+                ? t('settings.engines.systemPromptOverrideHelp')
+                : t('settings.engines.systemPromptHelp')}
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-xs text-[#8b949e] block mb-1">
-                入力フォーマット (--input-format)
+                {t('settings.engines.inputFormatLabel')}
               </label>
               <select
                 disabled={disabled}
@@ -255,15 +267,15 @@ export function AntigravityFields({
                 }}
                 className={selectClass}
               >
-                {isOverride && <option value="">未指定 (全体設定を継承)</option>}
-                <option value="text">text (標準テキスト / 単発プロンプト)</option>
-                <option value="stream-json">stream-json (NDJSON 入力)</option>
+                {isOverride && <option value="">{t('settings.engines.formatInherit')}</option>}
+                <option value="text">{t('settings.engines.formatTextPrompt')}</option>
+                <option value="stream-json">{t('settings.engines.formatStreamJsonInput')}</option>
               </select>
             </div>
 
             <div>
               <label className="text-xs text-[#8b949e] block mb-1">
-                出力フォーマット (--output-format)
+                {t('settings.engines.outputFormatLabel')}
               </label>
               <select
                 disabled={disabled}
@@ -274,17 +286,17 @@ export function AntigravityFields({
                 }}
                 className={selectClass}
               >
-                {isOverride && <option value="">未指定 (全体設定を継承)</option>}
-                <option value="text">text (標準テキスト)</option>
-                <option value="json">json (構造化 JSON / トークン使用量含む)</option>
-                <option value="stream-json">stream-json (NDJSON 逐次ストリーム)</option>
+                {isOverride && <option value="">{t('settings.engines.formatInherit')}</option>}
+                <option value="text">{t('settings.engines.formatText')}</option>
+                <option value="json">{t('settings.engines.formatJson')}</option>
+                <option value="stream-json">{t('settings.engines.formatStreamJson')}</option>
               </select>
             </div>
           </div>
 
           <div>
             <label className="text-xs text-[#8b949e] block mb-1">
-              JSON スキーマ制約 (--json-schema)
+              {t('settings.engines.jsonSchemaLabel')}
             </label>
             <textarea
               rows={4}
@@ -293,19 +305,19 @@ export function AntigravityFields({
               onChange={(e) => onChange({ jsonSchema: e.target.value })}
               placeholder={
                 isOverride
-                  ? '例: {"type":"object","properties":{...}} (未指定時は全体設定を継承)'
-                  : '例: {"type":"object","properties":{...}} または schema.json のファイルパス'
+                  ? t('settings.engines.jsonSchemaPlaceholder')
+                  : t('settings.engines.jsonSchemaPlaceholder')
               }
               className={textareaClass}
             />
             <p className="text-[11px] text-[#8b949e] mt-1">
-              指定時、モデルの最終出力を指定された JSON スキーマに厳格準拠（Structured Outputs）させます。
+              {t('settings.engines.jsonSchemaHelp')}
             </p>
           </div>
 
           <div>
             <label className="text-xs text-[#8b949e] block mb-1">
-              Print タイムアウト (--print-timeout)
+              {t('settings.engines.printTimeoutLabel')}
             </label>
             <input
               type="text"
@@ -314,13 +326,13 @@ export function AntigravityFields({
               onChange={(e) => onChange({ printTimeout: e.target.value })}
               placeholder={
                 isOverride
-                  ? '例: 900s または 15m (未指定時は全体設定を継承)'
-                  : '例: 900s または 15m (未指定時は 0s / 無制限)'
+                  ? t('settings.engines.printTimeoutPlaceholder')
+                  : t('settings.engines.printTimeoutDefaultPlaceholder')
               }
               className={inputClass}
             />
             <p className="text-[11px] text-[#8b949e] mt-1">
-              agy 自身の print モード（-p）内部時間制限です。指定時間でターンを打ち切り途中出力を返して正常終了します（単位: s, m）。
+              {t('settings.engines.printTimeoutHelp')}
             </p>
           </div>
 
@@ -328,7 +340,7 @@ export function AntigravityFields({
             {isOverride ? (
               <div>
                 <label className="text-xs text-[#8b949e] block mb-1">
-                  ターミナルサンドボックス (--sandbox)
+                  {t('settings.engines.sandboxLabel')}
                 </label>
                 <select
                   disabled={disabled}
@@ -339,9 +351,9 @@ export function AntigravityFields({
                   }}
                   className={selectClass}
                 >
-                  <option value="">未指定 (全体設定を継承)</option>
-                  <option value="true">有効 (--sandbox を付与)</option>
-                  <option value="false">無効 (付与しない)</option>
+                  <option value="">{t('settings.engines.sandboxOptionInherit')}</option>
+                  <option value="true">{t('settings.engines.sandboxOptionEnable')}</option>
+                  <option value="false">{t('settings.engines.sandboxOptionDisable')}</option>
                 </select>
               </div>
             ) : (
@@ -350,15 +362,15 @@ export function AntigravityFields({
                 disabled={disabled}
                 checked={Boolean(values.sandbox)}
                 onChange={(checked) => onChange({ sandbox: checked })}
-                label="ターミナルサンドボックス (--sandbox)"
-                description="エージェントのシェル操作を制限されたセキュアなサンドボックス内で実行します。"
+                label={t('settings.engines.sandboxLabel')}
+                description={t('settings.engines.sandboxDesc')}
               />
             )}
 
             {isOverride ? (
               <div>
                 <label className="text-xs text-[#8b949e] block mb-1">
-                  スキルの展開を抑止 (--disable-slash-commands)
+                  {t('settings.engines.disableSlashCommands')}
                 </label>
                 <select
                   disabled={disabled}
@@ -375,9 +387,9 @@ export function AntigravityFields({
                   }}
                   className={selectClass}
                 >
-                  <option value="">未指定 (全体設定を継承)</option>
-                  <option value="true">有効 (抑止する)</option>
-                  <option value="false">無効 (抑止しない)</option>
+                  <option value="">{t('settings.engines.disableSlashCommandsOptionInherit')}</option>
+                  <option value="true">{t('settings.engines.disableSlashCommandsOptionEnable')}</option>
+                  <option value="false">{t('settings.engines.disableSlashCommandsOptionDisable')}</option>
                 </select>
               </div>
             ) : (
@@ -386,8 +398,8 @@ export function AntigravityFields({
                 disabled={disabled}
                 checked={Boolean(values.disableSlashCommands)}
                 onChange={(checked) => onChange({ disableSlashCommands: checked })}
-                label="スキルの展開を抑止 (--disable-slash-commands)"
-                description="プロンプト内のスラッシュコマンドや意図しないスキルの展開を無効化します。"
+                label={t('settings.engines.disableSlashCommands')}
+                description={t('settings.engines.disableSlashCommandsDesc')}
               />
             )}
           </div>
@@ -397,7 +409,9 @@ export function AntigravityFields({
           </div>
 
           <div>
-            <label className="text-xs text-[#8b949e] block mb-1">追加カスタム引数 (Custom Args)</label>
+            <label className="text-xs text-[#8b949e] block mb-1">
+              {t('settings.engines.customArgs')}
+            </label>
             <input
               type="text"
               disabled={disabled}
@@ -405,8 +419,8 @@ export function AntigravityFields({
               onChange={(e) => onChange({ customArgs: e.target.value })}
               placeholder={
                 isOverride
-                  ? '例: --project my-project (未指定時は全体設定を継承)'
-                  : '例: --project my-project'
+                  ? t('settings.engines.customArgsInheritPlaceholder', { example: '--project my-project' })
+                  : t('settings.engines.customArgsPlaceholder')
               }
               className={inputClass}
             />
@@ -437,6 +451,7 @@ export function EngineEnvironmentVariables({
   disabled: boolean;
   engineLabel: string;
 }) {
+  const { t } = useI18n();
   const environment: Record<string, { value: string; secret: boolean; configured?: boolean }> = Object.fromEntries(
     Object.entries(values.customEnv ?? {}).map(([name, entry]) => [
       name,
@@ -470,7 +485,7 @@ export function EngineEnvironmentVariables({
   return (
     <div className="space-y-2.5">
       <div className="flex items-center justify-between gap-3">
-        <label className="text-xs text-[#8b949e]">環境変数</label>
+        <label className="text-xs text-[#8b949e]">{t('settings.engines.envVarsLabel')}</label>
         <button
           type="button"
           disabled={disabled}
@@ -478,12 +493,12 @@ export function EngineEnvironmentVariables({
           className="inline-flex items-center gap-1 rounded border border-[#30363d] px-2 py-1 text-[11px] text-sky-400 hover:bg-[#21262d] disabled:opacity-50"
         >
           <Plus className="h-3 w-3" />
-          追加
+          {t('settings.engines.addEnvVar')}
         </button>
       </div>
 
       {Object.entries(environment).length === 0 ? (
-        <p className="text-[11px] text-[#8b949e]">実行時に {engineLabel} CLI へ渡す環境変数を設定します。</p>
+        <p className="text-[11px] text-[#8b949e]">{t('settings.engines.envVarsDesc', { engine: engineLabel })}</p>
       ) : (
         <div className="space-y-2">
           {Object.entries(environment).map(([name, entry], index) => (
@@ -491,19 +506,19 @@ export function EngineEnvironmentVariables({
               <input
                 type="text"
                 disabled={disabled}
-                aria-label="環境変数名"
+                aria-label={t('settings.engines.envVarName')}
                 value={name}
                 onChange={(event) => updateVariable(name, event.target.value, entry)}
-                placeholder="変数名"
+                placeholder={t('settings.engines.envVarName')}
                 className="min-w-0 rounded border border-[#30363d] bg-[#0d1117] px-2.5 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-sky-500 disabled:opacity-50"
               />
               <input
                 type={entry.secret ? 'password' : 'text'}
                 disabled={disabled}
-                aria-label={`${name} の値${entry.secret ? '（機密情報）' : ''}`}
+                aria-label={entry.secret ? t('settings.engines.envVarValueSecretAria', { name }) : t('settings.engines.envVarValueAria', { name })}
                 value={entry.value}
                 onChange={(event) => updateVariable(name, name, { ...entry, value: event.target.value })}
-                placeholder={entry.secret && entry.configured ? '設定済み（変更時のみ入力）' : '値'}
+                placeholder={entry.secret && entry.configured ? t('settings.engines.envVarConfigured') : t('settings.engines.envVarValue')}
                 className="min-w-0 rounded border border-[#30363d] bg-[#0d1117] px-2.5 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-sky-500 disabled:opacity-50"
               />
               <label className="flex items-center gap-1 text-[10px] text-[#8b949e]">
@@ -512,14 +527,14 @@ export function EngineEnvironmentVariables({
                   disabled={disabled}
                   checked={entry.secret}
                   onChange={(event) => updateVariable(name, name, { ...entry, secret: event.target.checked })}
-                  aria-label={`${name} を機密情報として扱う`}
+                  aria-label={t('settings.engines.envVarSecretAria', { name })}
                 />
-                機密
+                {t('settings.engines.envVarSecret')}
               </label>
               <button
                 type="button"
                 disabled={disabled}
-                aria-label={`${name} を削除`}
+                aria-label={t('settings.engines.envVarDeleteAria', { name })}
                 onClick={() => updateVariable(name, '', { value: '', secret: false })}
                 className="rounded border border-[#30363d] px-2 text-[#8b949e] hover:border-rose-700 hover:text-rose-300 disabled:opacity-50"
               >
@@ -531,7 +546,7 @@ export function EngineEnvironmentVariables({
       )}
 
       <p className="text-[11px] text-amber-300/90">
-        機密に設定した値は画面と設定 API の応答で伏せて表示します。保存先では暗号化されません。
+        {t('settings.engines.envVarNotice')}
       </p>
     </div>
   );
@@ -545,6 +560,7 @@ export function ClaudeCodeFields({
   showAdvanced,
   onToggleAdvanced,
 }: ClaudeCodeFieldsProps) {
+  const { t } = useI18n();
   const [internalShowAdvanced, setInternalShowAdvanced] = useState(false);
   const isAdvancedOpen = showAdvanced !== undefined ? showAdvanced : internalShowAdvanced;
   const toggleAdvanced = onToggleAdvanced ?? (() => setInternalShowAdvanced((prev) => !prev));
@@ -573,20 +589,24 @@ export function ClaudeCodeFields({
       {!isOverride && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="text-xs text-[#8b949e] block mb-1">claude バイナリパス *</label>
+            <label className="text-xs text-[#8b949e] block mb-1">
+              {t('settings.engines.engineBinPath', { engine: 'claude' })}
+            </label>
             <input
               type="text"
               required
               disabled={disabled}
               value={values.binPath ?? ''}
               onChange={(e) => onChange({ binPath: e.target.value })}
-              placeholder="例: claude または /usr/local/bin/claude"
+              placeholder={t('settings.engines.binPathPlaceholder')}
               className={inputClass}
             />
           </div>
 
           <div>
-            <label className="text-xs text-[#8b949e] block mb-1">実行タイムアウト (秒)</label>
+            <label className="text-xs text-[#8b949e] block mb-1">
+              {t('settings.engines.timeoutLabel')}
+            </label>
             <input
               type="number"
               min={10}
@@ -624,7 +644,9 @@ export function ClaudeCodeFields({
       {/* 2. 基本設定 (モデル・推論レベル・タイムアウト) */}
       <div className={`grid grid-cols-1 ${isOverride ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-4`}>
         <div>
-          <label className="text-xs text-[#8b949e] block mb-1">モデル (--model)</label>
+          <label className="text-xs text-[#8b949e] block mb-1">
+            {t('settings.engines.modelLabel')}
+          </label>
           <input
             type="text"
             list="claude-model-suggestions"
@@ -633,18 +655,18 @@ export function ClaudeCodeFields({
             onChange={(e) => onChange({ model: e.target.value })}
             placeholder={
               isOverride
-                ? '例: sonnet (未指定時は全体設定を継承)'
-                : '例: sonnet'
+                ? t('settings.engines.modelInheritPlaceholder')
+                : t('settings.engines.modelPlaceholder')
             }
             className={inputClass}
           />
           <datalist id="claude-model-suggestions">
-            <option value="sonnet" label="推奨" />
-            <option value="opus" label="推論" />
-            <option value="haiku" label="高速" />
-            <option value="best" label="最高性能" />
+            <option value="sonnet" label={t('settings.engines.modelOptionRecommended')} />
+            <option value="opus" label={t('settings.engines.modelOptionReasoning')} />
+            <option value="haiku" label={t('settings.engines.modelOptionFast')} />
+            <option value="best" label={t('settings.engines.modelOptionBest')} />
             <option value="fable" />
-            <option value="opusplan" label="ハイブリッド" />
+            <option value="opusplan" label={t('settings.engines.modelOptionHybrid')} />
             <option value="sonnet[1m]" />
             <option value="opus[1m]" />
             <option value="default" />
@@ -657,7 +679,9 @@ export function ClaudeCodeFields({
         </div>
 
         <div>
-          <label className="text-xs text-[#8b949e] block mb-1">推論レベル (--effort)</label>
+          <label className="text-xs text-[#8b949e] block mb-1">
+            {t('settings.engines.effortLabel')}
+          </label>
           <input
             type="text"
             list="claude-effort-suggestions"
@@ -666,8 +690,8 @@ export function ClaudeCodeFields({
             onChange={(e) => onChange({ effort: e.target.value })}
             placeholder={
               isOverride
-                ? '例: high (未指定時は全体設定を継承)'
-                : '例: high'
+                ? t('settings.engines.effortInheritPlaceholder')
+                : t('settings.engines.effortPlaceholder')
             }
             className={inputClass}
           />
@@ -682,7 +706,9 @@ export function ClaudeCodeFields({
 
         {isOverride && (
           <div>
-            <label className="text-xs text-[#8b949e] block mb-1">タイムアウト (秒)</label>
+            <label className="text-xs text-[#8b949e] block mb-1">
+              {t('settings.engines.timeoutLabel')}
+            </label>
             <input
               type="number"
               min={10}
@@ -701,7 +727,7 @@ export function ClaudeCodeFields({
                   }
                 }
               }}
-              placeholder="例: 900 (未指定時は継承)"
+              placeholder={t('settings.engines.timeoutInheritPlaceholder')}
               className={inputClass}
             />
           </div>
@@ -718,15 +744,15 @@ export function ClaudeCodeFields({
         >
           <div className="flex items-center gap-2">
             <Sliders className="w-3.5 h-3.5 text-sky-400" />
-            <span>高度な設定</span>
+            <span>{t('settings.engines.advancedSettings')}</span>
             {advancedCount > 0 && (
               <span className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-sky-950 text-sky-300 border border-sky-800/80">
-                {advancedCount} 項目設定中
+                {t('settings.engines.advancedCountBadge', { count: advancedCount })}
               </span>
             )}
           </div>
           <div className="flex items-center gap-1.5 text-xs text-[#8b949e]">
-            <span>{isAdvancedOpen ? '閉じる' : '表示する'}</span>
+            <span>{isAdvancedOpen ? t('settings.engines.closeAdvanced') : t('settings.engines.openAdvanced')}</span>
             {isAdvancedOpen ? (
               <ChevronUp className="w-3.5 h-3.5" />
             ) : (
@@ -743,7 +769,7 @@ export function ClaudeCodeFields({
 
           <div>
             <label className="text-xs text-[#8b949e] block mb-1">
-              システムプロンプト / インタラクション (--append-system-prompt)
+              {t('settings.engines.systemPromptLabel')}
             </label>
             <textarea
               rows={3}
@@ -752,22 +778,22 @@ export function ClaudeCodeFields({
               onChange={(e) => onChange({ systemPrompt: e.target.value })}
               placeholder={
                 isOverride
-                  ? '例: あなたはセキュリティ監査官です。脆弱性の悪用シナリオと緩和策を厳格に報告してください。(未指定時は全体設定を継承)'
-                  : '例: あなたは建設的で厳格なシニアエンジニアです。指摘事項には理由と具体的な修正案を日本語で添えてください。'
+                  ? t('settings.engines.systemPromptInheritPlaceholder')
+                  : t('settings.engines.systemPromptPlaceholder')
               }
               className={textareaClass}
             />
             <p className="text-[11px] text-[#8b949e] mt-1">
               {isOverride
-                ? '指定した場合、エンジンの全体設定のシステムプロンプトをこの内容で完全に置き換えます。'
-                : 'エージェントのペルソナや振る舞い、共通のレビュー方針を規定します。CLI 実行時に --append-system-prompt として渡されます。'}
+                ? t('settings.engines.systemPromptOverrideHelp')
+                : t('settings.engines.systemPromptHelp')}
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-xs text-[#8b949e] block mb-1">
-                入力フォーマット (--input-format)
+                {t('settings.engines.inputFormatLabel')}
               </label>
               <select
                 disabled={disabled}
@@ -785,15 +811,15 @@ export function ClaudeCodeFields({
                 }}
                 className={selectClass}
               >
-                {isOverride && <option value="">未指定 (全体設定を継承)</option>}
-                <option value="text">text (標準テキスト / 単発プロンプト)</option>
-                <option value="stream-json">stream-json (NDJSON 入力)</option>
+                {isOverride && <option value="">{t('settings.engines.formatInherit')}</option>}
+                <option value="text">{t('settings.engines.formatTextPrompt')}</option>
+                <option value="stream-json">{t('settings.engines.formatStreamJsonInput')}</option>
               </select>
             </div>
 
             <div>
               <label className="text-xs text-[#8b949e] block mb-1">
-                出力フォーマット (--output-format)
+                {t('settings.engines.outputFormatLabel')}
               </label>
               <select
                 disabled={disabled}
@@ -804,17 +830,17 @@ export function ClaudeCodeFields({
                 }}
                 className={selectClass}
               >
-                {isOverride && <option value="">未指定 (全体設定を継承)</option>}
-                <option value="text">text (標準テキスト)</option>
-                <option value="json">json (構造化 JSON / トークン使用量含む)</option>
-                <option value="stream-json">stream-json (NDJSON 逐次ストリーム)</option>
+                {isOverride && <option value="">{t('settings.engines.formatInherit')}</option>}
+                <option value="text">{t('settings.engines.formatText')}</option>
+                <option value="json">{t('settings.engines.formatJson')}</option>
+                <option value="stream-json">{t('settings.engines.formatStreamJson')}</option>
               </select>
             </div>
           </div>
 
           <div>
             <label className="text-xs text-[#8b949e] block mb-1">
-              JSON スキーマ制約 (--json-schema)
+              {t('settings.engines.jsonSchemaLabel')}
             </label>
             <textarea
               rows={4}
@@ -823,19 +849,19 @@ export function ClaudeCodeFields({
               onChange={(e) => onChange({ jsonSchema: e.target.value })}
               placeholder={
                 isOverride
-                  ? '例: {"type":"object","properties":{...}} (未指定時は全体設定を継承)'
-                  : '例: {"type":"object","properties":{...}} または schema.json のファイルパス'
+                  ? t('settings.engines.jsonSchemaPlaceholder')
+                  : t('settings.engines.jsonSchemaPlaceholder')
               }
               className={textareaClass}
             />
             <p className="text-[11px] text-[#8b949e] mt-1">
-              指定時、モデルの最終出力を指定された JSON スキーマに厳格準拠（Structured Outputs）させます。
+              {t('settings.engines.jsonSchemaHelp')}
             </p>
           </div>
 
           <div>
             <label className="text-xs text-[#8b949e] block mb-1">
-              許可ツール制約 (--allowed-tools)
+              {t('settings.engines.allowedToolsLabel')}
             </label>
             <input
               type="text"
@@ -844,13 +870,13 @@ export function ClaudeCodeFields({
               onChange={(e) => onChange({ allowedTools: e.target.value })}
               placeholder={
                 isOverride
-                  ? '例: Bash,Edit,GlobTool (未指定時は全体設定を継承)'
-                  : '例: Bash,Edit,GlobTool (カンマ区切り、空欄で全ツール許可)'
+                  ? t('settings.engines.customArgsInheritPlaceholder', { example: 'Bash,Edit,GlobTool' })
+                  : t('settings.engines.allowedToolsPlaceholder')
               }
               className={inputClass}
             />
             <p className="text-[11px] text-[#8b949e] mt-1">
-              Claude Code CLI が利用可能なツールを制限します。カンマ区切りでツール名を指定します。
+              {t('settings.engines.allowedToolsHelp')}
             </p>
           </div>
 
@@ -858,7 +884,7 @@ export function ClaudeCodeFields({
             {isOverride ? (
               <div>
                 <label className="text-xs text-[#8b949e] block mb-1">
-                  設定読み込みスキップ (--bare)
+                  {t('settings.engines.bareMode')}
                 </label>
                 <select
                   disabled={disabled}
@@ -869,9 +895,9 @@ export function ClaudeCodeFields({
                   }}
                   className={selectClass}
                 >
-                  <option value="">未指定 (全体設定を継承)</option>
-                  <option value="true">有効 (--bare を付与)</option>
-                  <option value="false">無効 (付与しない)</option>
+                  <option value="">{t('settings.engines.bareModeOptionInherit')}</option>
+                  <option value="true">{t('settings.engines.bareModeOptionEnable')}</option>
+                  <option value="false">{t('settings.engines.bareModeOptionDisable')}</option>
                 </select>
               </div>
             ) : (
@@ -880,15 +906,15 @@ export function ClaudeCodeFields({
                 disabled={disabled}
                 checked={Boolean(values.bare)}
                 onChange={(checked) => onChange({ bare: checked })}
-                label="設定読み込みスキップ (--bare)"
-                description="ローカルの config やプロジェクト固有のカスタムプロンプト等の読み込みを抑制します。"
+                label={t('settings.engines.bareMode')}
+                description={t('settings.engines.bareModeDesc')}
               />
             )}
           </div>
 
           <div>
             <label className="text-xs text-[#8b949e] block mb-1">
-              最大ターン数制限 (--max-turns)
+              {t('settings.engines.maxTurnsLabel')}
             </label>
             <input
               type="number"
@@ -910,18 +936,20 @@ export function ClaudeCodeFields({
               }}
               placeholder={
                 isOverride
-                  ? '例: 15 (未指定時は全体設定を継承)'
-                  : '例: 15 (空欄で制限なし)'
+                  ? t('settings.engines.customArgsInheritPlaceholder', { example: '15' })
+                  : t('settings.engines.maxTurnsPlaceholder')
               }
               className={inputClass}
             />
             <p className="text-[11px] text-[#8b949e] mt-1">
-              自律探索の往復ターン数を制限し、ローカル GPU の VRAM 枯渇や長時間の無限ループを防止します。
+              {t('settings.engines.maxTurnsHelp')}
             </p>
           </div>
 
           <div>
-            <label className="text-xs text-[#8b949e] block mb-1">追加カスタム引数 (Custom Args)</label>
+            <label className="text-xs text-[#8b949e] block mb-1">
+              {t('settings.engines.customArgs')}
+            </label>
             <input
               type="text"
               disabled={disabled}
@@ -929,8 +957,8 @@ export function ClaudeCodeFields({
               onChange={(e) => onChange({ customArgs: e.target.value })}
               placeholder={
                 isOverride
-                  ? '例: --dangerously-skip-permissions (未指定時は全体設定を継承)'
-                  : '例: --dangerously-skip-permissions'
+                  ? t('settings.engines.customArgsInheritPlaceholder', { example: '--dangerously-skip-permissions' })
+                  : t('settings.engines.customArgsPlaceholder')
               }
               className={inputClass}
             />
@@ -948,47 +976,50 @@ export interface CodexFieldsProps {
 }
 
 export function CodexFields({ values, onChange, disabled = false }: CodexFieldsProps) {
+  const { t } = useI18n();
   const inputClass = 'w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500 disabled:opacity-50';
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="text-xs text-[#8b949e] block mb-1">codex バイナリパス *</label>
-          <input required disabled={disabled} className={inputClass} value={values.binPath ?? ''} onChange={(event) => onChange({ binPath: event.target.value })} />
+          <label className="text-xs text-[#8b949e] block mb-1">
+            {t('settings.engines.engineBinPath', { engine: 'codex' })}
+          </label>
+          <input required disabled={disabled} className={inputClass} value={values.binPath ?? ''} onChange={(event) => onChange({ binPath: event.target.value })} placeholder={t('settings.engines.binPathPlaceholder')} />
         </div>
         <div>
-          <label className="text-xs text-[#8b949e] block mb-1">実行タイムアウト (秒)</label>
+          <label className="text-xs text-[#8b949e] block mb-1">{t('settings.engines.timeoutLabel')}</label>
           <input type="number" min={10} max={3600} disabled={disabled} className={inputClass} value={values.timeoutSeconds ?? 900} onChange={(event) => onChange({ timeoutSeconds: Number(event.target.value) || 900 })} />
         </div>
         <div>
-          <label className="text-xs text-[#8b949e] block mb-1">モデル (--model)</label>
+          <label className="text-xs text-[#8b949e] block mb-1">{t('settings.engines.modelLabel')}</label>
           <input list="codex-model-suggestions" disabled={disabled} className={inputClass} value={values.model ?? ''} onChange={(event) => onChange({ model: event.target.value })} placeholder="gpt-6-sol" />
           <datalist id="codex-model-suggestions">
-            <option value="gpt-6-sol" label="Codex 推奨" />
-            <option value="gpt-5.3-codex" label="Codex 向けに最適化" />
+            <option value="gpt-6-sol" label={t('settings.engines.modelOptionCodexRecommended')} />
+            <option value="gpt-5.3-codex" label={t('settings.engines.modelOptionCodexOptimized')} />
           </datalist>
         </div>
         <div>
-          <label className="text-xs text-[#8b949e] block mb-1">推論レベル</label>
+          <label className="text-xs text-[#8b949e] block mb-1">{t('settings.engines.effortLabel')}</label>
           <input list="codex-effort-suggestions" disabled={disabled} className={inputClass} value={values.effort ?? ''} onChange={(event) => onChange({ effort: event.target.value })} placeholder="high" />
           <datalist id="codex-effort-suggestions"><option value="low" /><option value="medium" /><option value="high" /><option value="xhigh" /><option value="max" /><option value="ultra" /></datalist>
         </div>
         <div>
-          <label className="text-xs text-[#8b949e] block mb-1">サンドボックス</label>
+          <label className="text-xs text-[#8b949e] block mb-1">{t('settings.engines.sandboxModeLabel')}</label>
           <select disabled={disabled} className={inputClass} value={values.sandboxMode ?? 'workspace-write'} onChange={(event) => onChange({ sandboxMode: event.target.value as CodexEngineConfig['sandboxMode'] })}>
             <option value="read-only">read-only</option><option value="workspace-write">workspace-write</option><option value="danger-full-access">danger-full-access</option>
           </select>
         </div>
       </div>
-      <Checkbox variant="card" disabled={disabled} checked={values.ephemeral ?? true} onChange={(checked) => onChange({ ephemeral: checked })} label="一時セッション (--ephemeral)" description="Codex のセッション記録を保存せずに実行します。" />
+      <Checkbox variant="card" disabled={disabled} checked={values.ephemeral ?? true} onChange={(checked) => onChange({ ephemeral: checked })} label={t('settings.engines.ephemeralLabel')} description={t('settings.engines.ephemeralDesc')} />
       <details className="rounded border border-[#30363d] p-3">
-        <summary className="cursor-pointer text-xs text-[#c9d1d9]">高度な設定</summary>
+        <summary className="cursor-pointer text-xs text-[#c9d1d9]">{t('settings.engines.advancedSettings')}</summary>
         <div className="mt-3 space-y-4">
-          <label className="block text-xs text-[#8b949e]">システムプロンプト
+          <label className="block text-xs text-[#8b949e]">{t('settings.engines.systemPromptLabel')}
             <textarea rows={3} disabled={disabled} className={`${inputClass} mt-1`} value={values.systemPrompt ?? ''} onChange={(event) => onChange({ systemPrompt: event.target.value })} />
           </label>
           <EngineEnvironmentVariables values={values} onChange={onChange} disabled={disabled} engineLabel="Codex" />
-          <label className="block text-xs text-[#8b949e]">追加カスタム引数
+          <label className="block text-xs text-[#8b949e]">{t('settings.engines.customArgs')}
             <input disabled={disabled} className={`${inputClass} mt-1`} value={values.customArgs ?? ''} onChange={(event) => onChange({ customArgs: event.target.value })} />
           </label>
         </div>
@@ -1010,11 +1041,12 @@ export function MockFields({
   isOverride = false,
   disabled = false,
 }: MockFieldsProps) {
+  const { t } = useI18n();
   return (
     <div className="space-y-4">
       <div>
         <label className="text-xs text-[#8b949e] block mb-1">
-          疑似遅延時間 (ミリ秒)
+          {t('settings.engines.delayMsLabel')}
         </label>
         <input
           type="number"
@@ -1044,13 +1076,13 @@ export function MockFields({
           }}
           placeholder={
             isOverride
-              ? '例: 500 (未指定時は全体設定を継承)'
-              : '例: 500'
+              ? t('settings.engines.mockDelayInheritPlaceholder')
+              : t('settings.engines.mockDelayPlaceholder')
           }
           className={`w-full ${isOverride ? 'bg-[#161b22]' : 'bg-[#0d1117]'} border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-[#090d13]`}
         />
         <p className="text-[11px] text-[#8b949e] mt-1">
-          レビュー処理の実行をシミュレートする待機時間（ms）です。
+          {t('settings.engines.simulationDelayHelp')}
         </p>
       </div>
     </div>
@@ -1076,6 +1108,8 @@ export function EngineConfigFields({
   showAdvanced,
   onToggleAdvanced,
 }: EngineConfigFieldsProps) {
+  const { t } = useI18n();
+
   if (engine === 'antigravity') {
     return (
       <AntigravityFields
@@ -1119,7 +1153,7 @@ export function EngineConfigFields({
 
   return (
     <div className="text-xs text-[#8b949e] p-3 rounded bg-[#0d1117] border border-[#30363d]">
-      指定されたエンジン「{engine}」の設定フィールドはありません。
+      {t('settings.engines.noConfigForEngine', { engine })}
     </div>
   );
 }

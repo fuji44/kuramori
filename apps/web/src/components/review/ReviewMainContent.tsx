@@ -20,6 +20,7 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import type { ReviewReportData, ReviewComment, MarkType } from '@kuramori/core';
+import { useI18n } from '../../i18n/context.tsx';
 import { ReviewDiagram } from './ReviewDiagram.tsx';
 import { ReviewDiffViewer } from './ReviewDiffViewer.tsx';
 import { ReviewOutlineBar } from './ReviewOutlineBar.tsx';
@@ -39,15 +40,15 @@ interface ReviewMainContentProps {
   onOpenJson?: () => void;
 }
 
-const TAG_META: Record<string, { bg: string; text: string; meaning: string }> = {
-  MUST: { bg: 'bg-rose-500/15 text-rose-400 border-rose-500/30', text: 'text-rose-400', meaning: '必ず修正してほしい' },
-  Q: { bg: 'bg-amber-500/15 text-amber-400 border-amber-500/30', text: 'text-amber-400', meaning: '回答が必要' },
-  IMO: { bg: 'bg-blue-500/15 text-blue-400 border-blue-500/30', text: 'text-blue-400', meaning: 'より良い代替案の提示' },
-  NIT: { bg: 'bg-gray-500/15 text-gray-400 border-gray-500/30', text: 'text-gray-400', meaning: '重箱の隅' },
-  NR: { bg: 'bg-gray-500/15 text-gray-400 border-gray-500/30', text: 'text-gray-400', meaning: '余力があれば' },
-  FYI: { bg: 'bg-gray-500/15 text-gray-400 border-gray-500/30', text: 'text-gray-400', meaning: '情報の共有' },
-  PRAISE: { bg: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30', text: 'text-emerald-400', meaning: '良いコードへの称賛' },
-  THOUGHT: { bg: 'bg-gray-500/15 text-gray-400 border-gray-500/30', text: 'text-gray-400', meaning: '観点の共有' },
+const TAG_STYLES: Record<string, { bg: string; text: string }> = {
+  MUST: { bg: 'bg-rose-500/15 text-rose-400 border-rose-500/30', text: 'text-rose-400' },
+  Q: { bg: 'bg-amber-500/15 text-amber-400 border-amber-500/30', text: 'text-amber-400' },
+  IMO: { bg: 'bg-blue-500/15 text-blue-400 border-blue-500/30', text: 'text-blue-400' },
+  NIT: { bg: 'bg-gray-500/15 text-gray-400 border-gray-500/30', text: 'text-gray-400' },
+  NR: { bg: 'bg-gray-500/15 text-gray-400 border-gray-500/30', text: 'text-gray-400' },
+  FYI: { bg: 'bg-gray-500/15 text-gray-400 border-gray-500/30', text: 'text-gray-400' },
+  PRAISE: { bg: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30', text: 'text-emerald-400' },
+  THOUGHT: { bg: 'bg-gray-500/15 text-gray-400 border-gray-500/30', text: 'text-gray-400' },
 };
 
 const SEVERITY_META: Record<string, { label: string; badge: string }> = {
@@ -65,11 +66,11 @@ const CATEGORY_META: Record<string, { label: string; bg: string }> = {
   performance: { label: 'Performance', bg: 'bg-emerald-950/40 text-emerald-300 border-emerald-500/30' },
 };
 
-const LENS_META: Record<string, { label: string; desc: string; color: string }> = {
-  escalate: { label: '要検証 (escalate)', desc: 'この表で決められない。人間が最初に検証・判断する', color: 'text-rose-400 bg-rose-500/10 border-rose-500/30' },
-  promote: { label: '採用 (promote)', desc: '必ず言う', color: 'text-blue-400 bg-blue-500/10 border-blue-500/30' },
-  keep: { label: '維持 (keep)', desc: '出すが優先度は低い', color: 'text-gray-400 bg-gray-500/10 border-gray-500/30' },
-  drop: { label: '見送り (drop)', desc: '言わない（消さず畳む）', color: 'text-gray-500 bg-gray-500/5 border-gray-700' },
+const LENS_STYLES: Record<string, string> = {
+  escalate: 'text-rose-400 bg-rose-500/10 border-rose-500/30',
+  promote: 'text-blue-400 bg-blue-500/10 border-blue-500/30',
+  keep: 'text-gray-400 bg-gray-500/10 border-gray-500/30',
+  drop: 'text-gray-500 bg-gray-500/5 border-gray-700',
 };
 
 export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
@@ -86,10 +87,43 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
   onToggleSidebar,
   onOpenJson,
 }) => {
+  const { t, locale } = useI18n();
   const mainRef = useRef<HTMLElement>(null);
   const [openMap, setOpenMap] = useState<Record<string, boolean>>({});
   const [showChangedCode, setShowChangedCode] = useState<boolean>(true);
   const [isScrolled, setIsScrolled] = useState<boolean>(false);
+
+  const getTagMeaning = (tag?: string) => {
+    const key = (tag?.toLowerCase() ?? 'imo') as 'must' | 'q' | 'imo' | 'nit' | 'nr' | 'fyi' | 'praise' | 'thought';
+    const meanings = {
+      must: t('review.main.tagMeanings.must'),
+      q: t('review.main.tagMeanings.q'),
+      imo: t('review.main.tagMeanings.imo'),
+      nit: t('review.main.tagMeanings.nit'),
+      nr: t('review.main.tagMeanings.nr'),
+      fyi: t('review.main.tagMeanings.fyi'),
+      praise: t('review.main.tagMeanings.praise'),
+      thought: t('review.main.tagMeanings.thought'),
+    };
+    return meanings[key] ?? t('review.main.tagMeanings.imo');
+  };
+
+  const getLensMeta = (lens?: string) => {
+    if (!lens) return undefined;
+    const style = LENS_STYLES[lens] ?? 'text-gray-400 bg-gray-500/10 border-gray-500/30';
+    switch (lens) {
+      case 'escalate':
+        return { label: t('review.main.lensMeanings.escalateLabel'), desc: t('review.main.lensMeanings.escalateDesc'), color: style };
+      case 'promote':
+        return { label: t('review.main.lensMeanings.promoteLabel'), desc: t('review.main.lensMeanings.promoteDesc'), color: style };
+      case 'keep':
+        return { label: t('review.main.lensMeanings.keepLabel'), desc: t('review.main.lensMeanings.keepDesc'), color: style };
+      case 'drop':
+        return { label: t('review.main.lensMeanings.dropLabel'), desc: t('review.main.lensMeanings.dropDesc'), color: style };
+      default:
+        return { label: lens, desc: '', color: style };
+    }
+  };
 
   const handleScroll = (e: React.UIEvent<HTMLElement>) => {
     const top = e.currentTarget.scrollTop;
@@ -158,11 +192,11 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
             <button
               type="button"
               onClick={onToggleSidebar}
-              title="サイドバーを展開"
+              title={t('review.main.toggleSidebarTitle')}
               className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#21262d] hover:bg-[#30363d] text-gray-200 border border-[#30363d] text-xs transition-colors shrink-0"
             >
               <PanelLeftOpen className="w-3.5 h-3.5 text-[#00AFA8]" />
-              <span className="text-[11px]">サイドバー</span>
+              <span className="text-[11px]">{t('review.main.toggleSidebar')}</span>
             </button>
           )}
           <span className="font-mono text-xs font-bold text-[#00AFA8] shrink-0">
@@ -177,7 +211,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
             <button
               type="button"
               onClick={onOpenJson}
-              title="レビュー結果 JSON を表示"
+              title={t('review.main.showJson')}
               className="p-1.5 rounded-lg bg-[#21262d] hover:bg-[#30363d] text-gray-300 hover:text-[#00AFA8] border border-[#30363d] transition-colors"
             >
               <FileCode className="w-3.5 h-3.5" />
@@ -218,11 +252,11 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
                 <button
                   type="button"
                   onClick={onToggleSidebar}
-                  title="サイドバーを展開"
+                  title={t('review.main.toggleSidebarTitle')}
                   className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#21262d] hover:bg-[#30363d] text-gray-200 border border-[#30363d] text-xs font-sans transition-colors mr-1"
                 >
                   <PanelLeftOpen className="w-3.5 h-3.5 text-[#00AFA8]" />
-                  <span>サイドバー</span>
+                  <span>{t('review.main.toggleSidebar')}</span>
                 </button>
               )}
               <span className="w-2 h-2 rounded-full bg-[#00AFA8]" />
@@ -239,7 +273,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
             <button
               type="button"
               onClick={onOpenJson}
-              title="レビュー結果 JSON を表示"
+              title={t('review.main.showJson')}
               className="p-2 rounded-lg bg-[#21262d] hover:bg-[#30363d] text-gray-300 hover:text-[#00AFA8] border border-[#30363d] transition-all shrink-0 mt-0.5 shadow-sm"
             >
               <FileCode className="w-4 h-4" />
@@ -253,7 +287,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
           </div>
         )}
         <div className="p-3.5 rounded-xl bg-[#161b22] border border-[#30363d] text-xs leading-relaxed text-gray-400">
-          ※ タグや判定は一次レビューの候補です。左ペインの精査ボードまたは各指摘のカードで投稿・保留を確定させてください。
+          {t('review.main.preliminaryNote')}
         </div>
       </header>
 
@@ -263,7 +297,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
           <div className="flex items-center justify-between">
             <h2 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 text-[#00AFA8]" />
-              <span>適用されたレビュールール ({data.appliedRules.length} 件マージ済み)</span>
+              <span>{t('review.main.appliedRules', { count: data.appliedRules.length })}</span>
             </h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -296,7 +330,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
                   </p>
                   <div className="flex items-center justify-between text-[10px] text-gray-400 pt-1 border-t border-[#30363d]/60 font-mono">
                     <span className="capitalize">{rule.category}</span>
-                    <span>指摘: {rule.findingsCount} 件</span>
+                    <span>{t('review.main.findingsCount', { count: rule.findingsCount })}</span>
                   </div>
                 </div>
               );
@@ -307,16 +341,16 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
 
       {/* 2. 要約セクション（3つの文章） */}
       <section className="flex flex-col gap-3 w-full">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-gray-400">要約</h2>
+        <h2 className="text-xs font-bold uppercase tracking-wider text-gray-400">{t('review.main.summaryTitle')}</h2>
         <div className="flex flex-col rounded-2xl bg-[#161b22] border border-[#30363d] overflow-hidden divide-y divide-[#30363d]/80">
           {/* 問題点 */}
           <div className="p-5 flex gap-4 items-start">
             <div className="flex items-center gap-2 min-w-[120px] pt-0.5">
               <span className="w-2 h-2 rounded-full bg-rose-500" />
-              <span className="text-xs font-bold text-gray-300">何が問題か</span>
+              <span className="text-xs font-bold text-gray-300">{t('review.main.whatIsTheProblem')}</span>
             </div>
             <p className="text-sm leading-relaxed text-gray-200 flex-1">
-              {brief.problem || '明示された問題点はありません。'}
+              {brief.problem || t('review.main.noProblem')}
             </p>
           </div>
 
@@ -324,10 +358,10 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
           <div className="p-5 flex gap-4 items-start">
             <div className="flex items-center gap-2 min-w-[120px] pt-0.5">
               <span className="w-2 h-2 rounded-full bg-[#00AFA8]" />
-              <span className="text-xs font-bold text-gray-300">どう直したか</span>
+              <span className="text-xs font-bold text-gray-300">{t('review.main.howItWasFixed')}</span>
             </div>
             <p className="text-sm leading-relaxed text-gray-200 flex-1">
-              {brief.approach || '変更の詳細なアプローチは記載されていません。'}
+              {brief.approach || t('review.main.noApproach')}
             </p>
           </div>
 
@@ -335,10 +369,10 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
           <div className="p-5 flex gap-4 items-start bg-emerald-500/[0.03]">
             <div className="flex items-center gap-2 min-w-[120px] pt-0.5">
               <span className="w-2 h-2 rounded-full bg-emerald-400" />
-              <span className="text-xs font-bold text-emerald-400">何が変わらないか</span>
+              <span className="text-xs font-bold text-emerald-400">{t('review.main.whatDoesNotChange')}</span>
             </div>
             <p className="text-sm leading-relaxed text-gray-300 flex-1">
-              {brief.blastRadius || '明示された免責範囲はありません。'}
+              {brief.blastRadius || t('review.main.noBlastRadius')}
             </p>
           </div>
         </div>
@@ -347,8 +381,8 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
       {/* 3. 図でつかむ（3種類の図） */}
       <section className="flex flex-col gap-5 w-full">
         <div className="flex items-baseline gap-3 flex-wrap">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-gray-400">図でつかむ</h2>
-          <span className="text-xs text-gray-400">変更の構造と波及経路を視覚化</span>
+          <h2 className="text-xs font-bold uppercase tracking-wider text-gray-400">{t('review.main.diagramTitle')}</h2>
+          <span className="text-xs text-gray-400">{t('review.main.diagramDesc')}</span>
         </div>
 
         {/* 図 1: 影響範囲・システム関連図 (D2) */}
@@ -366,10 +400,10 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
             <div className="flex items-center justify-between border-b border-[#30363d]/80 pb-2.5">
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-400">
-                  判定メカニズム
+                  {t('review.main.mechanismTitle')}
                 </span>
                 <span className="text-sm font-semibold text-gray-100">
-                  因果連鎖と発動条件 (Mechanism)
+                  {t('review.main.mechanismSubtitle')}
                 </span>
               </div>
             </div>
@@ -379,7 +413,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
               <div className="p-3.5 rounded-xl bg-[#0d1117] border border-[#30363d] text-xs leading-relaxed space-y-2">
                 <span className="font-bold text-amber-400 flex items-center gap-1.5">
                   <Info className="w-3.5 h-3.5" />
-                  不具合が成立していた因果連鎖 (Why):
+                  {t('review.main.whyTitle')}
                 </span>
                 {Array.isArray(summary.mechanism.why) ? (
                   <ol className="list-decimal list-inside space-y-1.5 pl-1 text-gray-300">
@@ -398,7 +432,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
             {/* 発動条件 (Conditions) */}
             {summary.mechanism.conditions && summary.mechanism.conditions.length > 0 && (
               <div className="space-y-1.5">
-                <span className="text-[11px] font-bold text-cyan-400 uppercase tracking-wider block">変更が発動する条件 (Conditions):</span>
+                <span className="text-[11px] font-bold text-cyan-400 uppercase tracking-wider block">{t('review.main.conditionsTitle')}</span>
                 <div className="flex flex-wrap gap-2">
                   {summary.mechanism.conditions.map((cond, idx) => (
                     <div key={idx} className="px-2.5 py-1.5 rounded-lg bg-[#0d1117] border border-cyan-500/30 text-xs flex items-center gap-2">
@@ -417,7 +451,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
                   <div className="p-3 rounded-xl bg-[#0d1117] border border-indigo-500/30 text-xs flex flex-col gap-1">
                     <span className="font-bold text-indigo-400 flex items-center gap-1.5">
                       <Layers className="w-3.5 h-3.5" />
-                      修正の居場所:
+                      {t('review.main.fixLocation')}
                     </span>
                     <p className="text-gray-200 leading-relaxed font-mono text-[11px]">
                       {summary.mechanism.whereTheFixSits}
@@ -428,7 +462,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
                   <div className="p-3 rounded-xl bg-[#0d1117] border border-emerald-500/30 text-xs flex flex-col gap-1">
                     <span className="font-bold text-emerald-400 flex items-center gap-1.5">
                       <ShieldCheck className="w-3.5 h-3.5" />
-                      不変条件 (何が変わらないか):
+                      {t('review.main.invariants')}
                     </span>
                     <p className="text-emerald-200/90 leading-relaxed font-mono text-[11px]">
                       {summary.mechanism.unchanged}
@@ -446,10 +480,10 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
             <div className="flex items-center justify-between border-b border-[#30363d]/80 pb-2.5">
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/15 text-blue-400">
-                  処理順序
+                  {t('review.main.sequenceTitle')}
                 </span>
                 <span className="text-sm font-semibold text-gray-100">
-                  処理シーケンス ({data.callFlow.steps.length} ステップ)
+                  {t('review.main.sequenceSubtitle', { count: data.callFlow.steps.length })}
                 </span>
               </div>
             </div>
@@ -489,7 +523,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
 
       {/* 4. この PR の情報（メタデータグリッド） */}
       <section className="flex flex-col gap-3 w-full">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-gray-400">この PR の情報</h2>
+        <h2 className="text-xs font-bold uppercase tracking-wider text-gray-400">{t('review.main.prInfoTitle')}</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px bg-[#30363d] border border-[#30363d] rounded-2xl overflow-hidden">
           <div className="bg-[#161b22] p-4 flex flex-col gap-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Base</span>
@@ -504,11 +538,11 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
             <span className="text-xs font-mono font-bold text-gray-200">{pr?.headSha?.slice(0, 7) ?? '-'}</span>
           </div>
           <div className="bg-[#161b22] p-4 flex flex-col gap-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">変更ファイル数</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{t('review.main.filesChanged')}</span>
             <span className="text-sm font-mono font-bold text-gray-200">{data.metrics?.filesAnalyzed ?? '-'}</span>
           </div>
           <div className="bg-[#161b22] p-4 flex flex-col gap-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">指摘件数</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{t('review.main.findingsDetected')}</span>
             <span className="text-sm font-mono font-bold text-gray-200">{data.comments.length}</span>
           </div>
           <div className="bg-[#161b22] p-4 flex flex-col gap-1">
@@ -524,8 +558,8 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
       {summary.authorsDecisions && summary.authorsDecisions.length > 0 && (
         <section className="flex flex-col gap-3 w-full">
           <div className="flex items-baseline gap-3 flex-wrap">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-gray-400">作者の設計判断と論点</h2>
-            <span className="text-xs text-gray-400">PR作者の意図とレビューでの確認ポイント</span>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-gray-400">{t('review.main.authorDecisionsTitle')}</h2>
+            <span className="text-xs text-gray-400">{t('review.main.authorDecisionsDesc')}</span>
           </div>
           <div className="border border-[#30363d] rounded-2xl bg-[#161b22] p-4 divide-y divide-[#30363d]/60">
             {summary.authorsDecisions.map((item, idx) => (
@@ -544,7 +578,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
                     type="button"
                     onClick={() => onSelectComment(item.commentId!)}
                     className="shrink-0 px-2.5 py-1 rounded bg-[#21262d] hover:bg-[#00AFA8]/20 text-[#00AFA8] border border-[#30363d] hover:border-[#00AFA8]/40 font-mono text-xs font-bold transition-colors flex items-center gap-1.5"
-                    title={`指摘 ${item.commentId} へ移動`}
+                    title={t('review.main.jumpToFinding', { id: item.commentId })}
                   >
                     <span>{item.commentId}</span>
                     <ArrowRight className="w-3 h-3" />
@@ -559,7 +593,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
       {/* 6. 到達経路 (Reach Paths) */}
       {summary.reachPaths && summary.reachPaths.length > 0 && (
         <section className="flex flex-col gap-3 w-full">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-gray-400">到達経路</h2>
+          <h2 className="text-xs font-bold uppercase tracking-wider text-gray-400">{t('review.main.reachPathsTitle')}</h2>
           <div className="border border-[#30363d] rounded-2xl bg-[#161b22] overflow-hidden">
             {typeof summary.reachPaths[0] === 'string' ? (
               <div className="divide-y divide-[#30363d]/70">
@@ -574,9 +608,9 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="border-b border-[#30363d] bg-[#12161c]">
-                    <th className="p-3 font-semibold text-gray-400 uppercase text-[10.5px]">呼び出し元</th>
-                    <th className="p-3 font-semibold text-gray-400 uppercase text-[10.5px]">条件</th>
-                    <th className="p-3 font-semibold text-gray-400 uppercase text-[10.5px]">効き方</th>
+                    <th className="p-3 font-semibold text-gray-400 uppercase text-[10.5px]">{t('review.main.callerHeader')}</th>
+                    <th className="p-3 font-semibold text-gray-400 uppercase text-[10.5px]">{t('review.main.conditionHeader')}</th>
+                    <th className="p-3 font-semibold text-gray-400 uppercase text-[10.5px]">{t('review.main.effectHeader')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#30363d]/70">
@@ -598,13 +632,13 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
       {summary.changedCode && (
         <section className="flex flex-col gap-3 w-full">
           <div className="flex items-center justify-between">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-gray-400">変更コード</h2>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-gray-400">{t('review.main.changedCodeTitle')}</h2>
             <button
               type="button"
               onClick={() => setShowChangedCode(!showChangedCode)}
               className="text-xs text-[#00AFA8] hover:underline font-semibold"
             >
-              {showChangedCode ? '閉じる' : '開く'}
+              {showChangedCode ? t('review.main.closeChangedCode') : t('review.main.openChangedCode')}
             </button>
           </div>
 
@@ -638,7 +672,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
       <section className="flex flex-col gap-4 w-full">
         <div className="flex items-center justify-between flex-wrap gap-4 border-b border-[#30363d] pb-3">
           <h2 className="text-sm font-bold text-gray-200">
-            指摘 — 表示中 {comments.length} / 全 {data.comments.length} 件
+            {t('review.main.findingsHeader', { shown: comments.length, total: data.comments.length })}
           </h2>
           <div className="flex items-center gap-2">
             <button
@@ -646,30 +680,30 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
               onClick={() => handleToggleAll(!allOpened)}
               className="px-3 py-1 rounded-full text-xs font-semibold bg-[#21262d] hover:bg-[#2c323c] text-gray-300 border border-[#30363d] transition-colors"
             >
-              {allOpened ? 'すべて折りたたむ' : 'すべて開く'}
+              {allOpened ? t('review.main.collapseAll') : t('review.main.expandAll')}
             </button>
             <span className="w-px h-4 bg-[#30363d]" />
-            <span className="text-xs text-gray-400">表示中を一括:</span>
+            <span className="text-xs text-gray-400">{t('review.main.batchActionLabel')}</span>
             <button
               type="button"
               onClick={() => onBulkMark('post')}
               className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[#00AFA8]/15 hover:bg-[#00AFA8]/30 text-[#00AFA8] border border-[#00AFA8]/30 transition-colors"
             >
-              すべて投稿
+              {t('review.main.postAll')}
             </button>
             <button
               type="button"
               onClick={() => onBulkMark('hold')}
               className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/15 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 transition-colors"
             >
-              すべて保留
+              {t('review.main.holdAll')}
             </button>
             <button
               type="button"
               onClick={() => onBulkMark('skip')}
               className="px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-700/50 hover:bg-gray-700 text-gray-400 border border-gray-600 transition-colors"
             >
-              すべて見送り
+              {t('review.main.skipAll')}
             </button>
           </div>
         </div>
@@ -680,8 +714,9 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
             const isOpened = openMap[c.id] !== false; // デフォルト開
             const currentMark = marks[c.id];
             const currentMemo = memos[c.id] || '';
-            const tagMeta = TAG_META[c.tag ?? 'IMO'] || TAG_META.IMO;
-            const lensMeta = c.lens ? LENS_META[c.lens] : undefined;
+            const tagStyle = TAG_STYLES[c.tag ?? 'IMO'] || TAG_STYLES.IMO;
+            const tagMeaning = getTagMeaning(c.tag);
+            const lensMeta = getLensMeta(c.lens);
             const fileUrl = getFileUrl(c);
             const isActive = activeCommentId === c.id;
 
@@ -716,7 +751,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
                       {/* Severity */}
                       {c.severity && (
                         <span
-                          title={`重大度: ${c.severity}`}
+                          title={t('review.main.severityTitle', { severity: c.severity })}
                           className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-bold border ${
                             SEVERITY_META[c.severity]?.badge ?? 'bg-gray-500/20 text-gray-300 border-gray-500/30'
                           }`}
@@ -728,7 +763,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
                       {/* Category */}
                       {c.category && (
                         <span
-                          title={`カテゴリ: ${c.category}`}
+                          title={t('review.main.categoryTitle', { category: c.category })}
                           className={`inline-flex items-center px-2 py-0.5 rounded text-[10.5px] font-mono border ${
                             CATEGORY_META[c.category]?.bg ?? 'bg-gray-500/20 text-gray-300 border-gray-500/30'
                           }`}
@@ -738,10 +773,10 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
                       )}
 
                       {/* Tag */}
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-bold border ${tagMeta.bg}`}>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-bold border ${tagStyle.bg}`}>
                         {c.tag ?? 'IMO'}
                       </span>
-                      <span className="text-[11px] text-gray-400">{tagMeta.meaning}</span>
+                      <span className="text-[11px] text-gray-400">{tagMeaning}</span>
 
                       {/* Lens */}
                       {lensMeta && (
@@ -754,7 +789,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
                       {c.location?.outdated && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10.5px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
                           <AlertTriangle className="w-3 h-3" />
-                          位置が古い可能性
+                          {t('review.main.outdatedBadge')}
                         </span>
                       )}
                     </div>
@@ -798,7 +833,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
                       <div className="p-3 rounded-xl bg-blue-950/20 border border-blue-500/30 flex items-start gap-2.5 text-xs">
                         <Info className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
                         <div className="flex-1 min-w-0">
-                          <span className="font-bold text-blue-300 block mb-0.5">一次判定理由 ({c.lens.verdict}):</span>
+                          <span className="font-bold text-blue-300 block mb-0.5">{t('review.main.lensReason', { verdict: c.lens.verdict })}</span>
                           <span className="text-blue-200/90 leading-relaxed">{c.lens.reason}</span>
                           {c.lens.rule && (
                             <span className="mt-1 block font-mono text-[10.5px] text-blue-300/70">
@@ -813,21 +848,21 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
                     <div className="flex flex-col gap-3">
                       {c.problem && (
                         <div className="p-3.5 rounded-xl bg-[#0d1117] border border-[#30363d]/70 flex flex-col gap-1">
-                          <span className="text-[10.5px] font-bold uppercase tracking-wider text-rose-400">問題 (Problem)</span>
+                          <span className="text-[10.5px] font-bold uppercase tracking-wider text-rose-400">{t('review.main.problemLabel')}</span>
                           <p className="text-xs leading-relaxed text-gray-200 whitespace-pre-wrap">{c.problem}</p>
                         </div>
                       )}
 
                       {c.proposal && (
                         <div className="p-3.5 rounded-xl bg-[#0d1117] border border-[#30363d]/70 flex flex-col gap-1">
-                          <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#00AFA8]">改善案 (Proposal)</span>
+                          <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#00AFA8]">{t('review.main.proposalLabel')}</span>
                           <p className="text-xs leading-relaxed text-gray-200 whitespace-pre-wrap">{c.proposal}</p>
                         </div>
                       )}
 
                       {c.relationToExisting && (
                         <div className="p-3.5 rounded-xl bg-[#0d1117] border border-[#30363d]/70 flex flex-col gap-1">
-                          <span className="text-[10.5px] font-bold uppercase tracking-wider text-amber-400">既存レビューとの関係 (Relation)</span>
+                          <span className="text-[10.5px] font-bold uppercase tracking-wider text-amber-400">{t('review.main.relationLabel')}</span>
                           <p className="text-xs leading-relaxed text-gray-300 whitespace-pre-wrap">{c.relationToExisting}</p>
                         </div>
                       )}
@@ -870,7 +905,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
                       }`}
                     >
                       <Check className="w-3.5 h-3.5 shrink-0" />
-                      <span className="leading-none">投稿する</span>
+                      <span className="leading-none">{t('review.main.postBtn')}</span>
                     </button>
                     <button
                       type="button"
@@ -882,7 +917,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
                       }`}
                     >
                       <Clock className="w-3.5 h-3.5 shrink-0" />
-                      <span className="leading-none">保留</span>
+                      <span className="leading-none">{t('review.main.holdBtn')}</span>
                     </button>
                     <button
                       type="button"
@@ -894,7 +929,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
                       }`}
                     >
                       <X className="w-3.5 h-3.5 shrink-0" />
-                      <span className="leading-none">投稿しない</span>
+                      <span className="leading-none">{t('review.main.skipBtn')}</span>
                     </button>
                   </div>
 
@@ -902,7 +937,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
                     rows={2}
                     value={currentMemo}
                     onChange={(e) => onMemoChange(c.id, e.target.value)}
-                    placeholder="対応方針のメモ（ドラッグで高さを変更できます）"
+                    placeholder={t('review.main.notePlaceholder')}
                     className="flex-1 w-full bg-[#0d1117] border border-[#30363d] rounded-xl px-3.5 py-2 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-[#00AFA8] resize-y min-h-[38px] max-h-[320px] leading-relaxed"
                   />
                 </div>
@@ -914,35 +949,35 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
 
       {/* 9. 相互検証の透明性 (Transparency) */}
       {data.transparency && (() => {
-        const t = data.transparency as any;
-        const rawCount = t.rawFindingCount ?? t.rawFindingsCount ?? data.comments.length;
-        const aggCount = t.aggregatedCount ?? t.synthesizedFindingsCount ?? data.comments.length;
+        const trans = data.transparency as any;
+        const rawCount = trans.rawFindingCount ?? trans.rawFindingsCount ?? data.comments.length;
+        const aggCount = trans.aggregatedCount ?? trans.synthesizedFindingsCount ?? data.comments.length;
         const dupCount = Math.max(0, rawCount - aggCount);
-        const refSpecs: Array<any> = t.referencedSpecs ?? t.specsReferenced ?? [];
-        const unrefSpecs: Array<any> = t.unreferencedSpecs ?? t.specsMissing ?? [];
+        const refSpecs: Array<any> = trans.referencedSpecs ?? trans.specsReferenced ?? [];
+        const unrefSpecs: Array<any> = trans.unreferencedSpecs ?? trans.specsMissing ?? [];
 
         return (
           <section className="flex flex-col gap-4 w-full border-t border-[#30363d] pt-8">
             <div className="flex items-baseline gap-3 flex-wrap">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-gray-400">相互検証の透明性</h2>
-              <span className="text-xs text-gray-400">一次レビュー集約と参照仕様の網羅度</span>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-gray-400">{t('review.main.transparencyTitle')}</h2>
+              <span className="text-xs text-gray-400">{t('review.main.transparencyDesc')}</span>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-[#30363d] border border-[#30363d] rounded-2xl overflow-hidden">
               <div className="bg-[#161b22] p-4 flex flex-col gap-1">
-                <span className="text-[10.5px] font-bold uppercase tracking-wider text-gray-400">一次レビュー検出</span>
-                <span className="text-xl font-mono font-bold text-gray-100">{rawCount} 件</span>
+                <span className="text-[10.5px] font-bold uppercase tracking-wider text-gray-400">{t('review.main.rawCountLabel')}</span>
+                <span className="text-xl font-mono font-bold text-gray-100">{rawCount}</span>
               </div>
               <div className="bg-[#161b22] p-4 flex flex-col gap-1">
-                <span className="text-[10.5px] font-bold uppercase tracking-wider text-gray-400">集約後指摘数</span>
-                <span className="text-xl font-mono font-bold text-[#00AFA8]">{aggCount} 件</span>
+                <span className="text-[10.5px] font-bold uppercase tracking-wider text-gray-400">{t('review.main.aggCountLabel')}</span>
+                <span className="text-xl font-mono font-bold text-[#00AFA8]">{aggCount}</span>
               </div>
               <div className="bg-[#161b22] p-4 flex flex-col gap-1">
-                <span className="text-[10.5px] font-bold uppercase tracking-wider text-gray-400">重複統合数</span>
-                <span className="text-xl font-mono font-bold text-gray-100">{dupCount} 件</span>
+                <span className="text-[10.5px] font-bold uppercase tracking-wider text-gray-400">{t('review.main.dupCountLabel')}</span>
+                <span className="text-xl font-mono font-bold text-gray-100">{dupCount}</span>
               </div>
               <div className="bg-[#161b22] p-4 flex flex-col gap-1">
-                <span className="text-[10.5px] font-bold uppercase tracking-wider text-gray-400">参照仕様数</span>
+                <span className="text-[10.5px] font-bold uppercase tracking-wider text-gray-400">{t('review.main.specsCountLabel')}</span>
                 <span className="text-xl font-mono font-bold text-gray-100">{refSpecs.length}</span>
               </div>
             </div>
@@ -950,7 +985,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
             <div className="rounded-2xl bg-[#161b22] border border-[#30363d] divide-y divide-[#30363d]/80 text-xs">
               {refSpecs.length > 0 && (
                 <div className="p-4 flex flex-col gap-2">
-                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">参照した仕様ソース:</span>
+                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">{t('review.main.referencedSpecsLabel')}</span>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {refSpecs.map((s, idx) => {
                       const isObj = typeof s === 'object' && s !== null;
@@ -974,7 +1009,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
                                 target="_blank"
                                 rel="noreferrer"
                                 className="text-[#00AFA8] hover:text-white p-0.5 rounded transition-colors"
-                                title="仕様を開く"
+                                title={t('review.main.openSpec')}
                               >
                                 <ExternalLink className="w-3.5 h-3.5" />
                               </a>
@@ -989,7 +1024,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
 
               {unrefSpecs.length > 0 && (
                 <div className="p-4 flex flex-col gap-2">
-                  <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider">未参照・欠落している可能性のある仕様:</span>
+                  <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider">{t('review.main.missingSpecsLabel')}</span>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {unrefSpecs.map((s, idx) => {
                       const isObj = typeof s === 'object' && s !== null;
@@ -1003,7 +1038,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
                             <span className="font-mono text-[11.5px] font-bold text-amber-300 truncate">{name}</span>
                             {supersededBy && (
                               <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono">
-                                代替: {supersededBy}
+                                {t('review.main.supersededBy', { by: supersededBy })}
                               </span>
                             )}
                           </div>
@@ -1025,7 +1060,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
       <footer className="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-[#30363d] text-xs font-mono text-gray-500 w-full">
         <div className="flex flex-wrap gap-4 items-center">
           <span>Review Base Engine</span>
-          <span>Generated: {data.createdAt ? new Date(data.createdAt).toLocaleString('ja-JP') : '-'}</span>
+          <span>Generated: {data.createdAt ? new Date(data.createdAt).toLocaleString(locale === 'ja' ? 'ja-JP' : 'en-US') : '-'}</span>
           <span>Verdict: {data.verdict}</span>
         </div>
       </footer>

@@ -222,6 +222,7 @@ export interface AppSettings {
   };
   engineSettings: EngineSettingsMap;
   engineProfiles?: EngineProfile[];
+  displayLanguage?: 'auto' | 'en' | 'ja';
 }
 
 export interface CurrentUser {
