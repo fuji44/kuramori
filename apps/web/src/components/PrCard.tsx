@@ -181,26 +181,53 @@ export function PrCard({
                   )}
                 </button>
               ) : (
-                <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-950 text-emerald-400 border border-emerald-800">
-                  <CheckCircle2 className="w-3 h-3" />
-                  レビュー完了
-                </span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    if (item.latestJob?.id) {
+                      onOpenLog(e, item.latestJob.id, item.latestJob.error);
+                    }
+                  }}
+                  className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/80 hover:border-emerald-500 transition-all cursor-pointer"
+                  title="実行ログを表示"
+                >
+                  <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                  <span>レビュー完了 (ログ確認)</span>
+                </button>
               )}
             </div>
           ) : jobStatus === 'failed' ? (
-            <button
-              type="button"
-              onClick={(e) => {
-                if (item.latestJob?.id) {
-                  onOpenLog(e, item.latestJob.id, item.latestJob.error);
-                }
-              }}
-              className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800 hover:border-rose-600 transition-all cursor-pointer group"
-              title="エラー詳細と実行ログを表示"
-            >
-              <AlertCircle className="w-3.5 h-3.5 text-rose-400 group-hover:scale-105 transition-transform" />
-              <span>失敗 (ログ確認)</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {item.report?.id && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (item.report?.id) {
+                      onSelectReport(item.report.id, `${item.repository}#${item.number}: ${item.title}`);
+                    }
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/80 hover:border-emerald-500 shadow-sm transition-all cursor-pointer group"
+                  title="レビューレポートを表示"
+                >
+                  <FileText className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-105 transition-transform" />
+                  <span>レポート表示</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={(e) => {
+                  if (item.latestJob?.id) {
+                    onOpenLog(e, item.latestJob.id, item.latestJob.error);
+                  }
+                }}
+                className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800 hover:border-rose-600 transition-all cursor-pointer group"
+                title="エラー詳細と実行ログを表示"
+              >
+                <AlertCircle className="w-3.5 h-3.5 text-rose-400 group-hover:scale-105 transition-transform" />
+                <span>失敗 (ログ確認)</span>
+              </button>
+            </div>
           ) : (
             <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#21262d] text-[#8b949e] border border-[#30363d]">
               未レビュー

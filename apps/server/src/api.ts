@@ -104,9 +104,12 @@ export function createApi(deps: ApiDependencies) {
       const prJobs = jobs.filter((j) => j.requestId === req.id);
       // Latest job by startedAt or created
       const latestJob = prJobs.sort((a, b) => (b.startedAt ?? '').localeCompare(a.startedAt ?? ''))[0];
-      const report = latestJob
-        ? reports.find((r) => r.id === latestJob.reportId) ?? reports.find((r) => r.jobId === latestJob.id)
-        : undefined;
+      const prReports = reports
+        .filter((r) => r.requestId === req.id)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      const report = (latestJob?.reportId ? reports.find((r) => r.id === latestJob.reportId) : undefined)
+        ?? (latestJob ? reports.find((r) => r.jobId === latestJob.id) : undefined)
+        ?? prReports[0];
 
       let parsedLabels: Array<{ name: string; color?: string; description?: string }> = [];
       if (req.labels) {

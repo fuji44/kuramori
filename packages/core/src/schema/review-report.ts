@@ -103,6 +103,7 @@ export const ReviewCommentSchema = z.object({
       snippet: z.string().optional(),
       replacement: z.string().optional(),
     })
+    .nullable()
     .optional(),
 });
 export type ReviewComment = z.infer<typeof ReviewCommentSchema>;

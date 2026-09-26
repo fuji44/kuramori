@@ -681,27 +681,6 @@ export class ReviewQueue {
             completedAt,
           })
           .where(eq(reviewJobsTable.id, jobId));
-
-        // 静穏状態判定 (Quiescence Check): 同一 PR かつ同一 headSha のアクティブジョブ数を検査
-        const activeJobs = await this.db
-          .select()
-          .from(reviewJobsTable)
-          .where(
-            and(
-              eq(reviewJobsTable.requestId, pr.id),
-              eq(reviewJobsTable.headSha, job.headSha || pr.headSha),
-              or(eq(reviewJobsTable.status, 'pending'), eq(reviewJobsTable.status, 'running'))
-            )
-          );
-
-        // 自分以外の実行中/保留ジョブが 0 の静穏状態であれば集約を実行
-        if (activeJobs.length === 0) {
-          await aggregateRuleResults(this.db, this.storage, {
-            requestId: pr.id,
-            headSha: job.headSha || pr.headSha,
-            jobId,
-          });
-        }
       } else {
         await this.db
           .update(reviewJobsTable)
@@ -725,6 +704,36 @@ export class ReviewQueue {
     } finally {
       if (worktreeSession) {
         await worktreeSession.cleanup();
+      }
+
+      // 静穏状態判定 (Quiescence Check):
+      // 同一 PR かつ同一 headSha のアクティブジョブ数を検査
+      // 全て完了または失敗して静穏状態になったら集約を実行
+      try {
+        const activeJobs = await this.db
+          .select()
+          .from(reviewJobsTable)
+          .where(
+            and(
+              eq(reviewJobsTable.requestId, pr.id),
+              eq(reviewJobsTable.headSha, job.headSha || pr.headSha),
+              or(eq(reviewJobsTable.status, 'pending'), eq(reviewJobsTable.status, 'running'))
+            )
+          );
+
+        if (activeJobs.length === 0) {
+          await aggregateRuleResults(this.db, this.storage, {
+            requestId: pr.id,
+            headSha: job.headSha || pr.headSha,
+            jobId,
+          });
+        }
+      } catch (aggErr) {
+        console.error('Failed to aggregate rule results on job completion', {
+          requestId: pr.id,
+          jobId,
+          error: String(aggErr),
+        });
       }
     }
   }

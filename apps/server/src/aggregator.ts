@@ -238,7 +238,12 @@ export async function aggregateRuleResults(
   await db
     .update(reviewJobsTable)
     .set({ reportId })
-    .where(eq(reviewJobsTable.id, jobId));
+    .where(
+      and(
+        eq(reviewJobsTable.requestId, requestId),
+        eq(reviewJobsTable.headSha, headSha)
+      )
+    );
 
   // Storage に保存（Web UI からの取得用）
   await storage.saveReportData(reportId, reportData);
