@@ -86,6 +86,54 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
     };
   }, [isFullscreen]);
 
+  // diagram.svg が更新された際にキャッシュを同期
+  useEffect(() => {
+    if (diagram?.svg) {
+      setSvgCache((prev) => ({
+        ...prev,
+        tala: prev.tala || diagram.svg || '',
+        [currentLayout]: prev[currentLayout] || diagram.svg || '',
+      }));
+    }
+  }, [diagram?.svg, currentLayout]);
+
+  const compileLayout = useCallback(
+    async (targetLayout: 'tala' | 'elk' | 'dagre') => {
+      const source = diagram?.d2Source;
+      if (!source) return;
+
+      setIsCompiling(true);
+      setCompileError(null);
+      try {
+        const res = await fetch('/api/diagram/compile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            d2Source: source,
+            layout: targetLayout,
+          }),
+        });
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+
+        const json = await res.json();
+        if (json.svg) {
+          setSvgCache((prev) => ({ ...prev, [targetLayout]: json.svg }));
+        } else {
+          throw new Error(json.error || 'SVG の生成に失敗しました');
+        }
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        setCompileError(`レイアウト生成に失敗しました: ${message}`);
+      } finally {
+        setIsCompiling(false);
+      }
+    },
+    [diagram?.d2Source]
+  );
+
   // レイアウトエンジン切り替えハンドラー
   const handleLayoutChange = async (newLayout: 'tala' | 'elk' | 'dagre') => {
     if (newLayout === currentLayout) return;
@@ -96,37 +144,15 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
       return;
     }
 
-    if (!diagram?.d2Source) {
-      return;
-    }
-
-    setIsCompiling(true);
-    try {
-      const res = await fetch('/api/diagram/compile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          d2Source: diagram.d2Source,
-          layout: newLayout,
-        }),
-      });
-
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-      }
-
-      const json = await res.json();
-      if (json.svg) {
-        setSvgCache((prev) => ({ ...prev, [newLayout]: json.svg }));
-      } else {
-        throw new Error(json.error || 'SVG の生成に失敗しました');
-      }
-    } catch (err: any) {
-      setCompileError(`レイアウト生成に失敗しました: ${err.message || err}`);
-    } finally {
-      setIsCompiling(false);
-    }
+    await compileLayout(newLayout);
   };
+
+  // SVG が未生成かつ D2 ソースが存在する場合は自動コンパイル
+  useEffect(() => {
+    if (!diagram?.svg && diagram?.d2Source && !svgCache[currentLayout] && !isCompiling && !compileError) {
+      compileLayout(currentLayout);
+    }
+  }, [diagram?.svg, diagram?.d2Source, currentLayout, svgCache, isCompiling, compileError, compileLayout]);
 
   // 現在のレイアウトに対応する SVG 文字列
   const currentRawSvg = svgCache[currentLayout] || diagram?.svg || '';

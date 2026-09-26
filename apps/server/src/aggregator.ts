@@ -2,6 +2,7 @@ import { eq, and } from 'drizzle-orm';
 import type { AppDatabase } from './db/index.ts';
 import { reviewJobsTable, reviewReportsTable, reviewRuleResultsTable } from './db/schema.ts';
 import { ReviewReportDataSchema } from '@kuramori/core';
+import { compileD2ToSvg } from '@kuramori/runner';
 import type {
   ReportStorage,
   ReviewReportData,
@@ -167,28 +168,63 @@ export async function aggregateRuleResults(
   const representativeReport = representativeRule
     ? reviewReportsByRule.get(representativeRule.ruleId)
     : undefined;
-  const representativeCommentIds = representativeRule
-    ? aggregateCommentIdsByRule.get(representativeRule.ruleId)
-    : undefined;
-  const diagram = representativeReport?.diagram
+
+  const diagramRule = ruleResults
+    .filter((ruleResult) => {
+      const rep = reviewReportsByRule.get(ruleResult.ruleId);
+      return Boolean(rep?.diagram?.d2Source || rep?.diagram?.svg);
+    })
+    .sort((a, b) => {
+      if (a.ruleId === 'preset-architecture' && b.ruleId !== 'preset-architecture') return -1;
+      if (b.ruleId === 'preset-architecture' && a.ruleId !== 'preset-architecture') return 1;
+      const svgA = reviewReportsByRule.get(a.ruleId)?.diagram?.svg;
+      const svgB = reviewReportsByRule.get(b.ruleId)?.diagram?.svg;
+      if (svgA && !svgB) return -1;
+      if (!svgA && svgB) return 1;
+      return (b.createdAt ?? '').localeCompare(a.createdAt ?? '');
+    })[0] ?? representativeRule;
+
+  const diagramReport = diagramRule ? reviewReportsByRule.get(diagramRule.ruleId) : undefined;
+  const diagramCommentIds = diagramRule ? aggregateCommentIdsByRule.get(diagramRule.ruleId) : undefined;
+
+  const diagram = diagramReport?.diagram
     ? {
-        ...representativeReport.diagram,
-        nodes: representativeReport.diagram.nodes.map((node) => ({
+        ...diagramReport.diagram,
+        nodes: diagramReport.diagram.nodes.map((node) => ({
           ...node,
-          commentId: node.commentId ? representativeCommentIds?.get(node.commentId) : undefined,
+          commentId: node.commentId ? diagramCommentIds?.get(node.commentId) : undefined,
           commentIds: node.commentIds?.flatMap((id) => {
-            const mappedId = representativeCommentIds?.get(id);
+            const mappedId = diagramCommentIds?.get(id);
             return mappedId ? [mappedId] : [];
           }),
         })),
       }
     : undefined;
-  const callFlow = representativeReport?.callFlow
+
+  if (diagram?.d2Source && !diagram.svg) {
+    try {
+      diagram.svg = await compileD2ToSvg(diagram.d2Source, { layout: 'tala' });
+    } catch (err: unknown) {
+      console.error('Failed to compile D2 diagram in aggregator', { error: String(err) });
+    }
+  }
+
+  const callFlowRule = ruleResults
+    .filter((ruleResult) => {
+      const rep = reviewReportsByRule.get(ruleResult.ruleId);
+      return (rep?.callFlow?.steps?.length ?? 0) > 0;
+    })
+    .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))[0] ?? representativeRule;
+
+  const callFlowReport = callFlowRule ? reviewReportsByRule.get(callFlowRule.ruleId) : undefined;
+  const callFlowCommentIds = callFlowRule ? aggregateCommentIdsByRule.get(callFlowRule.ruleId) : undefined;
+
+  const callFlow = callFlowReport?.callFlow
     ? {
-        ...representativeReport.callFlow,
-        steps: representativeReport.callFlow.steps.map((step) => ({
+        ...callFlowReport.callFlow,
+        steps: callFlowReport.callFlow.steps.map((step) => ({
           ...step,
-          commentId: step.commentId ? representativeCommentIds?.get(step.commentId) : undefined,
+          commentId: step.commentId ? callFlowCommentIds?.get(step.commentId) : undefined,
         })),
       }
     : undefined;
