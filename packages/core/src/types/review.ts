@@ -244,8 +244,7 @@ export function resolveRuleEngineProfile(
     ?? profiles.find((p) => p.engineType === ruleEngine);
   if (matchedByType) return matchedByType;
 
-  // 3. フォールバック
-  return defaultProfile;
+  return undefined;
 }
 
 /**

@@ -98,7 +98,11 @@ export class GitHubPoller {
           });
 
           if (isEligibleForAutoReview) {
-            await this.queue.enqueue(pr.id);
+            try {
+              await this.queue.enqueue(pr.id);
+            } catch (err) {
+              console.error('Failed to auto-enqueue review', { requestId: pr.id, error: String(err) });
+            }
           }
         } else {
           // Update PR metadata
@@ -131,7 +135,11 @@ export class GitHubPoller {
             (j) => j.status === 'completed' || j.status === 'running' || j.status === 'pending'
           );
           if (!hasJob && isEligibleForAutoReview) {
-            await this.queue.enqueue(pr.id);
+            try {
+              await this.queue.enqueue(pr.id);
+            } catch (err) {
+              console.error('Failed to auto-enqueue review', { requestId: pr.id, error: String(err) });
+            }
           }
         }
       }

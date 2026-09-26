@@ -225,7 +225,9 @@ export default function App() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
-        throw new Error(`Run review failed: HTTP ${res.status}`);
+        const errorData = await res.json().catch(() => null);
+        const serverError = typeof errorData?.error === 'string' ? errorData.error : undefined;
+        throw new Error(serverError ?? `AIレビューの実行要求に失敗しました (HTTP ${res.status})`);
       }
       showSuccess(
         ruleIds && ruleIds.length > 0
@@ -233,9 +235,10 @@ export default function App() {
           : 'AIレビューをキューに投入しました'
       );
       await fetchReviews();
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to trigger review', err);
-      showError('AIレビューの実行要求に失敗しました。');
+      const message = err instanceof Error ? err.message : 'AIレビューの実行要求に失敗しました。';
+      showError(message);
     }
   };
 

@@ -151,7 +151,7 @@ Deno.test('EngineProfile - discriminated union guarantees type-safe config acces
   assertEquals(getProfileSummary(mockProfile), 'Mock delay: 300ms');
 });
 
-Deno.test('resolveRuleEngineProfile - resolves by profile ID, engineType, and falls back to default', () => {
+Deno.test('resolveRuleEngineProfile - resolves by profile ID, engineType, and returns undefined for unknown profiles', () => {
   const profiles: EngineProfile[] = [
     {
       id: 'default-agy',
@@ -189,8 +189,10 @@ Deno.test('resolveRuleEngineProfile - resolves by profile ID, engineType, and fa
   // 2. EngineType match (fallback for raw engine names like 'claude-code')
   assertEquals(resolveRuleEngineProfile('claude-code', profiles)?.id, 'default-claude');
 
-  // 3. 'default' or undefined/null falls back to default profile
+  // 3. 'default' or undefined/null resolves to default profile
   assertEquals(resolveRuleEngineProfile('default', profiles)?.id, 'default-agy');
   assertEquals(resolveRuleEngineProfile(undefined, profiles)?.id, 'default-agy');
-  assertEquals(resolveRuleEngineProfile('non-existent-id', profiles)?.id, 'default-agy');
+
+  // 4. Unknown profile ID returns undefined (no fallback)
+  assertEquals(resolveRuleEngineProfile('non-existent-id', profiles), undefined);
 });

@@ -46,7 +46,7 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
       getCloneUrl: () => Promise.resolve('https://github.com/test/repo.git'),
     };
 
-    const queue = new ReviewQueue(db, storage, { reportsDir });
+    const queue = new ReviewQueue(db, storage, { reportsDir, settingsService });
     const poller = new GitHubPoller(mockVcs, db, queue, settingsService);
     const api = createApi({ db, storage, poller, queue, settingsService });
 
@@ -318,7 +318,42 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
     assertEquals(settingsData.defaultBackendId, 'antigravity');
     assertEquals(settingsData.globalMaxConcurrency, 2);
 
-    // 11. Test Triggering review with specific ruleIds
+    // 11. Test Triggering review without configured engine profile (must fail with 400)
+    const resRunNoProfile = await api.request('/api/pulls/github%3Atest%2Frepo%231/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ruleIds: ['preset-correctness'] }),
+    });
+    assertEquals(resRunNoProfile.status, 400);
+    const noProfileData = await resRunNoProfile.json();
+    assertEquals(noProfileData.error.includes('実行プロファイル'), true);
+
+    // Test Triggering review with invalid ruleIds (must fail with 400)
+    const resRunInvalidRule = await api.request('/api/pulls/github%3Atest%2Frepo%231/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ruleIds: ['non-existent-rule-id'] }),
+    });
+    assertEquals(resRunInvalidRule.status, 400);
+    const invalidRuleData = await resRunInvalidRule.json();
+    assertEquals(invalidRuleData.error.includes('レビュールール'), true);
+
+    // Configure a mock engine profile
+    await settingsService.updateSettings({
+      engineProfiles: [
+        {
+          id: 'mock-profile',
+          name: 'Mock Engine Profile',
+          engineType: 'mock',
+          isDefault: true,
+          enabled: true,
+          config: { delayMs: 100 },
+        },
+      ],
+      defaultEngineProfileId: 'mock-profile',
+    });
+
+    // Now triggering review with mock profile should succeed
     const resRunRule = await api.request('/api/pulls/github%3Atest%2Frepo%231/run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -439,7 +474,8 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
 
     // 17. Test engineProfiles in settings and profile test endpoint
     assertEquals(Array.isArray(settingsBeforeData.engineProfiles), true);
-    assertEquals(settingsBeforeData.engineProfiles.length, 0);
+    assertEquals(settingsBeforeData.engineProfiles.length, 1);
+    assertEquals(settingsBeforeData.engineProfiles[0].id, 'mock-profile');
 
     const customProfile = {
       id: 'prof-local-ollama',

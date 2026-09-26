@@ -229,8 +229,13 @@ export function createApi(deps: ApiDependencies) {
       // Body is optional
     }
 
-    const jobIds = await deps.queue.enqueueRules(id, ruleIds, engine);
-    return c.json({ success: true, jobIds, jobId: jobIds[0] ?? '' });
+    try {
+      const jobIds = await deps.queue.enqueueRules(id, ruleIds, engine);
+      return c.json({ success: true, jobIds, jobId: jobIds[0] ?? '' });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'AIレビューの実行要求に失敗しました。';
+      return c.json({ error: message }, 400);
+    }
   });
 
   // Get all rule results for a PR

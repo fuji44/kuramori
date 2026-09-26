@@ -190,84 +190,9 @@ export class ReviewQueue {
       }
     }
 
-    if (engineName === 'mock') {
-      return new MockReviewEngine({ delayMs: settings.engineSettings?.mock?.delayMs });
-    }
-    if (engineName === 'codex') {
-      const cfg = settings.engineSettings.codex;
-      return new CodexEngine({
-        codexBinaryPath: cfg.binPath,
-        model: cfg.model,
-        effort: cfg.effort,
-        timeoutMs: (cfg.timeoutSeconds ?? 900) * 1000,
-        systemPrompt: cfg.systemPrompt,
-        sandboxMode: cfg.sandboxMode,
-        ephemeral: cfg.ephemeral,
-        customArgs: cfg.customArgs,
-        customEnv: cfg.customEnv,
-      });
-    }
-    if (engineName === 'claude-code') {
-      const baseCfg = settings.engineSettings?.claudeCode ?? {
-        binPath: settings.claudeBin,
-        model: 'sonnet',
-        effort: 'high',
-        timeoutSeconds: 900,
-        systemPrompt: '',
-        allowedTools: '',
-        bare: false,
-        inputFormat: 'text',
-        outputFormat: 'text',
-        jsonSchema: '',
-        customArgs: '',
-      };
-      const cfg = baseCfg;
-      return new ClaudeCodeEngine({
-        claudeBinaryPath: cfg.binPath || settings.claudeBin,
-        model: cfg.model,
-        effort: cfg.effort,
-        timeoutMs: (cfg.timeoutSeconds ?? 900) * 1000,
-        systemPrompt: cfg.systemPrompt,
-        allowedTools: cfg.allowedTools,
-        bare: cfg.bare,
-        inputFormat: cfg.inputFormat,
-        outputFormat: cfg.outputFormat,
-        jsonSchema: cfg.jsonSchema,
-        customArgs: cfg.customArgs,
-        customEnv: cfg.customEnv,
-        maxTurns: cfg.maxTurns,
-      });
-    }
-    // default: antigravity
-    const baseCfg = settings.engineSettings?.antigravity ?? {
-      binPath: settings.agyBin,
-      model: 'gemini-3.1-pro',
-      effort: 'high',
-      timeoutSeconds: 900,
-      systemPrompt: '',
-      printTimeout: '',
-      sandbox: false,
-      disableSlashCommands: false,
-      inputFormat: 'text',
-      outputFormat: 'text',
-      jsonSchema: '',
-      customArgs: '',
-    };
-    const cfg = baseCfg;
-    return new AntigravityEngine({
-      agyBinaryPath: cfg.binPath || settings.agyBin,
-      model: cfg.model,
-      effort: cfg.effort,
-      timeoutMs: (cfg.timeoutSeconds ?? 900) * 1000,
-      systemPrompt: cfg.systemPrompt,
-      printTimeout: cfg.printTimeout,
-      sandbox: cfg.sandbox,
-      disableSlashCommands: cfg.disableSlashCommands,
-      inputFormat: cfg.inputFormat,
-      outputFormat: cfg.outputFormat,
-      jsonSchema: cfg.jsonSchema,
-      customArgs: cfg.customArgs,
-    });
+    throw new Error(
+      `有効な実行プロファイルが見つかりません: ${engineName}。AI 実行設定でプロファイルを確認してください。`,
+    );
   }
 
   async recoverStaleJobs(): Promise<void> {
@@ -305,8 +230,7 @@ export class ReviewQueue {
 
     let pr = requests[0];
     if (!pr) {
-      console.error('Review request not found in database', { requestId });
-      return [];
+      throw new Error(`レビュー対象のプルリクエストが見つかりません: ${requestId}`);
     }
 
     // headSha が最新でない場合は VCS から取得
@@ -360,7 +284,10 @@ export class ReviewQueue {
 
     if (ruleIdsParam) {
       const ids = Array.isArray(ruleIdsParam) ? ruleIdsParam : [ruleIdsParam];
-      targetRules = rules.filter((r) => ids.includes(r.id));
+      targetRules = rules.filter((r) => r.enabled && ids.includes(r.id));
+      if (targetRules.length === 0) {
+        throw new Error(`指定されたレビュールールが見つからないか、無効化されています: ${ids.join(', ')}`);
+      }
     } else {
       // 自動選定: PR Pre-flight 評価
       let changedFiles: string[] = [];
@@ -428,17 +355,26 @@ export class ReviewQueue {
         targetRules = rules.filter((r) => r.enabled && matchRuleTrigger(r, event));
       }
 
-      // マッチするルールがない場合は defaultRuleIds を使用
       if (targetRules.length === 0) {
-        const fallbackIds = (settings.defaultRuleIds && settings.defaultRuleIds.length > 0)
-          ? settings.defaultRuleIds
-          : (settings.defaultRuleId ? [settings.defaultRuleId] : ['preset-correctness']);
-        targetRules = rules.filter((r) => fallbackIds.includes(r.id));
+        throw new Error('実行対象のレビュールールがありません。有効なルールまたはパス条件（トリガー）を設定してください。');
       }
     }
 
-    if (targetRules.length === 0) {
-      return [];
+    const availableProfiles = settings.engineProfiles?.filter((profile) => profile.enabled !== false) ?? [];
+    if (availableProfiles.length === 0) {
+      throw new Error('有効な AI 実行プロファイルが登録されていません。AI 実行設定でプロファイルを追加してください。');
+    }
+
+    const defaultProfile = availableProfiles.find(
+      (profile) => profile.id === settings.defaultEngineProfileId,
+    ) ?? availableProfiles.find((profile) => profile.isDefault) ?? availableProfiles[0];
+
+    let selectedProfile: typeof availableProfiles[number] | undefined;
+    if (engineProfileIdParam) {
+      selectedProfile = availableProfiles.find((profile) => profile.id === engineProfileIdParam);
+      if (!selectedProfile) {
+        throw new Error(`指定された実行プロファイルが見つかりません: ${engineProfileIdParam}`);
+      }
     }
 
     // 既存のアクティブジョブを確認して重複を防ぐ
@@ -462,24 +398,21 @@ export class ReviewQueue {
         continue;
       }
 
-      const availableProfiles = settings.engineProfiles?.filter((profile) => profile.enabled !== false) ?? [];
-      const defaultProfile = availableProfiles.find(
-        (profile) => profile.id === settings.defaultEngineProfileId,
-      ) ?? availableProfiles.find((profile) => profile.isDefault) ?? availableProfiles[0];
-      const defaultEngine = defaultProfile?.id
-        ?? settings.defaultBackendId
-        ?? settings.reviewEngine
-        ?? 'antigravity';
-
-      const selectedProfile = availableProfiles.find((profile) => profile.id === engineProfileIdParam);
-      const ruleProfile = resolveRuleEngineProfile(
-        rule.engineProfileId ?? rule.engine,
-        availableProfiles,
-        defaultProfile?.id,
-      );
-      const resolvedEngine = selectedProfile?.id
-        ?? ruleProfile?.id
-        ?? (rule.engine && rule.engine !== 'default' ? rule.engine : defaultEngine);
+      let resolvedProfileId: string;
+      if (selectedProfile) {
+        resolvedProfileId = selectedProfile.id;
+      } else {
+        const ruleProfileKey = rule.engineProfileId ?? (rule.engine && rule.engine !== 'default' ? rule.engine : undefined);
+        if (ruleProfileKey) {
+          const ruleProfile = availableProfiles.find((p) => p.id === ruleProfileKey);
+          if (!ruleProfile) {
+            throw new Error(`ルール「${rule.name}」に設定されている実行プロファイル「${ruleProfileKey}」が見つかりません。`);
+          }
+          resolvedProfileId = ruleProfile.id;
+        } else {
+          resolvedProfileId = defaultProfile.id;
+        }
+      }
 
       const jobId = crypto.randomUUID();
       await this.db.insert(reviewJobsTable).values({
@@ -487,7 +420,7 @@ export class ReviewQueue {
         requestId,
         userId: 'default',
         status: 'pending',
-        engine: resolvedEngine,
+        engine: resolvedProfileId,
         startedAt: null,
         completedAt: null,
         error: null,
