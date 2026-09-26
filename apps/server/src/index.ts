@@ -27,7 +27,7 @@ async function bootstrap() {
   // Start polling in background
   poller.start();
 
-  const api = createApi({ db, storage, poller, queue, settingsService, logsDir });
+  const api = createApi({ db, storage, poller, queue, settingsService, logsDir, vcsProvider });
   const app = new Hono();
 
   // Mount API

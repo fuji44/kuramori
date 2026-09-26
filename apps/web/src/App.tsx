@@ -4,12 +4,11 @@ import {
   AlertCircle,
   CheckCircle2,
   X,
-  Settings,
   LayoutDashboard,
   FileText,
 } from 'lucide-react';
 
-import { ReviewItem, AppSettings, ReviewRule, ReviewTrigger } from './types.ts';
+import { ReviewItem, AppSettings, ReviewRule, ReviewTrigger, CurrentUser } from './types.ts';
 import { useAppRoute, AppRoute, navigateTo } from './utils/route.ts';
 import { DashboardView } from './views/DashboardView.tsx';
 import { PrListView } from './views/PrListView.tsx';
@@ -19,6 +18,7 @@ import { SettingsView } from './views/SettingsView.tsx';
 import { JobLogModal } from './components/JobLogModal.tsx';
 import { ToastContainer, ToastItem, ToastType } from './components/Toast.tsx';
 import { useI18n } from './i18n/context.tsx';
+import { UserMenuPopover } from './components/UserMenuPopover.tsx';
 
 export default function App() {
   const { t } = useI18n();
@@ -29,6 +29,7 @@ export default function App() {
   const [triggers, setTriggers] = useState<ReviewTrigger[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
 
   // Toast notification state
   const [toasts, setToasts] = useState<ToastItem[]>([]);
@@ -148,17 +149,31 @@ export default function App() {
     }
   };
 
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await fetch('/api/me');
+      if (res.ok) {
+        const data = await res.json();
+        setCurrentUser(data.user ?? null);
+      }
+    } catch (err) {
+      console.error('Failed to fetch current user', err);
+    }
+  };
+
   useEffect(() => {
     fetchReviews();
     fetchSettings();
     fetchRules();
     fetchTriggers();
+    fetchCurrentUser();
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         fetchReviews();
         fetchRules();
         fetchTriggers();
+        fetchCurrentUser();
       }
     };
 
@@ -476,20 +491,12 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Settings Button */}
-          <button
-            type="button"
-            onClick={() => navigate({ view: 'settings', subview: 'general' })}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs transition-colors ${
-              route.view === 'settings'
-                ? 'bg-sky-950 text-sky-400 border-sky-800 font-medium shadow-sm'
-                : 'bg-[#21262d] hover:bg-[#30363d] border-[#30363d] text-[#c9d1d9]'
-            }`}
-            title={t('nav.openSettingsTooltip')}
-          >
-            <Settings className={`w-3.5 h-3.5 ${route.view === 'settings' ? 'text-sky-400' : 'text-[#8b949e]'}`} />
-            <span className="hidden sm:inline">{t('nav.settings')}</span>
-          </button>
+          {/* User & Settings Menu */}
+          <UserMenuPopover
+            user={currentUser}
+            activeView={route.view}
+            onNavigateSettings={(subview) => navigate({ view: 'settings', subview })}
+          />
         </div>
       </header>
 
@@ -499,15 +506,27 @@ export default function App() {
           <DashboardView
             items={items}
             settings={settings}
-            onNavigateToReviews={(anchorId) => {
-              if (typeof anchorId === 'string' && anchorId.trim() !== '') {
-                navigateTo(`/pulls#${anchorId}`);
+            rules={rules}
+            triggers={triggers}
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            onNavigateToReviews={(filterOrAnchorId) => {
+              if (
+                filterOrAnchorId?.startsWith('is:') ||
+                filterOrAnchorId?.startsWith('status:') ||
+                filterOrAnchorId?.startsWith('repo:')
+              ) {
+                navigate({ view: 'reviews', params: { q: filterOrAnchorId } });
+              } else if (typeof filterOrAnchorId === 'string' && filterOrAnchorId.trim() !== '') {
+                navigateTo(`/pulls#${filterOrAnchorId}`);
               } else {
                 navigate({ view: 'reviews', params: {} });
               }
             }}
             onNavigateToReports={() => navigate({ view: 'reports' })}
             onSelectReport={(reportId) => navigate({ view: 'report', reportId })}
+            onNavigateToSettings={(subview) => navigate({ view: 'settings', subview: subview ?? 'general' })}
+            onOpenLog={openJobLog}
           />
         )}
 

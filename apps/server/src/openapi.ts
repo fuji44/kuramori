@@ -33,6 +33,10 @@ export const openapiSpec = {
       description: 'Application configuration, secret environment variables, and review engine diagnostics',
     },
     {
+      name: 'User',
+      description: 'Authenticated user profile and VCS identity details',
+    },
+    {
       name: 'System',
       description: 'OpenAPI specification and system discovery endpoints',
     },
@@ -49,6 +53,38 @@ export const openapiSpec = {
             content: {
               'application/json': {
                 schema: { type: 'object' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/me': {
+      get: {
+        tags: ['User'],
+        summary: 'Get current authenticated user profile',
+        description: 'Returns the GitHub or VCS profile details (login, name, email, avatarUrl) of the current runner or operator.',
+        responses: {
+          '200': {
+            description: 'Current user profile or null if unauthenticated',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    user: {
+                      type: ['object', 'null'],
+                      properties: {
+                        login: { type: 'string' },
+                        name: { type: 'string' },
+                        email: { type: 'string' },
+                        avatarUrl: { type: 'string' },
+                      },
+                      required: ['login'],
+                    },
+                  },
+                  required: ['user'],
+                },
               },
             },
           },

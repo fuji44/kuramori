@@ -1,4 +1,4 @@
-import type { ReviewRequest } from '../types/review.ts';
+import type { ReviewRequest, VCSUser } from '../types/review.ts';
 
 export interface ListReviewRequestsOptions {
   includeDrafts?: boolean;
@@ -10,4 +10,5 @@ export interface VCSProvider {
   getReviewRequest(repository: string, number: number): Promise<ReviewRequest | null>;
   getDiff(repository: string, number: number): Promise<string>;
   getCloneUrl(repository: string): Promise<string>;
+  getCurrentUser?(): Promise<VCSUser | null>;
 }
