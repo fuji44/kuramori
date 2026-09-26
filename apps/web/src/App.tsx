@@ -404,8 +404,8 @@ export default function App() {
             className="flex items-center gap-2.5 cursor-pointer group"
             title="ダッシュボードへ"
           >
-            <div className="p-1.5 bg-[#21262d] rounded-lg border border-[#30363d] group-hover:border-sky-500/50 text-sky-400 transition-colors">
-              <GitPullRequest className="w-4 h-4" />
+            <div className="p-1 bg-[#21262d] rounded-lg border border-[#30363d] group-hover:border-sky-500/50 transition-colors flex items-center justify-center">
+              <img src="/favicon.svg" alt="kuramori" className="w-5 h-5" />
             </div>
             <div className="flex items-center gap-2">
               <h1 className="text-base font-bold text-white tracking-tight">kuramori</h1>
