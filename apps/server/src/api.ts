@@ -5,11 +5,11 @@ import { resolve } from 'node:path';
 import type { AppDatabase } from './db/index.ts';
 import { pullFiltersTable, reviewJobsTable, reviewReportsTable, reviewRequestsTable, reviewRulesTable, reviewRuleResultsTable, reviewTriggersTable } from './db/schema.ts';
 
-import type { EngineEnvironment, ReportStorage } from '@review-base/core';
+import type { EngineEnvironment, ReportStorage } from '@kuramori/core';
 import type { GitHubPoller } from './poller.ts';
 import type { ReviewQueue } from './queue.ts';
 import type { SettingsService } from './settings.ts';
-import { compileD2ToSvg, generateStandaloneReviewHtml, resolveEngineEnvironment } from '@review-base/runner';
+import { compileD2ToSvg, generateStandaloneReviewHtml, resolveEngineEnvironment } from '@kuramori/runner';
 import { openapiSpec } from './openapi.ts';
 import { Scalar } from '@scalar/hono-api-reference';
 
@@ -83,7 +83,7 @@ export function createApi(deps: ApiDependencies) {
     '/api/doc',
     Scalar({
       url: '/api/openapi.json',
-      pageTitle: 'review-base API Reference',
+      pageTitle: 'kuramori API Reference',
     }),
   );
   app.get('/openapi.json', (c) => c.redirect('/api/openapi.json'));
@@ -760,7 +760,7 @@ export function createApi(deps: ApiDependencies) {
     const timeoutMs = isExecution ? 45000 : 5000;
 
     let args: string[] = isExecution
-      ? ['-p', 'Respond with "review-base test OK"', '--dangerously-skip-permissions']
+      ? ['-p', 'Respond with "kuramori test OK"', '--dangerously-skip-permissions']
       : ['--version'];
 
     if (effectiveEngine === 'codex' && isExecution) {
@@ -796,7 +796,7 @@ export function createApi(deps: ApiDependencies) {
       const child = cmd.spawn();
       if (effectiveEngine === 'codex' && isExecution) {
         const writer = child.stdin.getWriter();
-        await writer.write(new TextEncoder().encode('Respond with "review-base test OK"'));
+        await writer.write(new TextEncoder().encode('Respond with "kuramori test OK"'));
         await writer.close();
       }
       const output = await child.output();

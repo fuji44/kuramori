@@ -1,6 +1,6 @@
 import { assertEquals, assertStringIncludes } from 'jsr:@std/assert';
 import { compileD2ToSvg, generateD2FromDiagram } from './d2-compiler.ts';
-import type { Diagram } from '@review-base/core';
+import type { Diagram } from '@kuramori/core';
 
 Deno.test('D2 Compiler - generates D2 code from Diagram data', () => {
   const diagram: Diagram = {

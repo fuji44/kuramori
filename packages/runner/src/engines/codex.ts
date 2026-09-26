@@ -5,8 +5,8 @@ import type {
   ReviewEngine,
   ReviewExecutionContext,
   ReviewExecutionResult,
-} from '@review-base/core';
-import { getReviewReportJsonSchema } from '@review-base/core';
+} from '@kuramori/core';
+import { getReviewReportJsonSchema } from '@kuramori/core';
 import { executePreFlight, buildReviewPrompt, executePostFlight } from '../pipeline/runner-pipeline.ts';
 import { resolveEngineEnvironment } from './environment.ts';
 import { prepareCodexOutputSchema } from './codex-schema.ts';

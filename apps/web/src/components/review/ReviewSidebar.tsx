@@ -23,7 +23,7 @@ import {
   Bookmark,
   Trash2,
 } from 'lucide-react';
-import type { ReviewReportData, ReviewComment, Severity, LensVerdict } from '@review-base/core';
+import type { ReviewReportData, ReviewComment, Severity, LensVerdict } from '@kuramori/core';
 
 export type MarkType = 'post' | 'hold' | 'skip';
 

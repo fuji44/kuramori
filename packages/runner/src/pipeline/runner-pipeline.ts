@@ -9,7 +9,7 @@ import {
   type RuleResultVerdict,
   type FindingSeverity,
   getReviewReportJsonSchema,
-} from '@review-base/core';
+} from '@kuramori/core';
 import { collectPreFlightContext } from '../context/collector.ts';
 import {
   validateReviewReportData,

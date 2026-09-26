@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { CodexEngine } from './codex.ts';
 
 Deno.test('CodexEngine - runs exec with structured output, profile options, and profile environment', async () => {
-  const tempDir = await Deno.makeTempDir({ prefix: 'review-base-codex-test-' });
+  const tempDir = await Deno.makeTempDir({ prefix: 'kuramori-codex-test-' });
   const worktreePath = join(tempDir, 'worktree');
   const outputDir = join(tempDir, 'output');
   const argsPath = join(tempDir, 'args.txt');
@@ -86,7 +86,7 @@ printf '%s\\n' '{"type":"thread.started"}' '{"type":"turn.completed"}'
 });
 
 Deno.test('CodexEngine - rejects custom arguments that disable the sandbox', async () => {
-  const tempDir = await Deno.makeTempDir({ prefix: 'review-base-codex-danger-test-' });
+  const tempDir = await Deno.makeTempDir({ prefix: 'kuramori-codex-danger-test-' });
 
   try {
     const engine = new CodexEngine({ customArgs: '--yolo' });

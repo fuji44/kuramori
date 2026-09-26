@@ -2,16 +2,16 @@ import { Hono } from 'hono';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createDb, initDatabase } from './db/index.ts';
-import { LocalFileReportStorage, GitHubProvider } from '@review-base/core';
+import { LocalFileReportStorage, GitHubProvider } from '@kuramori/core';
 import { ReviewQueue } from './queue.ts';
 import { GitHubPoller } from './poller.ts';
 import { createApi } from './api.ts';
-import { ClaudeCodeEngine, MockReviewEngine } from '@review-base/runner';
+import { ClaudeCodeEngine, MockReviewEngine } from '@kuramori/runner';
 import { SettingsService } from './settings.ts';
 
 async function bootstrap() {
   const port = parseInt(Deno.env.get('PORT') ?? '3456', 10);
-  const dbUrl = Deno.env.get('DATABASE_URL') ?? 'file:data/review-base.db';
+  const dbUrl = Deno.env.get('DATABASE_URL') ?? 'file:data/kuramori.db';
   const reportsDir = resolve(Deno.env.get('REPORTS_DIR') ?? './data/reports');
   const logsDir = join(dirname(reportsDir), 'logs');
 

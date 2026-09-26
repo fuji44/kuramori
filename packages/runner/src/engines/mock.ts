@@ -4,7 +4,7 @@ import type {
   ReviewExecutionContext,
   ReviewExecutionResult,
   ReviewReportData,
-} from '@review-base/core';
+} from '@kuramori/core';
 
 export interface MockReviewEngineOptions {
   delayMs?: number;

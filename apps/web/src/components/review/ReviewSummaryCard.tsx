@@ -19,7 +19,7 @@ import type {
   ReviewMetrics,
   ReviewVerdictType,
   ReviewPrMeta,
-} from '@review-base/core';
+} from '@kuramori/core';
 
 interface ReviewSummaryCardProps {
   verdict: ReviewVerdictType;

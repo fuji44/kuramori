@@ -1,5 +1,5 @@
 import { assertEquals } from 'jsr:@std/assert@^1.0.11';
-import type { ReviewRule } from '@review-base/core';
+import type { ReviewRule } from '@kuramori/core';
 import {
   matchRuleTrigger,
   filterMatchingRules,
@@ -150,7 +150,7 @@ Deno.test('ReviewTriggerMatcher - matches repository and paths', () => {
   const trigger = {
     id: 'trig-1',
     name: 'Server Trigger',
-    repository: 'fuji44/review-base',
+    repository: 'fuji44/kuramori',
     paths: ['apps/server/**'],
     ruleIds: ['rule-server-1'],
     enabled: true,
@@ -160,7 +160,7 @@ Deno.test('ReviewTriggerMatcher - matches repository and paths', () => {
   assertEquals(
     matchReviewTrigger(trigger, {
       eventType: 'synchronize',
-      repository: 'fuji44/review-base',
+      repository: 'fuji44/kuramori',
       changedFiles: ['apps/server/src/api.ts'],
       isDraft: false,
     }),
@@ -182,7 +182,7 @@ Deno.test('ReviewTriggerMatcher - matches repository and paths', () => {
   assertEquals(
     matchReviewTrigger(trigger, {
       eventType: 'synchronize',
-      repository: 'fuji44/review-base',
+      repository: 'fuji44/kuramori',
       changedFiles: ['apps/web/src/App.tsx'],
       isDraft: false,
     }),

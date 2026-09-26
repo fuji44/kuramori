@@ -1,4 +1,4 @@
-import type { Diagram, DiagramNode, DiagramEdge } from '@review-base/core';
+import type { Diagram, DiagramNode, DiagramEdge } from '@kuramori/core';
 import { D2 } from 'npm:@d2lang/d2';
 
 /**

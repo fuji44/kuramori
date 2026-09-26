@@ -5,7 +5,7 @@ import { ClaudeCodeEngine } from './engines/claude-code.ts';
 import { AntigravityEngine } from './engines/antigravity.ts';
 import { MockReviewEngine } from './engines/mock.ts';
 import { CodexEngine } from './engines/codex.ts';
-import type { ReviewEngine } from '@review-base/core';
+import type { ReviewEngine } from '@kuramori/core';
 
 async function main() {
   const args = parseArgs(Deno.args, {
@@ -32,7 +32,7 @@ async function main() {
 
   if (args.help || !args.repo || !args.pr) {
     console.log(`
-Usage: review-runner [options]
+Usage: kuramori [options]
 
 Options:
   -r, --repo <owner/repo>     GitHub repository (required)

@@ -18,7 +18,7 @@ import {
   matchRuleTrigger,
   filterRulesByTriggers,
   resolveEngineEnvironment,
-} from '@review-base/runner';
+} from '@kuramori/runner';
 import {
   type ReportStorage,
   type ReviewEngine,
@@ -26,7 +26,7 @@ import {
   type ReviewRule,
   type ReviewTrigger,
   type RuleResultFinding,
-} from '@review-base/core';
+} from '@kuramori/core';
 import type { SettingsService, AppSettings } from './settings.ts';
 import { aggregateRuleResults } from './aggregator.ts';
 

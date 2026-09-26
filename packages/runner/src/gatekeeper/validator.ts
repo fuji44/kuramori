@@ -2,7 +2,7 @@ import {
   ReviewReportDataSchema,
   type ReviewReportData,
   type ReviewComment,
-} from "@review-base/core";
+} from "@kuramori/core";
 
 export interface GatekeeperViolation {
   path: string;

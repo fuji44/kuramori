@@ -1,4 +1,4 @@
-import type { EngineEnvironment, ReviewEngine, ReviewExecutionContext, ReviewExecutionResult } from '@review-base/core';
+import type { EngineEnvironment, ReviewEngine, ReviewExecutionContext, ReviewExecutionResult } from '@kuramori/core';
 import { executePreFlight, buildReviewPrompt, executePostFlight } from '../pipeline/runner-pipeline.ts';
 import { resolveEngineEnvironment } from './environment.ts';
 

@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import type { VCSProvider } from '@review-base/core';
+import type { VCSProvider } from '@kuramori/core';
 import type { AppDatabase } from './db/index.ts';
 import { reviewJobsTable, reviewRequestsTable } from './db/schema.ts';
 import type { ReviewQueue } from './queue.ts';

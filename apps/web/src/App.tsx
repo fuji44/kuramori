@@ -408,7 +408,7 @@ export default function App() {
               <GitPullRequest className="w-4 h-4" />
             </div>
             <div className="flex items-center gap-2">
-              <h1 className="text-base font-bold text-white tracking-tight">review-base</h1>
+              <h1 className="text-base font-bold text-white tracking-tight">kuramori</h1>
               <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-sky-950 text-sky-400 border border-sky-800/80 font-mono">
                 MVP
               </span>

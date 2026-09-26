@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { LocalFileReportStorage } from './local-storage.ts';
 
 Deno.test('LocalFileReportStorage - save, retrieve and check existence', async () => {
-  const tempDir = await Deno.makeTempDir({ prefix: 'review-base-storage-test-' });
+  const tempDir = await Deno.makeTempDir({ prefix: 'kuramori-storage-test-' });
 
   try {
     const storage = new LocalFileReportStorage(tempDir);

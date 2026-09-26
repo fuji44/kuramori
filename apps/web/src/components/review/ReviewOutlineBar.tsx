@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { ReviewComment, MarkType } from '@review-base/core';
+import type { ReviewComment, MarkType } from '@kuramori/core';
 import { ArrowUp, Check, Clock, X, HelpCircle } from 'lucide-react';
 
 interface ReviewOutlineBarProps {

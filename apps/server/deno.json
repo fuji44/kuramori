@@ -1,10 +1,10 @@
 {
-  "name": "@review-base/server",
+  "name": "@kuramori/server",
   "version": "0.1.0",
   "exports": "./src/index.ts",
   "imports": {
-    "@review-base/core": "../../packages/core/src/index.ts",
-    "@review-base/runner": "../../packages/runner/src/index.ts",
+    "@kuramori/core": "../../packages/core/src/index.ts",
+    "@kuramori/runner": "../../packages/runner/src/index.ts",
     "hono": "npm:hono@^4.6.14",
     "hono/": "npm:/hono@^4.6.14/",
     "@scalar/hono-api-reference": "npm:@scalar/hono-api-reference@^0.12.6",

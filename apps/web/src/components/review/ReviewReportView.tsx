@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Loader2, AlertCircle, ExternalLink } from 'lucide-react';
-import type { ReviewReportData, ReviewComment, MarkType } from '@review-base/core';
+import type { ReviewReportData, ReviewComment, MarkType } from '@kuramori/core';
 import { ReviewSidebar, type FilterState } from './ReviewSidebar.tsx';
 import { ReviewMainContent } from './ReviewMainContent.tsx';
 import { ReviewExportModal } from './ReviewExportModal.tsx';

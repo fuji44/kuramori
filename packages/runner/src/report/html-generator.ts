@@ -1,1 +1,1 @@
-export { generateStandaloneReviewHtml } from '@review-base/core';
+export { generateStandaloneReviewHtml } from '@kuramori/core';

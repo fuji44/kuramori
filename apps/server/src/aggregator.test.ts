@@ -1,7 +1,7 @@
 import { assertEquals } from 'jsr:@std/assert@^1.0.11';
 import { createDb, initDatabase } from './db/index.ts';
 import { reviewRuleResultsTable, reviewRequestsTable, reviewJobsTable } from './db/schema.ts';
-import { LocalFileReportStorage } from '@review-base/core';
+import { LocalFileReportStorage } from '@kuramori/core';
 import { aggregateRuleResults } from './aggregator.ts';
 
 Deno.test('Aggregator - merges rule results and derives correct verdict', async () => {

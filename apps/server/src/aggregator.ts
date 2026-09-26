@@ -1,7 +1,7 @@
 import { eq, and } from 'drizzle-orm';
 import type { AppDatabase } from './db/index.ts';
 import { reviewJobsTable, reviewReportsTable, reviewRuleResultsTable } from './db/schema.ts';
-import { ReviewReportDataSchema } from '@review-base/core';
+import { ReviewReportDataSchema } from '@kuramori/core';
 import type {
   ReportStorage,
   ReviewReportData,
@@ -10,7 +10,7 @@ import type {
   Severity,
   RuleResult,
   RuleResultFinding,
-} from '@review-base/core';
+} from '@kuramori/core';
 
 export interface AggregateOptions {
   requestId: string;

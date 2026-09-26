@@ -82,7 +82,7 @@ export interface RuleTrigger {
 export interface ReviewTrigger {
   id: string;
   name: string;
-  repository: string; // 例: "fuji44/review-base" または "*" (全リポジトリ)
+  repository: string; // 例: "fuji44/kuramori" または "*" (全リポジトリ)
   paths?: string[]; // 対象ファイルパス (Glob)
   pathsIgnore?: string[]; // 除外ファイルパス (Glob)
   ruleIds: string[]; // 発動させるルール ID のリスト

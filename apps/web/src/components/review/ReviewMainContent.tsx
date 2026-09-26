@@ -19,7 +19,7 @@ import {
   Flame,
   HelpCircle,
 } from 'lucide-react';
-import type { ReviewReportData, ReviewComment, MarkType } from '@review-base/core';
+import type { ReviewReportData, ReviewComment, MarkType } from '@kuramori/core';
 import { ReviewDiagram } from './ReviewDiagram.tsx';
 import { ReviewDiffViewer } from './ReviewDiffViewer.tsx';
 import { ReviewOutlineBar } from './ReviewOutlineBar.tsx';

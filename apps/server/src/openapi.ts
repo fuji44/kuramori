@@ -1,14 +1,14 @@
 export const openapiSpec = {
   openapi: '3.1.0',
   info: {
-    title: 'review-base API',
+    title: 'kuramori API',
     version: '0.1.0',
-    description: 'REST API for review-base automated code review and runner platform. Allows agents and clients to inspect and manage review rules, triggers, pulls, reports, and settings.',
+    description: 'REST API for kuramori automated code review and runner platform. Allows agents and clients to inspect and manage review rules, triggers, pulls, reports, and settings.',
   },
   servers: [
     {
       url: '/',
-      description: 'Current review-base server instance',
+      description: 'Current kuramori server instance',
     },
   ],
   tags: [
@@ -548,7 +548,7 @@ export const openapiSpec = {
     '/api/settings': {
       get: {
         tags: ['Settings'],
-        summary: 'Get global review-base settings',
+        summary: 'Get global kuramori settings',
         responses: {
           '200': { description: 'Current application settings' },
         },

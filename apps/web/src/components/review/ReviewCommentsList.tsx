@@ -23,7 +23,7 @@ import type {
   FindingTag,
   LensVerdict,
   ReviewPrMeta,
-} from '@review-base/core';
+} from '@kuramori/core';
 
 export type DecisionType = 'post' | 'hold' | 'ignore';
 

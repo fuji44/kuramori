@@ -9,7 +9,7 @@ import type {
   EngineSettingsMap,
   EngineProfile,
   EngineType,
-} from '@review-base/core';
+} from '@kuramori/core';
 
 export type {
   BaseCliEngineConfig,
@@ -21,7 +21,7 @@ export type {
   EngineOverrideConfig,
   EngineProfile,
   EngineType,
-} from '@review-base/core';
+} from '@kuramori/core';
 
 export interface AppSettings {
   autoQueue: boolean;

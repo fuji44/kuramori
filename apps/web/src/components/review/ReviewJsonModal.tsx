@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { X, Copy, Check, Download, ExternalLink, FileCode } from 'lucide-react';
-import type { ReviewReportData } from '@review-base/core';
+import type { ReviewReportData } from '@kuramori/core';
 
 interface ReviewJsonModalProps {
   isOpen: boolean;

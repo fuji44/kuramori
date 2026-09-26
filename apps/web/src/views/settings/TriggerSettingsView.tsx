@@ -243,7 +243,7 @@ export function TriggerSettingsView({
                 list="trigger-known-repos"
                 value={triggerForm.repository}
                 onChange={(e) => setTriggerForm({ ...triggerForm, repository: e.target.value })}
-                placeholder="例: fuji44/review-base (または * で全リポジトリ)"
+                placeholder="例: fuji44/kuramori (または * で全リポジトリ)"
                 className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
               />
               <datalist id="trigger-known-repos">

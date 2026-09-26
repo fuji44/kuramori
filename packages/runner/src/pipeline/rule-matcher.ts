@@ -1,5 +1,5 @@
 import { globToRegExp } from 'jsr:@std/path/glob-to-regexp';
-import type { ReviewRule, ReviewTrigger } from '@review-base/core';
+import type { ReviewRule, ReviewTrigger } from '@kuramori/core';
 
 export interface PrEvaluationEvent {
   eventType: 'opened' | 'synchronize' | 'reopened' | 'ready_for_review';

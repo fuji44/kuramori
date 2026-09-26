@@ -21,7 +21,7 @@ import {
   Layout,
   AlertCircle,
 } from 'lucide-react';
-import type { Diagram, DiagramNode, ReviewComment } from '@review-base/core';
+import type { Diagram, DiagramNode, ReviewComment } from '@kuramori/core';
 
 interface ReviewDiagramProps {
   diagram?: Diagram;

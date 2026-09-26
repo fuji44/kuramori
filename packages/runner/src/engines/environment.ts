@@ -1,4 +1,4 @@
-import type { EngineEnvironment } from '@review-base/core';
+import type { EngineEnvironment } from '@kuramori/core';
 
 export function resolveEngineEnvironment(
   inherited: Record<string, string>,

@@ -2,14 +2,14 @@ import { assertEquals } from 'jsr:@std/assert@^1.0.11';
 import { createDb, initDatabase } from './db/index.ts';
 import { reviewRequestsTable, reviewReportsTable, reviewJobsTable } from './db/schema.ts';
 import { createApi } from './api.ts';
-import { LocalFileReportStorage } from '@review-base/core';
-import type { VCSProvider, ReviewRequest } from '@review-base/core';
+import { LocalFileReportStorage } from '@kuramori/core';
+import type { VCSProvider, ReviewRequest } from '@kuramori/core';
 import { ReviewQueue } from './queue.ts';
 import { GitHubPoller } from './poller.ts';
 import { SettingsService } from './settings.ts';
 
 Deno.test('API Endpoints - comprehensive integration test', async () => {
-  const tempDir = await Deno.makeTempDir({ prefix: 'review-base-api-test-' });
+  const tempDir = await Deno.makeTempDir({ prefix: 'kuramori-api-test-' });
   const dbUrl = `file:${tempDir}/test.db`;
   const reportsDir = `${tempDir}/reports`;
 

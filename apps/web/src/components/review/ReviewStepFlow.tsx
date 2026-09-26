@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowDown, AlertCircle, Sparkles, RefreshCw, CircleDot } from 'lucide-react';
-import type { CallFlow, CallFlowStep } from '@review-base/core';
+import type { CallFlow, CallFlowStep } from '@kuramori/core';
 
 interface ReviewStepFlowProps {
   callFlow?: CallFlow;

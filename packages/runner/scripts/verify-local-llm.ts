@@ -141,7 +141,7 @@ Options:
     console.log(`  -> Protocol: ${apiProtocol}`);
     console.log(`  -> Response received in ${elapsedMs}ms:`);
     console.log(`     ${responseText.trim()}`);
-    console.log(`\n[SUCCESS] Local LLM endpoint is healthy and ready for review-runner!`);
+    console.log(`\n[SUCCESS] Local LLM endpoint is healthy and ready for kuramori!`);
     console.log(`\nTo run a review with this local setup:`);
     console.log(`  Set ANTHROPIC_BASE_URL and the required authentication environment variable, then run:`);
     console.log(`  deno task runner --repo owner/repo --pr 123 --engine claude-code --model ${model}`);

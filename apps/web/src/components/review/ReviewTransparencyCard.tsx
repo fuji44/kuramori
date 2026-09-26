@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Shield, ChevronDown, ChevronRight, ExternalLink, CheckCircle, AlertCircle } from 'lucide-react';
-import type { ReviewTransparency } from '@review-base/core';
+import type { ReviewTransparency } from '@kuramori/core';
 
 interface ReviewTransparencyCardProps {
   transparency?: ReviewTransparency;

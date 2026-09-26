@@ -3,7 +3,7 @@ import { drizzle } from 'drizzle-orm/libsql';
 import { dirname } from 'node:path';
 import * as schema from './schema.ts';
 
-export function createDb(dbUrl: string = 'file:data/review-base.db') {
+export function createDb(dbUrl: string = 'file:data/kuramori.db') {
   if (dbUrl.startsWith('file:')) {
     const filePath = dbUrl.slice(5);
     const dir = dirname(filePath);

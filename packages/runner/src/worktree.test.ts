@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { WorktreeManager } from './worktree.ts';
 
 Deno.test('WorktreeManager - prepareWorktree and cleanup with local bare repo', async () => {
-  const tempBase = await Deno.makeTempDir({ prefix: 'review-base-worktree-test-' });
+  const tempBase = await Deno.makeTempDir({ prefix: 'kuramori-worktree-test-' });
   const cacheDir = join(tempBase, 'cache');
   const worktreeDir = join(tempBase, 'worktrees');
   const originDir = join(tempBase, 'origin.git');
