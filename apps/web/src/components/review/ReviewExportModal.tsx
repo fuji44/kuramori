@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Copy, Check } from 'lucide-react';
+import { useI18n } from '../../i18n/context.tsx';
 
 interface ReviewExportModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ export const ReviewExportModal: React.FC<ReviewExportModalProps> = ({
   onClose,
   exportText,
 }) => {
+  const { t } = useI18n();
   const [copied, setCopied] = useState<boolean>(false);
 
   if (!isOpen) return null;
@@ -37,10 +39,10 @@ export const ReviewExportModal: React.FC<ReviewExportModalProps> = ({
       >
         <div className="flex items-center justify-between border-b border-[#30363d] pb-3">
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-bold text-gray-100">判断の書き出し</h3>
+            <h3 className="text-lg font-bold text-gray-100">{t('review.exportModal.title')}</h3>
             {copied && (
               <span className="text-xs text-emerald-400 flex items-center gap-1 font-medium">
-                <Check className="w-3.5 h-3.5" /> コピーしました！
+                <Check className="w-3.5 h-3.5" /> {t('review.exportModal.copied')}
               </span>
             )}
           </div>
@@ -54,7 +56,7 @@ export const ReviewExportModal: React.FC<ReviewExportModalProps> = ({
         </div>
 
         <p className="text-xs text-gray-400">
-          投稿マークが付いた指摘とメモを Markdown 形式で出力しています。PR レビューのコメント欄や AI agent への引き継ぎに利用できます。
+          {t('review.exportModal.desc')}
         </p>
 
         <textarea
@@ -69,7 +71,7 @@ export const ReviewExportModal: React.FC<ReviewExportModalProps> = ({
             onClick={onClose}
             className="px-5 py-2.5 rounded-full text-xs font-semibold text-gray-300 hover:text-white bg-[#21262d] hover:bg-[#30363d] transition-colors"
           >
-            とじる
+            {t('review.exportModal.close')}
           </button>
           <button
             type="button"
@@ -77,7 +79,7 @@ export const ReviewExportModal: React.FC<ReviewExportModalProps> = ({
             className="px-6 py-2.5 rounded-full text-xs font-bold text-black bg-[#ECEDF0] hover:bg-white flex items-center gap-1.5 transition-all shadow-md"
           >
             {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-            <span>コピーする</span>
+            <span>{t('review.exportModal.copy')}</span>
           </button>
         </div>
       </div>

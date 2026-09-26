@@ -29,6 +29,7 @@ import {
   SettingEmptyState,
   SettingFormFooter,
 } from '../../components/settings/SettingViewLayout.tsx';
+import { useI18n } from '../../i18n/context.tsx';
 
 interface RuleSettingsViewProps {
   rules: ReviewRule[];
@@ -53,6 +54,7 @@ export function RuleSettingsView({
   onShowSuccess,
   onShowError,
 }: RuleSettingsViewProps) {
+  const { t } = useI18n();
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
   const [isCreatingRule, setIsCreatingRule] = useState(false);
   const [expandedInstructionId, setExpandedInstructionId] = useState<string | null>(null);
@@ -143,15 +145,15 @@ export function RuleSettingsView({
 
       if (editingRuleId) {
         await onUpdateRule(editingRuleId, rulePayload);
-        onShowSuccess(`ルール「${ruleForm.name}」を更新しました`);
+        onShowSuccess(t('settings.rules.updatedSuccess', { name: ruleForm.name }));
         setEditingRuleId(null);
       } else {
         await onCreateRule(rulePayload);
-        onShowSuccess(`新しいルール「${ruleForm.name}」を作成しました`);
+        onShowSuccess(t('settings.rules.createdSuccess', { name: ruleForm.name }));
         setIsCreatingRule(false);
       }
     } catch {
-      onShowError('ルールの保存に失敗しました');
+      onShowError(t('settings.rules.saveError'));
     } finally {
       setSaving(false);
     }
@@ -160,10 +162,10 @@ export function RuleSettingsView({
   const handleDelete = async (id: string, name: string) => {
     try {
       await onDeleteRule(id);
-      onShowSuccess(`ルール「${name}」を削除しました`);
+      onShowSuccess(t('settings.rules.deletedSuccess', { name }));
       setConfirmDeleteId(null);
     } catch {
-      onShowError('ルールの削除に失敗しました');
+      onShowError(t('settings.rules.deleteError'));
     }
   };
 
@@ -179,9 +181,9 @@ export function RuleSettingsView({
         concurrency: rule.concurrency ? { ...rule.concurrency } : undefined,
         enabled: rule.enabled,
       });
-      onShowSuccess(`ルール「${rule.name} (Copy)」を作成しました`);
+      onShowSuccess(t('settings.rules.duplicatedSuccess', { name: rule.name }));
     } catch {
-      onShowError('ルールの複製に失敗しました');
+      onShowError(t('settings.rules.duplicateError'));
     }
   };
 
@@ -202,13 +204,13 @@ export function RuleSettingsView({
       <div className="max-w-4xl mx-auto space-y-6">
         <SettingFormHeader
           icon={<Shield className="w-5 h-5" />}
-          backLabel="ルール一覧に戻る"
+          backLabel={t('settings.rules.backToList')}
           onBack={handleCancelForm}
-          title={editingRuleId ? 'ルールを編集' : '新規ルールを作成'}
+          title={editingRuleId ? t('settings.rules.editRuleTitle') : t('settings.rules.createRuleTitle')}
           description={
             editingRuleId
-              ? `「${ruleForm.name || 'ルール'}」の指示文、対象ファイル、実行プロファイルを更新します。`
-              : 'PR 評価時に並列実行される新しい観点のルールを定義します。'
+              ? t('settings.rules.editRuleDesc', { name: ruleForm.name || 'Rule' })
+              : t('settings.rules.createRuleDesc')
           }
         />
 
@@ -219,74 +221,74 @@ export function RuleSettingsView({
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-xs text-[#8b949e] block mb-1">ルール名 *</label>
+              <label className="text-xs text-[#8b949e] block mb-1">{t('settings.rules.nameLabel')}</label>
               <input
                 type="text"
                 required
                 value={ruleForm.name}
                 onChange={(e) => setRuleForm({ ...ruleForm, name: e.target.value })}
-                placeholder="例: Security Audit"
+                placeholder={t('settings.rules.namePlaceholder')}
                 className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500"
               />
             </div>
             <div>
-              <label className="text-xs text-[#8b949e] block mb-1">カテゴリ</label>
+              <label className="text-xs text-[#8b949e] block mb-1">{t('settings.rules.categoryLabel')}</label>
               <select
                 value={ruleForm.category}
                 onChange={(e) => setRuleForm({ ...ruleForm, category: e.target.value })}
                 className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500"
               >
-                <option value="correctness">correctness (正確性・バグ・回帰リスク)</option>
-                <option value="security">security (セキュリティ監査・脆弱性)</option>
-                <option value="architecture">architecture (設計・モジュール境界)</option>
-                <option value="performance">performance (パフォーマンス)</option>
-                <option value="general">general (総合)</option>
+                <option value="correctness">{t('settings.rules.categoryCorrectness')}</option>
+                <option value="security">{t('settings.rules.categorySecurity')}</option>
+                <option value="architecture">{t('settings.rules.categoryArchitecture')}</option>
+                <option value="performance">{t('settings.rules.categoryPerformance')}</option>
+                <option value="general">{t('settings.rules.categoryGeneral')}</option>
               </select>
             </div>
           </div>
 
           <div>
-            <label className="text-xs text-[#8b949e] block mb-1">ルールの説明</label>
+            <label className="text-xs text-[#8b949e] block mb-1">{t('settings.rules.descriptionLabel')}</label>
             <input
               type="text"
               value={ruleForm.description}
               onChange={(e) => setRuleForm({ ...ruleForm, description: e.target.value })}
-              placeholder="例: 認証認可や機密情報漏洩、入力値検証の脆弱性を重点監査"
+              placeholder={t('settings.rules.descriptionPlaceholder')}
               className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500"
             />
           </div>
 
           <div>
             <label className="text-xs text-[#8b949e] block mb-1">
-              レビュー指示文 (Instructions / Prompt) *
+              {t('settings.rules.instructionsLabel')}
             </label>
             <textarea
               required
               rows={6}
               value={ruleForm.instructions}
               onChange={(e) => setRuleForm({ ...ruleForm, instructions: e.target.value })}
-              placeholder="AI エージェントに重点的に検査させたい観点や評価基準をプロンプトとして記述してください..."
+              placeholder={t('settings.rules.instructionsPlaceholder')}
               className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg p-3 text-xs text-white font-mono leading-relaxed focus:outline-none focus:border-sky-500"
             />
             <p className="text-[11px] text-[#8b949e] mt-1">
-              この指示文は、PR レビュー実行時に AI エージェントのプロンプトへ自動的に注入されます。
+              {t('settings.rules.instructionsHelp')}
             </p>
           </div>
 
           <div>
-            <label className="text-xs text-[#8b949e] block mb-1">実行プロファイル</label>
+            <label className="text-xs text-[#8b949e] block mb-1">{t('settings.rules.profileLabel')}</label>
             <select
               value={ruleForm.engine}
               onChange={(e) => setRuleForm({ ...ruleForm, engine: e.target.value })}
               className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500"
             >
               <option value="default">
-                システム既定（{defaultEngineProfile?.name ?? '未設定'}）
+                {t('settings.rules.systemDefaultProfile', { name: defaultEngineProfile?.name ?? t('settings.engines.modelUnspecified') })}
               </option>
 
               {disabledSelectedProfile && (
                 <option value={disabledSelectedProfile.id} disabled>
-                  {disabledSelectedProfile.name}（無効）
+                  {t('settings.rules.disabledProfileSuffix', { name: disabledSelectedProfile.name })}
                 </option>
               )}
 
@@ -298,21 +300,21 @@ export function RuleSettingsView({
             </select>
             {(!settings?.engineProfiles || settings.engineProfiles.length === 0) && (
               <p className="text-[11px] text-amber-400/80 mt-1">
-                ※ 実行プロファイルが登録されていません。「AI 実行設定」からプロファイルを追加するか、システム既定（{settings?.reviewEngine ?? '未設定'}）が適用されます。
+                {t('settings.rules.noProfilesWarning', { engine: settings?.reviewEngine ?? t('settings.engines.modelUnspecified') })}
               </p>
             )}
           </div>
 
           <SettingFormFooter
             onCancel={handleCancelForm}
-            submitLabel="ルールを保存"
+            submitLabel={t('settings.rules.saveRuleBtn')}
             saving={saving}
             leftContent={
               <div className="flex items-center gap-6">
                 <Checkbox
                   checked={ruleForm.enabled}
                   onChange={(checked) => setRuleForm({ ...ruleForm, enabled: checked })}
-                  label="ルールを有効化"
+                  label={t('settings.rules.enableRuleLabel')}
                 />
 
                 <Checkbox
@@ -320,7 +322,7 @@ export function RuleSettingsView({
                   onChange={(checked) =>
                     setRuleForm({ ...ruleForm, cancelInProgress: checked })
                   }
-                  label="新コミット時に進行中ジョブをキャンセル"
+                  label={t('settings.rules.cancelOnNewCommitLabel')}
                 />
               </div>
             }
@@ -334,10 +336,10 @@ export function RuleSettingsView({
     <div className="max-w-4xl mx-auto space-y-6">
       <SettingViewHeader
         icon={<Shield className="w-5 h-5" />}
-        title="レビュールール"
-        description="PR 評価時に並列実行される独立した観点（セキュリティ、正確性、設計など）のルールを管理します。"
+        title={t('settings.rules.title')}
+        description={t('settings.rules.description')}
         action={{
-          label: '新しいルールを追加',
+          label: t('settings.rules.addRuleBtn'),
           onClick: handleOpenCreateRule,
         }}
       />
@@ -347,10 +349,10 @@ export function RuleSettingsView({
         {rules.length === 0 ? (
           <SettingEmptyState
             icon={<Shield className="w-8 h-8" />}
-            message="ルールがまだ登録されていません。"
-            description="レビュールールを追加して、PR 評価時の検証観点を設定してください。"
+            message={t('settings.rules.noRulesMessage')}
+            description={t('settings.rules.noRulesDesc')}
             action={{
-              label: '最初のルールを作成',
+              label: t('settings.rules.createFirstRule'),
               onClick: handleOpenCreateRule,
             }}
           />
@@ -379,7 +381,7 @@ export function RuleSettingsView({
                       );
                       const isSystemDefault = !rule.engine || rule.engine === 'default';
                       const label = isSystemDefault
-                        ? `システム既定（${matchedProfile?.name ?? '未設定'}）`
+                        ? t('settings.rules.systemDefaultProfile', { name: matchedProfile?.name ?? t('settings.engines.modelUnspecified') })
                         : (matchedProfile?.name ?? rule.engine);
                       const engineType = matchedProfile?.engineType;
                       return (
@@ -395,7 +397,7 @@ export function RuleSettingsView({
                             )
                           }
                         >
-                          実行プロファイル: {label}
+                          {t('settings.rules.profileBadge', { name: label })}
                         </SettingBadge>
                       );
                     })()}
@@ -409,19 +411,19 @@ export function RuleSettingsView({
                       return profile && settings?.enabledEngines && !settings.enabledEngines.includes(profile.engineType);
                     })() && (
                       <SettingBadge variant="warning" icon={<AlertCircle className="w-3 h-3" />}>
-                        エンジン種別無効化中
+                        {t('settings.rules.engineDisabledBadge')}
                       </SettingBadge>
                     )}
 
                     {isDefault && (
                       <SettingBadge variant="default" icon={<CheckCircle2 className="w-3 h-3" />}>
-                        既定
+                        {t('settings.rules.defaultBadge')}
                       </SettingBadge>
                     )}
 
                     {!rule.enabled && (
                       <SettingBadge variant="muted" icon={<Ban className="w-3 h-3" />}>
-                        無効
+                        {t('settings.rules.disabledBadge')}
                       </SettingBadge>
                     )}
                   </>
@@ -431,7 +433,7 @@ export function RuleSettingsView({
                   rule.concurrency?.cancelInProgress ? (
                     <div className="flex items-center gap-1 text-[11px] text-[#8b949e]">
                       <Clock className="w-3 h-3" />
-                      <span>新コミット時キャンセル</span>
+                      <span>{t('settings.rules.cancelBadge')}</span>
                     </div>
                   ) : undefined
                 }
@@ -449,7 +451,7 @@ export function RuleSettingsView({
                               : [...defaultRuleIds, rule.id];
                             onUpdateDefaultRuleIds(next);
                           }}
-                          title={isDefault ? '既定ルールから外す' : '既定ルールに追加'}
+                          title={isDefault ? t('settings.rules.removeFromDefaultTooltip') : t('settings.rules.addToDefaultTooltip')}
                         >
                           <CheckCircle2 className={`w-3.5 h-3.5 ${isDefault ? 'fill-emerald-400/20' : ''}`} />
                         </SettingActionButton>
@@ -459,7 +461,7 @@ export function RuleSettingsView({
                       <SettingActionButton
                         active={rule.enabled}
                         onClick={() => onUpdateRule(rule.id, { enabled: !rule.enabled })}
-                        title={rule.enabled ? 'ルールを無効化' : 'ルールを有効化'}
+                        title={rule.enabled ? t('settings.rules.disableRuleTooltip') : t('settings.rules.enableRuleTooltip')}
                       >
                         <Power className="w-3.5 h-3.5" />
                       </SettingActionButton>
@@ -468,34 +470,34 @@ export function RuleSettingsView({
                     {/* 管理操作系グループ */}
                     {isConfirmingDelete ? (
                       <div className="flex items-center gap-1 bg-rose-950/60 border border-rose-800/80 rounded-lg p-1">
-                        <span className="text-[11px] text-rose-300 px-1">「{rule.name}」を削除しますか?</span>
+                        <span className="text-[11px] text-rose-300 px-1">{t('settings.rules.confirmDelete', { name: rule.name })}</span>
                         <button
                           type="button"
                           onClick={() => handleDelete(rule.id, rule.name)}
                           className="px-2 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-medium transition-colors cursor-pointer"
                         >
-                          削除
+                          {t('common.delete')}
                         </button>
                         <button
                           type="button"
                           onClick={() => setConfirmDeleteId(null)}
                           className="px-1.5 py-0.5 rounded text-[#8b949e] hover:text-white text-[11px] cursor-pointer"
                         >
-                          戻る
+                          {t('common.back')}
                         </button>
                       </div>
                     ) : (
                       <SettingButtonGroup>
-                        <SettingActionButton onClick={() => handleOpenEditRule(rule)} title="ルールを編集">
+                        <SettingActionButton onClick={() => handleOpenEditRule(rule)} title={t('settings.rules.editRuleTooltip')}>
                           <Edit2 className="w-3.5 h-3.5" />
                         </SettingActionButton>
-                        <SettingActionButton onClick={() => handleDuplicateRule(rule)} title="ルールを複製">
+                        <SettingActionButton onClick={() => handleDuplicateRule(rule)} title={t('settings.rules.duplicateRuleTooltip')}>
                           <Copy className="w-3.5 h-3.5" />
                         </SettingActionButton>
                         <SettingActionButton
                           danger
                           onClick={() => setConfirmDeleteId(rule.id)}
-                          title="ルールを削除"
+                          title={t('settings.rules.deleteRuleTooltip')}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </SettingActionButton>
@@ -511,7 +513,7 @@ export function RuleSettingsView({
                   aria-controls={`rule-instructions-${rule.id}`}
                   className="w-full flex items-center justify-between gap-3 px-4 sm:px-5 py-2.5 border-t border-[#30363d]/60 text-left text-xs text-[#8b949e] hover:text-white hover:bg-[#21262d]/60 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-[-2px]"
                 >
-                  <span>{isExpanded ? 'レビュー指示文を隠す' : 'レビュー指示文を表示'}</span>
+                  <span>{isExpanded ? t('settings.rules.hideInstructions') : t('settings.rules.showInstructions')}</span>
                   {isExpanded ? (
                     <ChevronUp className="w-3.5 h-3.5 shrink-0" />
                   ) : (
@@ -524,7 +526,7 @@ export function RuleSettingsView({
                   className="px-5 py-4 bg-[#0d1117] border-t border-[#30363d] space-y-2"
                 >
                   <span className="text-xs font-semibold text-[#8b949e] uppercase tracking-wider block">
-                    レビュー指示文 (Instructions)
+                    {t('settings.rules.instructionsHeader')}
                   </span>
                   <pre className="text-xs text-white/90 font-mono whitespace-pre-wrap leading-relaxed bg-[#161b22] p-3 rounded-lg border border-[#30363d]/60">
                     {rule.instructions}

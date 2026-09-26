@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { ReviewItem } from '../types.ts';
 import { getPrAnchorId } from '../utils/anchor.ts';
+import { useI18n } from '../i18n/context.tsx';
 
 interface ReportListViewProps {
   items: ReviewItem[];
@@ -26,6 +27,7 @@ export function ReportListView({
   onSelectReport,
   onNavigateToReviews,
 }: ReportListViewProps) {
+  const { t, formatDate } = useI18n();
   const [searchQuery, setSearchQuery] = useState('');
   const [verdictFilter, setVerdictFilter] = useState<'all' | 'APPROVE' | 'COMMENT' | 'REQUEST_CHANGES'>('all');
   const [repoFilter, setRepoFilter] = useState<string>('all');
@@ -86,21 +88,6 @@ export function ReportListView({
     });
   }, [reportItems, verdictFilter, repoFilter, searchQuery]);
 
-  const formatDate = (isoString: string) => {
-    try {
-      const d = new Date(isoString);
-      return d.toLocaleString('ja-JP', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return isoString;
-    }
-  };
-
   const getVerdictBadge = (verdict: string | null | undefined) => {
     switch (verdict) {
       case 'APPROVE':
@@ -140,13 +127,13 @@ export function ReportListView({
         <div>
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
             <FileText className="w-5 h-5 text-emerald-400" />
-            <span>レビューレポート一覧</span>
+            <span>{t('reports.title')}</span>
             <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800 font-mono font-normal">
-              {stats.total}件
+              {t('dashboard.countSuffix', { count: stats.total })}
             </span>
           </h2>
           <p className="text-xs text-[#8b949e] mt-1">
-            生成されたAIレビューレポートの判定結果・要約の一覧です。
+            {t('reports.desc')}
           </p>
         </div>
 
@@ -156,7 +143,7 @@ export function ReportListView({
           className="flex items-center gap-1.5 px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] rounded-lg text-xs text-[#c9d1d9] transition-colors self-start sm:self-auto shrink-0"
         >
           <GitPullRequest className="w-3.5 h-3.5 text-sky-400" />
-          <span>PR一覧を開く</span>
+          <span>{t('reports.openPrList')}</span>
         </button>
       </div>
 
@@ -171,7 +158,7 @@ export function ReportListView({
               : 'bg-[#161b22] border-[#30363d] hover:border-[#8b949e]'
           }`}
         >
-          <div className="text-[11px] text-neutral-400 font-medium">全レポート</div>
+          <div className="text-[11px] text-neutral-400 font-medium">{t('reports.allReportsCard')}</div>
           <div className="text-xl font-bold text-white font-mono mt-0.5">{stats.total}</div>
         </button>
 
@@ -185,7 +172,7 @@ export function ReportListView({
           }`}
         >
           <div className="flex items-center justify-between text-[11px] text-emerald-400 font-medium">
-            <span>承認 (APPROVE)</span>
+            <span>{t('reports.verdictApprove')}</span>
             <CheckCircle2 className="w-3.5 h-3.5" />
           </div>
           <div className="text-xl font-bold text-emerald-300 font-mono mt-0.5">{stats.approve}</div>
@@ -201,7 +188,7 @@ export function ReportListView({
           }`}
         >
           <div className="flex items-center justify-between text-[11px] text-sky-400 font-medium">
-            <span>コメント (COMMENT)</span>
+            <span>{t('reports.verdictComment')}</span>
             <MessageSquare className="w-3.5 h-3.5" />
           </div>
           <div className="text-xl font-bold text-sky-300 font-mono mt-0.5">{stats.comment}</div>
@@ -217,7 +204,7 @@ export function ReportListView({
           }`}
         >
           <div className="flex items-center justify-between text-[11px] text-rose-400 font-medium">
-            <span>要修正 (CHANGES)</span>
+            <span>{t('reports.verdictRequestChanges')}</span>
             <AlertTriangle className="w-3.5 h-3.5" />
           </div>
           <div className="text-xl font-bold text-rose-300 font-mono mt-0.5">{stats.requestChanges}</div>
@@ -232,7 +219,7 @@ export function ReportListView({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="タイトル・PR番号・リポジトリ・要約で検索..."
+            placeholder={t('reports.searchPlaceholder')}
             className="w-full pl-9 pr-8 py-1.5 bg-[#0d1117] border border-[#30363d] rounded-lg text-xs text-white placeholder-[#8b949e] focus:outline-none focus:border-sky-500 transition-colors"
           />
           {searchQuery && (
@@ -257,7 +244,7 @@ export function ReportListView({
                 className="bg-transparent text-white focus:outline-none cursor-pointer pr-1"
               >
                 <option value="all" className="bg-[#161b22] text-white">
-                  全リポジトリ
+                  {t('reports.filterRepoAll')}
                 </option>
                 {repositories.map((repo) => (
                   <option key={repo} value={repo} className="bg-[#161b22] text-white">
@@ -279,7 +266,7 @@ export function ReportListView({
               }}
               className="text-xs text-neutral-400 hover:text-white underline px-2 py-1"
             >
-              条件をクリア
+              {t('reports.clearFilters')}
             </button>
           )}
         </div>
@@ -290,17 +277,17 @@ export function ReportListView({
         <div className="bg-[#161b22] border border-[#30363d] rounded-2xl p-12 text-center">
           <FileText className="w-10 h-10 text-neutral-600 mx-auto mb-3" />
           <h3 className="text-sm font-semibold text-white mb-1">
-            生成済みのレビューレポートはありません
+            {t('reports.noReportsFoundTitle')}
           </h3>
           <p className="text-xs text-[#8b949e] max-w-sm mx-auto mb-4">
-            PR一覧画面から対象PRのAIレビューを実行すると、ここに判定レポートが保存されます。
+            {t('reports.noReportsFoundDesc')}
           </p>
           <button
             type="button"
             onClick={() => onNavigateToReviews()}
             className="inline-flex items-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors"
           >
-            <span>PR一覧を開く</span>
+            <span>{t('reports.openPrList')}</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -308,10 +295,10 @@ export function ReportListView({
         <div className="bg-[#161b22] border border-[#30363d] rounded-2xl p-12 text-center">
           <Search className="w-8 h-8 text-neutral-600 mx-auto mb-2" />
           <h3 className="text-sm font-semibold text-white mb-1">
-            一致するレポートが見つかりません
+            {t('reports.noMatchingReportsTitle')}
           </h3>
           <p className="text-xs text-[#8b949e] mb-4">
-            検索キーワードやフィルタ条件を変更してお試しください。
+            {t('reports.noMatchingReportsDesc')}
           </p>
           <button
             type="button"
@@ -322,7 +309,7 @@ export function ReportListView({
             }}
             className="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] rounded-lg text-xs text-[#c9d1d9] transition-colors"
           >
-            フィルタをリセット
+            {t('reports.resetFilters')}
           </button>
         </div>
       ) : (
@@ -386,7 +373,7 @@ export function ReportListView({
                       onClick={() => onNavigateToReviews(anchorId)}
                       className="text-[11px] text-neutral-400 hover:text-sky-300 transition-colors hover:underline"
                     >
-                      PR一覧で見る
+                      {t('reports.viewInPulls')}
                     </button>
                     <span className="text-neutral-600">•</span>
                     <a
@@ -403,7 +390,7 @@ export function ReportListView({
                       onClick={() => onSelectReport(reportId, fullTitle)}
                       className="flex items-center gap-1 px-2.5 py-1 bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/80 rounded-md text-[11px] font-medium transition-colors ml-1"
                     >
-                      <span>詳細レポート</span>
+                      <span>{t('reports.detailedReport')}</span>
                       <ArrowRight className="w-3 h-3" />
                     </button>
                   </div>

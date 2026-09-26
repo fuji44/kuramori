@@ -16,13 +16,13 @@ import {
   User,
   RefreshCw,
   ChevronDown,
-  Check,
   CheckSquare,
   Square,
 } from 'lucide-react';
 import { EngineProfile, ReviewItem, ReviewRule } from '../types.ts';
 import { getPrAnchorId } from '../utils/anchor.ts';
 import { AnchoredPopover } from './AnchoredPopover.tsx';
+import { useI18n } from '../i18n/context.tsx';
 
 interface PrCardProps {
   item: ReviewItem;
@@ -49,6 +49,7 @@ export function PrCard({
   onSelectReport,
   onSelectCard,
 }: PrCardProps) {
+  const { t, formatDate } = useI18n();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [selectedRuleIds, setSelectedRuleIds] = useState<Set<string>>(new Set());
   const [selectedEngine, setSelectedEngine] = useState<string>('default');
@@ -78,7 +79,6 @@ export function PrCard({
   );
   const anchorId = getPrAnchorId(item.repository, item.number);
 
-
   return (
     <div
       id={anchorId}
@@ -89,7 +89,7 @@ export function PrCard({
           ? 'border-sky-500 bg-[#161b22] ring-2 ring-sky-500/70 shadow-lg'
           : 'border-[#30363d] bg-[#161b22] hover:border-[#484f58]'
       }`}
-      title="クリックでURLにアンカーを設定"
+      title={t('pulls.clickToSetAnchor')}
     >
       {/* Header: Project Icon & Repo / PR number / Badges (Left) & Results (Right) */}
       <div className="flex items-center justify-between gap-3 pb-2.5 border-b border-[#21262d] mb-3">
@@ -114,14 +114,14 @@ export function PrCard({
 
           {item.isDraft && (
             <span className="text-[11px] px-1.5 py-0.2 rounded bg-neutral-800 text-neutral-400 border border-neutral-700">
-              Draft
+              {t('pulls.draftBadge')}
             </span>
           )}
 
           {item.milestone && (
             <span
               className="text-[11px] px-2 py-0.5 rounded bg-[#21262d] text-teal-300 border border-[#30363d] font-mono flex items-center gap-1 shrink-0"
-              title={`マイルストーン: ${item.milestone}`}
+              title={t('pulls.milestoneTitle', { milestone: item.milestone })}
             >
               <Milestone className="w-3 h-3 text-[#00AFA8]" />
               <span>{item.milestone}</span>
@@ -140,24 +140,24 @@ export function PrCard({
                 }
               }}
               className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-950/80 hover:bg-sky-900 text-sky-400 border border-sky-800 hover:border-sky-600 transition-all cursor-pointer"
-              title="実行中のログを表示"
+              title={t('pulls.openRunningLog')}
             >
               <RefreshCw className="w-3 h-3 animate-spin" />
-              <span>レビュー実行中</span>
+              <span>{t('pulls.reviewRunningBadge')}</span>
             </button>
           ) : jobStatus === 'pending' || jobStatus === 'queued' ? (
             <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-950 text-amber-400 border border-amber-800">
               <Clock className="w-3 h-3" />
-              キュー待機中
+              {t('pulls.reviewQueuedBadge')}
             </span>
           ) : jobStatus === 'completed' ? (
             <div className="flex items-center gap-2.5">
               {item.report?.createdAt && (
                 <span
                   className="text-[11px] text-neutral-400 shrink-0 hidden sm:inline font-mono"
-                  title={`レポート作成日時: ${new Date(item.report.createdAt).toLocaleString('ja-JP')}`}
+                  title={t('pulls.reportCreatedAtTitle', { date: formatDate(item.report.createdAt) })}
                 >
-                  レビュー: {new Date(item.report.createdAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  {t('pulls.reportCreatedAtLabel', { date: formatDate(item.report.createdAt) })}
                 </span>
               )}
               {item.report?.id ? (
@@ -170,10 +170,10 @@ export function PrCard({
                     }
                   }}
                   className="flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/80 hover:border-emerald-500 shadow-sm transition-all cursor-pointer group"
-                  title="レビューレポートを表示"
+                  title={t('pulls.viewReportBtn')}
                 >
                   <FileText className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-105 transition-transform" />
-                  <span>レポート表示</span>
+                  <span>{t('pulls.viewReportBtn')}</span>
                   {item.report?.verdict && (
                     <span className="ml-1 px-1.5 py-0.2 rounded bg-emerald-900/90 text-emerald-200 border border-emerald-700/60 text-[10px] font-mono font-semibold">
                       {item.report.verdict}
@@ -189,10 +189,10 @@ export function PrCard({
                     }
                   }}
                   className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/80 hover:border-emerald-500 transition-all cursor-pointer"
-                  title="実行ログを表示"
+                  title={t('pulls.openRunningLog')}
                 >
                   <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                  <span>レビュー完了 (ログ確認)</span>
+                  <span>{t('pulls.reviewCompletedWithLog')}</span>
                 </button>
               )}
             </div>
@@ -208,10 +208,10 @@ export function PrCard({
                     }
                   }}
                   className="flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/80 hover:border-emerald-500 shadow-sm transition-all cursor-pointer group"
-                  title="レビューレポートを表示"
+                  title={t('pulls.viewReportBtn')}
                 >
                   <FileText className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-105 transition-transform" />
-                  <span>レポート表示</span>
+                  <span>{t('pulls.viewReportBtn')}</span>
                 </button>
               )}
               <button
@@ -222,15 +222,15 @@ export function PrCard({
                   }
                 }}
                 className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800 hover:border-rose-600 transition-all cursor-pointer group"
-                title="エラー詳細と実行ログを表示"
+                title={t('pulls.openRunningLog')}
               >
                 <AlertCircle className="w-3.5 h-3.5 text-rose-400 group-hover:scale-105 transition-transform" />
-                <span>失敗 (ログ確認)</span>
+                <span>{t('pulls.reviewFailedWithLog')}</span>
               </button>
             </div>
           ) : (
             <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#21262d] text-[#8b949e] border border-[#30363d]">
-              未レビュー
+              {t('pulls.unreviewedBadge')}
             </span>
           )}
         </div>
@@ -267,7 +267,7 @@ export function PrCard({
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
             className="text-sm md:text-base font-semibold text-white hover:text-sky-400 transition-colors truncate leading-snug group/title flex items-center gap-1.5"
-            title={`${item.title} (GitHubで開く)`}
+            title={`${item.title} (${t('pulls.openInGithub')})`}
           >
             <span className="truncate">{item.title}</span>
             <ExternalLink className="w-3.5 h-3.5 opacity-0 group-hover/title:opacity-80 transition-opacity shrink-0 text-sky-400" />
@@ -301,20 +301,20 @@ export function PrCard({
         <div className="flex items-center gap-3.5 flex-wrap min-w-0">
           {/* Author */}
           <span className="flex items-center gap-1 shrink-0">
-            <span className="text-[#8b949e]">by</span>
+            <span className="text-[#8b949e]">{t('pulls.authorBy')}</span>
             <span className="text-neutral-300 font-medium">@{item.author}</span>
           </span>
 
           {/* Assignees */}
           {item.assignees && item.assignees.length > 0 && (
             <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-neutral-500">担当:</span>
+              <span className="text-neutral-500">{t('pulls.assigneesLabel')}</span>
               <div className="flex items-center gap-2">
                 {item.assignees.map((assignee) => (
                   <span
                     key={assignee.login}
                     className="inline-flex items-center gap-1 text-neutral-300 font-medium"
-                    title={`担当: @${assignee.login}`}
+                    title={t('pulls.assigneeTitle', { login: assignee.login })}
                   >
                     {assignee.avatarUrl ? (
                       <img
@@ -336,7 +336,7 @@ export function PrCard({
           {item.sourceBranch && (
             <span
               className="flex items-center gap-1 font-mono truncate max-w-[220px]"
-              title={`ブランチ: ${item.sourceBranch}`}
+              title={t('pulls.branchLabel', { branch: item.sourceBranch })}
             >
               <GitBranch className="w-3.5 h-3.5 shrink-0 text-neutral-500" />
               <span className="truncate">{item.sourceBranch}</span>
@@ -344,7 +344,7 @@ export function PrCard({
           )}
 
           {item.additions != null && item.deletions != null && (
-            <span className="flex items-center gap-1.5 shrink-0 font-mono" title="差分行数">
+            <span className="flex items-center gap-1.5 shrink-0 font-mono" title={t('pulls.diffLinesTitle')}>
               <span className="text-emerald-400">+{item.additions}</span>
               <span className="text-rose-400">−{item.deletions}</span>
             </span>
@@ -352,13 +352,13 @@ export function PrCard({
 
           {/* PR Updated At */}
           <span className="shrink-0 text-neutral-500 flex items-center gap-1.5 font-mono">
-            <span>PR更新: {new Date(item.updatedAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+            <span>{t('pulls.prUpdatedLabel', { date: formatDate(item.updatedAt) })}</span>
             {isPrUpdatedAfterReport && (
               <span
                 className="text-[10px] font-sans px-1.5 py-0.2 rounded bg-amber-950/80 text-amber-300 border border-amber-800/80 font-normal cursor-help"
-                title="レポート作成後にPRへの更新（コミットや変更など）がありました。再実行を推奨します。"
+                title={t('pulls.updatedAfterReportTooltip')}
               >
-                レビュー後更新あり
+                {t('pulls.updatedAfterReport')}
               </span>
             )}
           </span>
@@ -378,38 +378,38 @@ export function PrCard({
               className="flex items-center gap-1.5 px-3 py-1 text-xs bg-[#21262d] hover:bg-[#30363d] text-[#c9d1d9] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed border-r border-[#30363d]"
               title={
                 defaultRuleIds && defaultRuleIds.length > 0
-                  ? `既定ルール (${defaultRuleIds.length}件) を実行`
+                  ? t('pulls.runDefaultRulesTooltip', { count: defaultRuleIds.length })
                   : jobStatus === 'completed'
-                  ? 'AIレビューを再実行'
+                  ? t('pulls.rerunReviewTooltip')
                   : jobStatus === 'failed'
-                  ? 'AIレビューを再試行'
-                  : 'AIレビューを開始'
+                  ? t('pulls.retryReviewTooltip')
+                  : t('pulls.startReviewTooltip')
               }
             >
               {jobStatus === 'running' ? (
                 <>
                   <RefreshCw className="w-3 h-3 animate-spin text-sky-400" />
-                  <span>実行中...</span>
+                  <span>{t('pulls.runningReview')}</span>
                 </>
               ) : jobStatus === 'pending' || jobStatus === 'queued' ? (
                 <>
                   <Clock className="w-3 h-3 text-amber-400" />
-                  <span>待機中...</span>
+                  <span>{t('pulls.waitingReview')}</span>
                 </>
               ) : jobStatus === 'completed' ? (
                 <>
                   <RefreshCw className="w-3 h-3 text-sky-400" />
-                  <span>再実行</span>
+                  <span>{t('pulls.rerunReview')}</span>
                 </>
               ) : jobStatus === 'failed' ? (
                 <>
                   <RefreshCw className="w-3 h-3 text-rose-400" />
-                  <span>再試行</span>
+                  <span>{t('pulls.retryReview')}</span>
                 </>
               ) : (
                 <>
                   <Play className="w-3 h-3 text-sky-400 fill-sky-400" />
-                  <span>レビュー開始</span>
+                  <span>{t('pulls.startReview')}</span>
                 </>
               )}
             </button>
@@ -423,7 +423,7 @@ export function PrCard({
               }}
               disabled={jobStatus === 'running' || jobStatus === 'pending' || jobStatus === 'queued'}
               className="px-2 py-1 bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title="ルールを選択して実行"
+              title={t('pulls.selectRuleToRunTooltip')}
             >
               <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
@@ -439,14 +439,14 @@ export function PrCard({
               className="w-80 max-w-[calc(100vw-16px)] bg-[#1c2128] border border-[#30363d] rounded-xl shadow-2xl z-[1000] p-3 text-xs flex flex-col gap-2.5"
             >
               <div className="flex items-center justify-between pb-2 border-b border-[#30363d]">
-                <span className="font-semibold text-white">ルール選択実行</span>
+                <span className="font-semibold text-white">{t('pulls.ruleSelectModalTitle')}</span>
                 <div className="flex items-center gap-2 text-[11px]">
                   <button
                     type="button"
                     onClick={() => setSelectedRuleIds(new Set(rules.map((r) => r.id)))}
                     className="text-sky-400 hover:underline"
                   >
-                    全選択
+                    {t('pulls.selectAll')}
                   </button>
                   <span className="text-[#30363d]">|</span>
                   <button
@@ -454,20 +454,20 @@ export function PrCard({
                     onClick={() => setSelectedRuleIds(new Set())}
                     className="text-[#8b949e] hover:underline"
                   >
-                    全解除
+                    {t('pulls.deselectAll')}
                   </button>
                 </div>
               </div>
 
               {/* 実行プロファイル選択 */}
               <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#30363d]">
-                <label className="text-xs text-[#8b949e] font-medium shrink-0">実行プロファイル:</label>
+                <label className="text-xs text-[#8b949e] font-medium shrink-0">{t('pulls.engineProfileLabel')}</label>
                 <select
                   value={selectedEngine}
                   onChange={(e) => setSelectedEngine(e.target.value)}
                   className="bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-sky-500 min-w-0 flex-1 truncate"
                 >
-                  <option value="default">各ルールの設定に従う</option>
+                  <option value="default">{t('pulls.engineDefaultOption')}</option>
                   {engineProfiles.filter((profile) => profile.enabled !== false).map((profile) => (
                     <option key={profile.id} value={profile.id}>
                       {profile.name}
@@ -478,7 +478,7 @@ export function PrCard({
 
               {rules.length === 0 ? (
                 <div className="py-4 text-center text-[#8b949e]">
-                  登録されているルールがありません
+                  {t('pulls.noRulesRegistered')}
                 </div>
               ) : (
                 <div className="max-h-60 overflow-y-auto space-y-1.5 pr-1">
@@ -532,7 +532,7 @@ export function PrCard({
 
               <div className="pt-2 border-t border-[#30363d] flex items-center justify-between">
                 <span className="text-[11px] text-[#8b949e]">
-                  {selectedRuleIds.size} 件選択中
+                  {t('pulls.selectedRulesCount', { count: selectedRuleIds.size })}
                 </span>
                 <button
                   type="button"
@@ -549,7 +549,7 @@ export function PrCard({
                   }}
                   className="px-3 py-1 rounded bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium transition-colors"
                 >
-                  選択したルールを実行
+                  {t('pulls.runSelectedRulesBtn')}
                 </button>
               </div>
             </AnchoredPopover>

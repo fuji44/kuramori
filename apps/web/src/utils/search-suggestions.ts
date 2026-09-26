@@ -12,112 +12,121 @@ export interface SearchSuggestionOptions {
   branches?: string[];
 }
 
-export const ALL_BASE_SUGGESTIONS: SuggestionItem[] = [
-  // is:
-  { value: 'is:open', description: 'オープンなPR', category: 'filter' },
-  { value: 'is:unreviewed', description: 'AIレビューが未完了のPR', category: 'filter' },
-  { value: 'is:reviewed', description: 'AIレビューが完了したPR', category: 'filter' },
-  { value: 'is:draft', description: 'ドラフト状態のPR', category: 'filter' },
-  { value: 'is:approved', description: 'AIレビュー判定が APPROVE のPR', category: 'status' },
-  { value: 'is:changes-requested', description: 'AIレビュー判定が REQUEST_CHANGES のPR', category: 'status' },
-  { value: 'is:merged', description: 'マージ済みのPR', category: 'filter' },
-  { value: 'is:unmerged', description: '未マージのPR', category: 'filter' },
-  { value: 'is:closed', description: 'クローズ済みのPR', category: 'filter' },
-  { value: 'is:pr', description: 'Pull Request のみ', category: 'filter' },
-  { value: '-is:draft', description: '通常PR (ドラフトPRを除外)', category: 'filter' },
-  { value: '-is:merged', description: 'マージ済みPRを除外', category: 'filter' },
-  { value: '-is:reviewed', description: 'レビュー完了済みを除外', category: 'filter' },
+export function getBaseSuggestions(locale: 'en' | 'ja' = 'en'): SuggestionItem[] {
+  const isJa = locale === 'ja';
 
-  // review-requested / reviews
-  { value: 'review-requested:@me', description: '自分にレビュー依頼が来ているPR', category: 'filter' },
-  { value: 'user-review-requested:@me', description: '直接自分にレビュー依頼が来ているPR', category: 'filter' },
-  { value: 'team-review-requested:', description: 'チーム宛てにレビュー依頼されたPR (例: team-review-requested:org/team)', category: 'filter' },
-  { value: 'reviewed-by:@me', description: '自身がレビュー実施済みのPR', category: 'filter' },
-  { value: 'review-involves:@me', description: '自身がレビューに関与しているPR', category: 'filter' },
-  { value: 'review:approved', description: '承認 (APPROVE) されたPR', category: 'status' },
-  { value: 'review:changes_requested', description: '変更要求 (REQUEST_CHANGES) されたPR', category: 'status' },
-  { value: 'review:none', description: '未レビューのPR', category: 'status' },
-  { value: 'review:required', description: 'レビューが必要なPR', category: 'status' },
+  return [
+    // is:
+    { value: 'is:open', description: isJa ? 'オープンなPR' : 'Open pull requests', category: 'filter' },
+    { value: 'is:unreviewed', description: isJa ? 'AIレビューが未完了のPR' : 'Pull requests pending AI review', category: 'filter' },
+    { value: 'is:reviewed', description: isJa ? 'AIレビューが完了したPR' : 'Pull requests with completed AI review', category: 'filter' },
+    { value: 'is:draft', description: isJa ? 'ドラフト状態のPR' : 'Draft pull requests', category: 'filter' },
+    { value: 'is:approved', description: isJa ? 'AIレビュー判定が APPROVE のPR' : 'PRs with APPROVE verdict', category: 'status' },
+    { value: 'is:changes-requested', description: isJa ? 'AIレビュー判定が REQUEST_CHANGES のPR' : 'PRs with REQUEST_CHANGES verdict', category: 'status' },
+    { value: 'is:merged', description: isJa ? 'マージ済みのPR' : 'Merged pull requests', category: 'filter' },
+    { value: 'is:unmerged', description: isJa ? '未マージのPR' : 'Unmerged pull requests', category: 'filter' },
+    { value: 'is:closed', description: isJa ? 'クローズ済みのPR' : 'Closed pull requests', category: 'filter' },
+    { value: 'is:pr', description: isJa ? 'Pull Request のみ' : 'Pull requests only', category: 'filter' },
+    { value: '-is:draft', description: isJa ? '通常PR (ドラフトPRを除外)' : 'Standard PRs (exclude drafts)', category: 'filter' },
+    { value: '-is:merged', description: isJa ? 'マージ済みPRを除外' : 'Exclude merged PRs', category: 'filter' },
+    { value: '-is:reviewed', description: isJa ? 'レビュー完了済みを除外' : 'Exclude reviewed PRs', category: 'filter' },
 
-  // author / assignee / involves / mentions / commenter
-  { value: 'author:@me', description: '自分が作成したPR', category: 'author' },
-  { value: 'author:', description: '作成者で絞り込み (例: author:alice)', category: 'author' },
-  { value: '-author:', description: '指定作成者のPRを除外', category: 'author' },
-  { value: 'assignee:@me', description: '自分にアサインされているPR', category: 'filter' },
-  { value: 'assignee:*', description: '担当者が割り当てられているPR', category: 'filter' },
-  { value: 'assignee:none', description: '担当者が未割り当てのPR', category: 'filter' },
-  { value: 'assignee:', description: '担当者で絞り込み (例: assignee:bob)', category: 'author' },
-  { value: 'involves:@me', description: '自身が関与 (作成/アサイン/レビュー) しているPR', category: 'filter' },
-  { value: 'mentions:@me', description: '自身がメンションされたPR', category: 'filter' },
-  { value: 'commenter:', description: 'コメント投稿者で絞り込み', category: 'author' },
+    // review-requested / reviews
+    { value: 'review-requested:@me', description: isJa ? '自分にレビュー依頼が来ているPR' : 'PRs requesting review from you', category: 'filter' },
+    { value: 'user-review-requested:@me', description: isJa ? '直接自分にレビュー依頼が来ているPR' : 'PRs directly requesting your review', category: 'filter' },
+    { value: 'team-review-requested:', description: isJa ? 'チーム宛てにレビュー依頼されたPR (例: team-review-requested:org/team)' : 'PRs requesting team review (e.g. team-review-requested:org/team)', category: 'filter' },
+    { value: 'reviewed-by:@me', description: isJa ? '自身がレビュー実施済みのPR' : 'PRs reviewed by you', category: 'filter' },
+    { value: 'review-involves:@me', description: isJa ? '自身がレビューに関与しているPR' : 'PRs involving you in review', category: 'filter' },
+    { value: 'review:approved', description: isJa ? '承認 (APPROVE) されたPR' : 'Approved (APPROVE) PRs', category: 'status' },
+    { value: 'review:changes_requested', description: isJa ? '変更要求 (REQUEST_CHANGES) されたPR' : 'Changes requested (REQUEST_CHANGES) PRs', category: 'status' },
+    { value: 'review:none', description: isJa ? '未レビューのPR' : 'Unreviewed PRs', category: 'status' },
+    { value: 'review:required', description: isJa ? 'レビューが必要なPR' : 'PRs requiring review', category: 'status' },
 
-  // labels / milestones
-  { value: 'label:', description: 'ラベルで絞り込み (例: label:bug)', category: 'filter' },
-  { value: '-label:', description: '指定ラベルを除外', category: 'filter' },
-  { value: 'milestone:*', description: 'マイルストーンが設定されているPR', category: 'filter' },
-  { value: 'milestone:', description: 'マイルストーン名で絞り込み', category: 'filter' },
+    // author / assignee / involves / mentions / commenter
+    { value: 'author:@me', description: isJa ? '自分が作成したPR' : 'PRs created by you', category: 'author' },
+    { value: 'author:', description: isJa ? '作成者で絞り込み (例: author:alice)' : 'Filter by author (e.g. author:alice)', category: 'author' },
+    { value: '-author:', description: isJa ? '指定作成者のPRを除外' : 'Exclude specified author PRs', category: 'author' },
+    { value: 'assignee:@me', description: isJa ? '自分にアサインされているPR' : 'PRs assigned to you', category: 'filter' },
+    { value: 'assignee:*', description: isJa ? '担当者が割り当てられているPR' : 'PRs with an assignee', category: 'filter' },
+    { value: 'assignee:none', description: isJa ? '担当者が未割り当てのPR' : 'PRs without an assignee', category: 'filter' },
+    { value: 'assignee:', description: isJa ? '担当者で絞り込み (例: assignee:bob)' : 'Filter by assignee (e.g. assignee:bob)', category: 'author' },
+    { value: 'involves:@me', description: isJa ? '自身が関与 (作成/アサイン/レビュー) しているPR' : 'PRs involving you (author, assignee, reviewer)', category: 'filter' },
+    { value: 'mentions:@me', description: isJa ? '自身がメンションされたPR' : 'PRs mentioning you', category: 'filter' },
+    { value: 'commenter:', description: isJa ? 'コメント投稿者で絞り込み' : 'Filter by commenter', category: 'author' },
 
-  // no: / has:
-  { value: 'no:assignee', description: '担当者が割り当てられていないPR', category: 'filter' },
-  { value: 'no:label', description: 'ラベルが付いていないPR', category: 'filter' },
-  { value: 'no:milestone', description: 'マイルストーンが未設定のPR', category: 'filter' },
-  { value: 'no:project', description: 'プロジェクトが未設定のPR', category: 'filter' },
-  { value: 'has:assignee', description: '担当者が割り当てられているPR', category: 'filter' },
-  { value: 'has:label', description: 'ラベルが付いているPR', category: 'filter' },
-  { value: 'has:milestone', description: 'マイルストーンが設定されているPR', category: 'filter' },
+    // labels / milestones
+    { value: 'label:', description: isJa ? 'ラベルで絞り込み (例: label:bug)' : 'Filter by label (e.g. label:bug)', category: 'filter' },
+    { value: '-label:', description: isJa ? '指定ラベルを除外' : 'Exclude specified label', category: 'filter' },
+    { value: 'milestone:*', description: isJa ? 'マイルストーンが設定されているPR' : 'PRs with a milestone', category: 'filter' },
+    { value: 'milestone:', description: isJa ? 'マイルストーン名で絞り込み' : 'Filter by milestone name', category: 'filter' },
 
-  // draft / state / type
-  { value: 'draft:true', description: 'ドラフト状態のPR', category: 'filter' },
-  { value: 'draft:false', description: 'レビュー準備完了（ドラフト以外）', category: 'filter' },
-  { value: 'state:open', description: 'オープンなPR', category: 'filter' },
-  { value: 'state:closed', description: 'クローズ済みのPR', category: 'filter' },
-  { value: 'state:merged', description: 'マージ済みのPR', category: 'filter' },
-  { value: 'type:pr', description: 'Pull Request のみ', category: 'filter' },
+    // no: / has:
+    { value: 'no:assignee', description: isJa ? '担当者が割り当てられていないPR' : 'PRs without an assignee', category: 'filter' },
+    { value: 'no:label', description: isJa ? 'ラベルが付いていないPR' : 'PRs without labels', category: 'filter' },
+    { value: 'no:milestone', description: isJa ? 'マイルストーンが未設定のPR' : 'PRs without milestone', category: 'filter' },
+    { value: 'no:project', description: isJa ? 'プロジェクトが未設定のPR' : 'PRs without project', category: 'filter' },
+    { value: 'has:assignee', description: isJa ? '担当者が割り当てられているPR' : 'PRs with an assignee', category: 'filter' },
+    { value: 'has:label', description: isJa ? 'ラベルが付いているPR' : 'PRs with labels', category: 'filter' },
+    { value: 'has:milestone', description: isJa ? 'マイルストーンが設定されているPR' : 'PRs with a milestone', category: 'filter' },
 
-  // lines / additions / deletions / size
-  { value: 'lines:>100', description: '変更行数が100行を超えるPR', category: 'filter' },
-  { value: 'lines:<50', description: '変更行数が50行未満のPR', category: 'filter' },
-  { value: 'lines:50..200', description: '変更行数が50〜200行のPR', category: 'filter' },
-  { value: 'additions:>100', description: '追加行数が100行を超えるPR', category: 'filter' },
-  { value: 'deletions:>50', description: '削除行数が50行を超えるPR', category: 'filter' },
-  { value: 'size:>100', description: '総変更行数が100行を超えるPR', category: 'filter' },
+    // draft / state / type
+    { value: 'draft:true', description: isJa ? 'ドラフト状態のPR' : 'Draft pull requests', category: 'filter' },
+    { value: 'draft:false', description: isJa ? 'レビュー準備完了（ドラフト以外）' : 'Ready for review (non-draft)', category: 'filter' },
+    { value: 'state:open', description: isJa ? 'オープンなPR' : 'Open PRs', category: 'filter' },
+    { value: 'state:closed', description: isJa ? 'クローズ済みのPR' : 'Closed PRs', category: 'filter' },
+    { value: 'state:merged', description: isJa ? 'マージ済みのPR' : 'Merged PRs', category: 'filter' },
+    { value: 'type:pr', description: isJa ? 'Pull Request のみ' : 'Pull requests only', category: 'filter' },
 
-  // repo / org / user / head / base / sha
-  { value: 'repo:', description: 'リポジトリで絞り込み (例: repo:org/repo)', category: 'repo' },
-  { value: '-repo:', description: '指定リポジトリを除外', category: 'repo' },
-  { value: 'org:', description: 'GitHub Organization で絞り込み', category: 'repo' },
-  { value: 'user:', description: 'リポジトリ所有者で絞り込み', category: 'repo' },
-  { value: 'head:', description: '元ブランチ名で絞り込み (例: head:feature-1)', category: 'branch' },
-  { value: '-head:', description: '指定元ブランチを除外', category: 'branch' },
-  { value: 'base:', description: 'ターゲットブランチで絞り込み (例: base:main)', category: 'branch' },
-  { value: '-base:', description: '指定ターゲットブランチを除外', category: 'branch' },
-  { value: 'sha:', description: 'コミットSHAハッシュで絞り込み', category: 'filter' },
+    // lines / additions / deletions / size
+    { value: 'lines:>100', description: isJa ? '変更行数が100行を超えるPR' : 'PRs with >100 changed lines', category: 'filter' },
+    { value: 'lines:<50', description: isJa ? '変更行数が50行未満のPR' : 'PRs with <50 changed lines', category: 'filter' },
+    { value: 'lines:50..200', description: isJa ? '変更行数が50〜200行のPR' : 'PRs with 50-200 changed lines', category: 'filter' },
+    { value: 'additions:>100', description: isJa ? '追加行数が100行を超えるPR' : 'PRs with >100 added lines', category: 'filter' },
+    { value: 'deletions:>50', description: isJa ? '削除行数が50行を超えるPR' : 'PRs with >50 deleted lines', category: 'filter' },
+    { value: 'size:>100', description: isJa ? '総変更行数が100行を超えるPR' : 'PRs with >100 total lines', category: 'filter' },
 
-  // dates (created, updated, closed, merged)
-  { value: 'created:', description: '作成日時で絞り込み (例: created:>YYYY-MM-DD)', category: 'date' },
-  { value: 'updated:', description: '更新日時で絞り込み (例: updated:>YYYY-MM-DD)', category: 'date' },
-  { value: 'closed:', description: 'クローズ日時で絞り込み (例: closed:>YYYY-MM-DD)', category: 'date' },
-  { value: 'merged:', description: 'マージ日時で絞り込み (例: merged:>YYYY-MM-DD)', category: 'date' },
+    // repo / org / user / head / base / sha
+    { value: 'repo:', description: isJa ? 'リポジトリで絞り込み (例: repo:org/repo)' : 'Filter by repository (e.g. repo:org/repo)', category: 'repo' },
+    { value: '-repo:', description: isJa ? '指定リポジトリを除外' : 'Exclude repository', category: 'repo' },
+    { value: 'org:', description: isJa ? 'GitHub Organization で絞り込み' : 'Filter by GitHub organization', category: 'repo' },
+    { value: 'user:', description: isJa ? 'リポジトリ所有者で絞り込み' : 'Filter by repository owner', category: 'repo' },
+    { value: 'head:', description: isJa ? '元ブランチ名で絞り込み (例: head:feature-1)' : 'Filter by source branch (e.g. head:feature-1)', category: 'branch' },
+    { value: '-head:', description: isJa ? '指定元ブランチを除外' : 'Exclude source branch', category: 'branch' },
+    { value: 'base:', description: isJa ? 'ターゲットブランチで絞り込み (例: base:main)' : 'Filter by target branch (e.g. base:main)', category: 'branch' },
+    { value: '-base:', description: isJa ? '指定ターゲットブランチを除外' : 'Exclude target branch', category: 'branch' },
+    { value: 'sha:', description: isJa ? 'コミットSHAハッシュで絞り込み' : 'Filter by commit SHA hash', category: 'filter' },
 
-  // status / verdict
-  { value: 'status:pending', description: 'レビュー待機中', category: 'status' },
-  { value: 'status:running', description: 'レビュー実行中', category: 'status' },
-  { value: 'status:completed', description: 'レビュー完了', category: 'status' },
-  { value: 'status:failed', description: 'レビュー失敗', category: 'status' },
-  { value: 'verdict:APPROVE', description: 'レビュー判定: APPROVE', category: 'status' },
-  { value: 'verdict:COMMENT', description: 'レビュー判定: COMMENT', category: 'status' },
-  { value: 'verdict:REQUEST_CHANGES', description: 'レビュー判定: REQUEST_CHANGES', category: 'status' },
+    // dates (created, updated, closed, merged)
+    { value: 'created:', description: isJa ? '作成日時で絞り込み (例: created:>YYYY-MM-DD)' : 'Filter by creation date (e.g. created:>YYYY-MM-DD)', category: 'date' },
+    { value: 'updated:', description: isJa ? '更新日時で絞り込み (例: updated:>YYYY-MM-DD)' : 'Filter by update date (e.g. updated:>YYYY-MM-DD)', category: 'date' },
+    { value: 'closed:', description: isJa ? 'クローズ日時で絞り込み (例: closed:>YYYY-MM-DD)' : 'Filter by close date (e.g. closed:>YYYY-MM-DD)', category: 'date' },
+    { value: 'merged:', description: isJa ? 'マージ日時で絞り込み (例: merged:>YYYY-MM-DD)' : 'Filter by merge date (e.g. merged:>YYYY-MM-DD)', category: 'date' },
 
-  // in
-  { value: 'in:title', description: 'タイトル限定でキーワード検索', category: 'filter' },
-];
+    // status / verdict
+    { value: 'status:pending', description: isJa ? 'レビュー待機中' : 'Review pending', category: 'status' },
+    { value: 'status:running', description: isJa ? 'レビュー実行中' : 'Review running', category: 'status' },
+    { value: 'status:completed', description: isJa ? 'レビュー完了' : 'Review completed', category: 'status' },
+    { value: 'status:failed', description: isJa ? 'レビュー失敗' : 'Review failed', category: 'status' },
+    { value: 'verdict:APPROVE', description: isJa ? 'レビュー判定: APPROVE' : 'Review verdict: APPROVE', category: 'status' },
+    { value: 'verdict:COMMENT', description: isJa ? 'レビュー判定: COMMENT' : 'Review verdict: COMMENT', category: 'status' },
+    { value: 'verdict:REQUEST_CHANGES', description: isJa ? 'レビュー判定: REQUEST_CHANGES' : 'Review verdict: REQUEST_CHANGES', category: 'status' },
+
+    // in
+    { value: 'in:title', description: isJa ? 'タイトル限定でキーワード検索' : 'Search within title only', category: 'filter' },
+  ];
+}
+
+export const ALL_BASE_SUGGESTIONS: SuggestionItem[] = getBaseSuggestions('en');
 
 export function getSearchSuggestions(
   activeToken: string,
-  options: SearchSuggestionOptions
+  options: SearchSuggestionOptions,
+  locale: 'en' | 'ja' = 'en'
 ): SuggestionItem[] {
   const { authors, repositories, branches = [] } = options;
   const token = activeToken.toLowerCase();
+  const isJa = locale === 'ja';
+  const baseSuggestions = getBaseSuggestions(locale);
 
   // 1. Author
   if (token.startsWith('author:') || token.startsWith('-author:')) {
@@ -125,12 +134,20 @@ export function getSearchSuggestions(
     const prefix = token.slice(isNeg ? 8 : 7);
     const prefixKey = isNeg ? '-author:' : 'author:';
     const userList: SuggestionItem[] = [
-      { value: `${prefixKey}@me`, description: `自分が作成したPR${isNeg ? ' を除外' : ''}`, category: 'author' },
+      {
+        value: `${prefixKey}@me`,
+        description: isJa
+          ? `自分が作成したPR${isNeg ? ' を除外' : ''}`
+          : `PRs created by you${isNeg ? ' (excluded)' : ''}`,
+        category: 'author',
+      },
     ];
     for (const a of authors) {
       userList.push({
         value: `${prefixKey}${a}`,
-        description: `@${a} の作成したPR${isNeg ? ' を除外' : ''}`,
+        description: isJa
+          ? `@${a} の作成したPR${isNeg ? ' を除外' : ''}`
+          : `PRs created by @${a}${isNeg ? ' (excluded)' : ''}`,
         category: 'author',
       });
     }
@@ -146,7 +163,7 @@ export function getSearchSuggestions(
       .filter((r) => r.toLowerCase().includes(prefix))
       .map((r) => ({
         value: `${prefixKey}${r}`,
-        description: `${r}${isNeg ? ' を除外' : ''}`,
+        description: isJa ? `${r}${isNeg ? ' を除外' : ''}` : `${r}${isNeg ? ' (excluded)' : ''}`,
         category: 'repo',
       }));
     return repoList;
@@ -164,7 +181,7 @@ export function getSearchSuggestions(
       .filter((o) => o.toLowerCase().includes(prefix))
       .map((o) => ({
         value: `${token.slice(0, 5)}${o}`,
-        description: `${o} 組織/オーナーのPR`,
+        description: isJa ? `${o} 組織/オーナーのPR` : `PRs from ${o} organization / owner`,
         category: 'repo',
       }));
     return orgList;
@@ -179,7 +196,9 @@ export function getSearchSuggestions(
       .filter((b) => b.toLowerCase().includes(prefix))
       .map((b) => ({
         value: `${prefixKey}${b}`,
-        description: `ブランチ ${b} からのPR${isNeg ? ' を除外' : ''}`,
+        description: isJa
+          ? `ブランチ ${b} からのPR${isNeg ? ' を除外' : ''}`
+          : `PRs from branch ${b}${isNeg ? ' (excluded)' : ''}`,
         category: 'branch',
       }));
     return branchList;
@@ -192,7 +211,9 @@ export function getSearchSuggestions(
       .filter((b) => b.toLowerCase().includes(prefix))
       .map((b) => ({
         value: `${prefixKey}${b}`,
-        description: `ターゲットブランチ ${b}${isNeg ? ' 宛てを除外' : ''}`,
+        description: isJa
+          ? `ターゲットブランチ ${b}${isNeg ? ' 宛てを除外' : ''}`
+          : `PRs targeting branch ${b}${isNeg ? ' (excluded)' : ''}`,
         category: 'branch',
       }));
     return branchList;
@@ -200,39 +221,19 @@ export function getSearchSuggestions(
 
   // 5. is:
   if (token.startsWith('is:')) {
-    const isOptions: SuggestionItem[] = [
-      { value: 'is:open', description: 'オープンなPR', category: 'filter' },
-      { value: 'is:unreviewed', description: 'AIレビューが未完了のPR', category: 'filter' },
-      { value: 'is:reviewed', description: 'AIレビューが完了したPR', category: 'filter' },
-      { value: 'is:draft', description: 'ドラフト状態のPR', category: 'filter' },
-      { value: 'is:approved', description: 'AIレビュー判定が APPROVE のPR', category: 'status' },
-      { value: 'is:changes-requested', description: 'AIレビュー判定が REQUEST_CHANGES のPR', category: 'status' },
-      { value: 'is:merged', description: 'マージ済みのPR', category: 'filter' },
-      { value: 'is:unmerged', description: '未マージのPR', category: 'filter' },
-      { value: 'is:closed', description: 'クローズ済みのPR', category: 'filter' },
-      { value: 'is:pr', description: 'Pull Request のみ', category: 'filter' },
-    ];
+    const isOptions = baseSuggestions.filter((opt) => opt.value.startsWith('is:'));
     return isOptions.filter((opt) => opt.value.toLowerCase().includes(token));
   }
 
   // 6. -is:
   if (token.startsWith('-is:')) {
-    const negIsOptions: SuggestionItem[] = [
-      { value: '-is:draft', description: 'ドラフトPRを除外', category: 'filter' },
-      { value: '-is:merged', description: 'マージ済みPRを除外', category: 'filter' },
-      { value: '-is:reviewed', description: 'レビュー完了済みを除外', category: 'filter' },
-    ];
+    const negIsOptions = baseSuggestions.filter((opt) => opt.value.startsWith('-is:'));
     return negIsOptions.filter((opt) => opt.value.toLowerCase().includes(token));
   }
 
   // 7. review:
   if (token.startsWith('review:')) {
-    const reviewOptions: SuggestionItem[] = [
-      { value: 'review:approved', description: 'レビュー判定: APPROVE', category: 'status' },
-      { value: 'review:changes_requested', description: 'レビュー判定: REQUEST_CHANGES', category: 'status' },
-      { value: 'review:none', description: 'まだレビューされていないPR', category: 'status' },
-      { value: 'review:required', description: 'レビューが必要なPR', category: 'status' },
-    ];
+    const reviewOptions = baseSuggestions.filter((opt) => opt.value.startsWith('review:'));
     return reviewOptions.filter((opt) => opt.value.toLowerCase().includes(token));
   }
 
@@ -240,12 +241,16 @@ export function getSearchSuggestions(
   if (token.startsWith('review-requested:') || token.startsWith('user-review-requested:')) {
     const key = token.startsWith('user-review-requested:') ? 'user-review-requested:' : 'review-requested:';
     const reviewReqOptions: SuggestionItem[] = [
-      { value: `${key}@me`, description: '自分にレビュー依頼が来ているPR', category: 'filter' },
+      {
+        value: `${key}@me`,
+        description: isJa ? '自分にレビュー依頼が来ているPR' : 'PRs requesting review from you',
+        category: 'filter',
+      },
     ];
     for (const a of authors) {
       reviewReqOptions.push({
         value: `${key}${a}`,
-        description: `@${a} にレビュー依頼されたPR`,
+        description: isJa ? `@${a} にレビュー依頼されたPR` : `PRs requesting review from @${a}`,
         category: 'author',
       });
     }
@@ -254,18 +259,28 @@ export function getSearchSuggestions(
 
   if (token.startsWith('team-review-requested:')) {
     return [
-      { value: 'team-review-requested:', description: 'チーム宛てにレビュー依頼されたPR (例: team-review-requested:org/team)', category: 'filter' },
+      {
+        value: 'team-review-requested:',
+        description: isJa
+          ? 'チーム宛てにレビュー依頼されたPR (例: team-review-requested:org/team)'
+          : 'PRs requesting team review (e.g. team-review-requested:org/team)',
+        category: 'filter',
+      },
     ];
   }
 
   if (token.startsWith('reviewed-by:')) {
     const reviewedByOptions: SuggestionItem[] = [
-      { value: 'reviewed-by:@me', description: '自分がレビュー実施済みのPR', category: 'filter' },
+      {
+        value: 'reviewed-by:@me',
+        description: isJa ? '自分がレビュー実施済みのPR' : 'PRs reviewed by you',
+        category: 'filter',
+      },
     ];
     for (const a of authors) {
       reviewedByOptions.push({
         value: `reviewed-by:${a}`,
-        description: `@${a} がレビューしたPR`,
+        description: isJa ? `@${a} がレビューしたPR` : `PRs reviewed by @${a}`,
         category: 'author',
       });
     }
@@ -274,12 +289,16 @@ export function getSearchSuggestions(
 
   if (token.startsWith('review-involves:')) {
     const involvesOptions: SuggestionItem[] = [
-      { value: 'review-involves:@me', description: '自身がレビューに関与しているPR', category: 'filter' },
+      {
+        value: 'review-involves:@me',
+        description: isJa ? '自身がレビューに関与しているPR' : 'PRs involving you in review',
+        category: 'filter',
+      },
     ];
     for (const a of authors) {
       involvesOptions.push({
         value: `review-involves:${a}`,
-        description: `@${a} がレビューに関与しているPR`,
+        description: isJa ? `@${a} がレビューに関与しているPR` : `PRs involving @${a} in review`,
         category: 'author',
       });
     }
@@ -291,14 +310,26 @@ export function getSearchSuggestions(
     const isNeg = token.startsWith('-assignee:');
     const prefixKey = isNeg ? '-assignee:' : 'assignee:';
     const assigneeOptions: SuggestionItem[] = [
-      { value: `${prefixKey}@me`, description: '自分にアサインされているPR', category: 'filter' },
-      { value: `${prefixKey}*`, description: '担当者が割り当てられているPR', category: 'filter' },
-      { value: `${prefixKey}none`, description: '担当者が未割り当てのPR', category: 'filter' },
+      {
+        value: `${prefixKey}@me`,
+        description: isJa ? '自分にアサインされているPR' : 'PRs assigned to you',
+        category: 'filter',
+      },
+      {
+        value: `${prefixKey}*`,
+        description: isJa ? '担当者が割り当てられているPR' : 'PRs with an assignee',
+        category: 'filter',
+      },
+      {
+        value: `${prefixKey}none`,
+        description: isJa ? '担当者が未割り当てのPR' : 'PRs without an assignee',
+        category: 'filter',
+      },
     ];
     for (const a of authors) {
       assigneeOptions.push({
         value: `${prefixKey}${a}`,
-        description: `@${a} が担当のPR`,
+        description: isJa ? `@${a} が担当のPR` : `PRs assigned to @${a}`,
         category: 'author',
       });
     }
@@ -308,20 +339,36 @@ export function getSearchSuggestions(
   // 10. involves: / mentions: / commenter:
   if (token.startsWith('involves:')) {
     const list: SuggestionItem[] = [
-      { value: 'involves:@me', description: '自身が関与しているPR', category: 'filter' },
+      {
+        value: 'involves:@me',
+        description: isJa ? '自身が関与しているPR' : 'PRs involving you',
+        category: 'filter',
+      },
     ];
     for (const a of authors) {
-      list.push({ value: `involves:${a}`, description: `@${a} が関与しているPR`, category: 'author' });
+      list.push({
+        value: `involves:${a}`,
+        description: isJa ? `@${a} が関与しているPR` : `PRs involving @${a}`,
+        category: 'author',
+      });
     }
     return list.filter((opt) => opt.value.toLowerCase().includes(token));
   }
 
   if (token.startsWith('mentions:')) {
     const list: SuggestionItem[] = [
-      { value: 'mentions:@me', description: '自身がメンションされたPR', category: 'filter' },
+      {
+        value: 'mentions:@me',
+        description: isJa ? '自身がメンションされたPR' : 'PRs mentioning you',
+        category: 'filter',
+      },
     ];
     for (const a of authors) {
-      list.push({ value: `mentions:${a}`, description: `@${a} がメンションされたPR`, category: 'author' });
+      list.push({
+        value: `mentions:${a}`,
+        description: isJa ? `@${a} がメンションされたPR` : `PRs mentioning @${a}`,
+        category: 'author',
+      });
     }
     return list.filter((opt) => opt.value.toLowerCase().includes(token));
   }
@@ -331,29 +378,20 @@ export function getSearchSuggestions(
       .filter((a) => a.toLowerCase().includes(token.slice(10)))
       .map((a) => ({
         value: `commenter:${a}`,
-        description: `@${a} がコメントしたPR`,
+        description: isJa ? `@${a} がコメントしたPR` : `PRs commented by @${a}`,
         category: 'author',
       }));
   }
 
   // 11. no:
   if (token.startsWith('no:')) {
-    const noOptions: SuggestionItem[] = [
-      { value: 'no:assignee', description: '担当者が割り当てられていないPR', category: 'filter' },
-      { value: 'no:label', description: 'ラベルが付いていないPR', category: 'filter' },
-      { value: 'no:milestone', description: 'マイルストーンが未設定のPR', category: 'filter' },
-      { value: 'no:project', description: 'プロジェクトが未設定のPR', category: 'filter' },
-    ];
+    const noOptions = baseSuggestions.filter((opt) => opt.value.startsWith('no:'));
     return noOptions.filter((opt) => opt.value.toLowerCase().includes(token));
   }
 
   // 12. has:
   if (token.startsWith('has:')) {
-    const hasOptions: SuggestionItem[] = [
-      { value: 'has:assignee', description: '担当者が割り当てられているPR', category: 'filter' },
-      { value: 'has:label', description: 'ラベルが付いているPR', category: 'filter' },
-      { value: 'has:milestone', description: 'マイルストーンが設定されているPR', category: 'filter' },
-    ];
+    const hasOptions = baseSuggestions.filter((opt) => opt.value.startsWith('has:'));
     return hasOptions.filter((opt) => opt.value.toLowerCase().includes(token));
   }
 
@@ -362,42 +400,33 @@ export function getSearchSuggestions(
     const isNeg = token.startsWith('-label:');
     const prefixKey = isNeg ? '-label:' : 'label:';
     const labelOptions: SuggestionItem[] = [
-      { value: `${prefixKey}bug`, description: 'バグ修正ラベル', category: 'filter' },
-      { value: `${prefixKey}feature`, description: '新機能ラベル', category: 'filter' },
-      { value: `${prefixKey}documentation`, description: 'ドキュメントラベル', category: 'filter' },
+      { value: `${prefixKey}bug`, description: isJa ? 'バグ修正ラベル' : 'Bug fix label', category: 'filter' },
+      { value: `${prefixKey}feature`, description: isJa ? '新機能ラベル' : 'New feature label', category: 'filter' },
+      { value: `${prefixKey}documentation`, description: isJa ? 'ドキュメントラベル' : 'Documentation label', category: 'filter' },
     ];
     return labelOptions.filter((opt) => opt.value.toLowerCase().includes(token));
   }
 
   if (token.startsWith('milestone:')) {
     const milestoneOptions: SuggestionItem[] = [
-      { value: 'milestone:*', description: 'マイルストーンあり', category: 'filter' },
+      { value: 'milestone:*', description: isJa ? 'マイルストーンあり' : 'With milestone', category: 'filter' },
     ];
     return milestoneOptions.filter((opt) => opt.value.toLowerCase().includes(token));
   }
 
   // 14. draft: / state: / type:
   if (token.startsWith('draft:')) {
-    const draftOptions: SuggestionItem[] = [
-      { value: 'draft:true', description: 'ドラフト状態のPR', category: 'filter' },
-      { value: 'draft:false', description: 'レビュー準備完了（ドラフト以外）', category: 'filter' },
-    ];
+    const draftOptions = baseSuggestions.filter((opt) => opt.value.startsWith('draft:'));
     return draftOptions.filter((opt) => opt.value.toLowerCase().includes(token));
   }
 
   if (token.startsWith('state:')) {
-    const stateOptions: SuggestionItem[] = [
-      { value: 'state:open', description: 'オープンなPR', category: 'filter' },
-      { value: 'state:closed', description: 'クローズ済みのPR', category: 'filter' },
-      { value: 'state:merged', description: 'マージ済みのPR', category: 'filter' },
-    ];
+    const stateOptions = baseSuggestions.filter((opt) => opt.value.startsWith('state:'));
     return stateOptions.filter((opt) => opt.value.toLowerCase().includes(token));
   }
 
   if (token.startsWith('type:')) {
-    const typeOptions: SuggestionItem[] = [
-      { value: 'type:pr', description: 'Pull Request のみ', category: 'filter' },
-    ];
+    const typeOptions = baseSuggestions.filter((opt) => opt.value.startsWith('type:'));
     return typeOptions.filter((opt) => opt.value.toLowerCase().includes(token));
   }
 
@@ -405,46 +434,41 @@ export function getSearchSuggestions(
   if (token.startsWith('lines:') || token.startsWith('additions:') || token.startsWith('deletions:') || token.startsWith('size:')) {
     const prefix = token.split(':')[0] + ':';
     const linesOptions: SuggestionItem[] = [
-      { value: `${prefix}>100`, description: '100行を超える変更', category: 'filter' },
-      { value: `${prefix}<50`, description: '50行未満の変更', category: 'filter' },
-      { value: `${prefix}50..200`, description: '50〜200行の範囲の変更', category: 'filter' },
+      { value: `${prefix}>100`, description: isJa ? '100行を超える変更' : 'Changes > 100 lines', category: 'filter' },
+      { value: `${prefix}<50`, description: isJa ? '50行未満の変更' : 'Changes < 50 lines', category: 'filter' },
+      { value: `${prefix}50..200`, description: isJa ? '50〜200行の範囲の変更' : 'Changes between 50-200 lines', category: 'filter' },
     ];
     return linesOptions;
   }
 
   // 16. status:
   if (token.startsWith('status:')) {
-    const statusOptions: SuggestionItem[] = [
-      { value: 'status:pending', description: 'レビュー待機中', category: 'status' },
-      { value: 'status:running', description: 'レビュー実行中', category: 'status' },
-      { value: 'status:completed', description: 'レビュー完了', category: 'status' },
-      { value: 'status:failed', description: 'レビュー失敗', category: 'status' },
-    ];
+    const statusOptions = baseSuggestions.filter((opt) => opt.value.startsWith('status:'));
     return statusOptions.filter((opt) => opt.value.toLowerCase().includes(token));
   }
 
   // 17. verdict:
   if (token.startsWith('verdict:')) {
-    const verdictOptions: SuggestionItem[] = [
-      { value: 'verdict:APPROVE', description: '判定: APPROVE', category: 'status' },
-      { value: 'verdict:COMMENT', description: '判定: COMMENT', category: 'status' },
-      { value: 'verdict:REQUEST_CHANGES', description: '判定: REQUEST_CHANGES', category: 'status' },
-    ];
+    const verdictOptions = baseSuggestions.filter((opt) => opt.value.startsWith('verdict:'));
     return verdictOptions.filter((opt) => opt.value.toLowerCase().includes(token));
   }
 
   // 18. in:
   if (token.startsWith('in:')) {
-    const inOptions: SuggestionItem[] = [
-      { value: 'in:title', description: 'PRのタイトルのみを検索', category: 'filter' },
-    ];
+    const inOptions = baseSuggestions.filter((opt) => opt.value.startsWith('in:'));
     return inOptions.filter((opt) => opt.value.toLowerCase().includes(token));
   }
 
   // 19. sha:
   if (token.startsWith('sha:')) {
     const shaOptions: SuggestionItem[] = [
-      { value: 'sha:', description: 'コミットSHAハッシュの先頭を入力して検索', category: 'filter' },
+      {
+        value: 'sha:',
+        description: isJa
+          ? 'コミットSHAハッシュの先頭を入力して検索'
+          : 'Search by typing prefix of commit SHA hash',
+        category: 'filter',
+      },
     ];
     return shaOptions;
   }
@@ -454,22 +478,35 @@ export function getSearchSuggestions(
     const key = token.split(':')[0] + ':';
     const now = new Date();
     const today = now.toISOString().slice(0, 10);
-    const actionName = key === 'created:' ? '作成' : key === 'updated:' ? '更新' : key === 'closed:' ? 'クローズ' : 'マージ';
+    const actionNameJa = key === 'created:' ? '作成' : key === 'updated:' ? '更新' : key === 'closed:' ? 'クローズ' : 'マージ';
+    const actionNameEn = key === 'created:' ? 'created' : key === 'updated:' ? 'updated' : key === 'closed:' ? 'closed' : 'merged';
     const dateOptions: SuggestionItem[] = [
-      { value: `${key}>${today}`, description: `本日以降に${actionName}`, category: 'date' },
-      { value: `${key}<${today}`, description: `本日以前に${actionName}`, category: 'date' },
-      { value: `${key}2026-09-01..${today}`, description: `期間指定で絞り込み`, category: 'date' },
+      {
+        value: `${key}>${today}`,
+        description: isJa ? `本日以降に${actionNameJa}` : `${actionNameEn} on or after today`,
+        category: 'date',
+      },
+      {
+        value: `${key}<${today}`,
+        description: isJa ? `本日以前に${actionNameJa}` : `${actionNameEn} on or before today`,
+        category: 'date',
+      },
+      {
+        value: `${key}2026-09-01..${today}`,
+        description: isJa ? '期間指定で絞り込み' : 'Filter by date range',
+        category: 'date',
+      },
     ];
     return dateOptions;
   }
 
   // When typing fresh or partial prefix, filter the comprehensive master suggestion list
   if (!token) {
-    return ALL_BASE_SUGGESTIONS;
+    return baseSuggestions;
   }
 
   // Search across value or description
-  return ALL_BASE_SUGGESTIONS.filter((item) =>
+  return baseSuggestions.filter((item) =>
     item.value.toLowerCase().includes(token) || item.description.toLowerCase().includes(token)
   );
 }

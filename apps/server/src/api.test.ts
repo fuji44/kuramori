@@ -166,23 +166,26 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
     assertEquals(dataSettings1.autoQueue, false);
     assertEquals(dataSettings1.autoQueueIncludeOwn, false);
     assertEquals(dataSettings1.reviewEngine, 'antigravity');
+    assertEquals(dataSettings1.displayLanguage, 'auto');
 
     const resSettingsPost = await api.request('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ autoQueue: true, autoQueueIncludeOwn: true, reviewEngine: 'mock' }),
+      body: JSON.stringify({ autoQueue: true, autoQueueIncludeOwn: true, reviewEngine: 'mock', displayLanguage: 'ja' }),
     });
     assertEquals(resSettingsPost.status, 200);
     const dataSettings2 = await resSettingsPost.json();
     assertEquals(dataSettings2.autoQueue, true);
     assertEquals(dataSettings2.autoQueueIncludeOwn, true);
     assertEquals(dataSettings2.reviewEngine, 'mock');
+    assertEquals(dataSettings2.displayLanguage, 'ja');
 
     const resSettingsGet2 = await api.request('/api/settings');
     const dataSettings3 = await resSettingsGet2.json();
     assertEquals(dataSettings3.autoQueue, true);
     assertEquals(dataSettings3.autoQueueIncludeOwn, true);
     assertEquals(dataSettings3.reviewEngine, 'mock');
+    assertEquals(dataSettings3.displayLanguage, 'ja');
 
     // 7. Test poller auto-queuing:
     // With autoQueue: true, both own PR and review requested PR are queued.

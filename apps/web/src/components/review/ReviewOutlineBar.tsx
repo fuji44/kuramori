@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { ReviewComment, MarkType } from '@kuramori/core';
 import { ArrowUp, Check, Clock, X, HelpCircle } from 'lucide-react';
+import { useI18n } from '../../i18n/context.tsx';
 
 interface ReviewOutlineBarProps {
   comments: ReviewComment[];
@@ -22,6 +23,7 @@ export const ReviewOutlineBar: React.FC<ReviewOutlineBarProps> = ({
   onSelectComment,
   scrollContainerRef,
 }) => {
+  const { t } = useI18n();
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
   const [visibleCommentId, setVisibleCommentId] = useState<string | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -113,14 +115,14 @@ export const ReviewOutlineBar: React.FC<ReviewOutlineBarProps> = ({
   return (
     <nav
       ref={navRef}
-      aria-label="指摘索引アウトライン"
+      aria-label={t('review.outlineBar.ariaLabel')}
       className="relative flex flex-col items-center py-2 px-1 rounded-xl bg-[#161b22]/90 backdrop-blur-sm border border-[#30363d]/60 select-none w-8 shadow-md"
     >
       {/* 最上部: トップへ戻るアイコン */}
       <button
         type="button"
         onClick={scrollToTop}
-        title="ページ先頭へスクロール"
+        title={t('review.outlineBar.scrollToTop')}
         className="w-6 h-5 flex items-center justify-center rounded text-gray-500 hover:text-gray-200 hover:bg-[#21262d] transition-colors mb-1.5 shrink-0"
       >
         <ArrowUp className="w-3 h-3" />
@@ -192,20 +194,20 @@ export const ReviewOutlineBar: React.FC<ReviewOutlineBarProps> = ({
             const c = tooltip.comment;
             const m = marks[c.id];
 
-            let statusText = '未選択';
+            let statusText = t('review.sidebar.markUnset');
             let StatusIcon = HelpCircle;
             let statusColor = 'text-gray-400';
 
             if (m === 'post') {
-              statusText = '投稿する';
+              statusText = t('review.sidebar.markPost');
               StatusIcon = Check;
               statusColor = 'text-[#00AFA8]';
             } else if (m === 'hold') {
-              statusText = '保留';
+              statusText = t('review.sidebar.markHold');
               StatusIcon = Clock;
               statusColor = 'text-amber-400';
             } else if (m === 'skip') {
-              statusText = '投稿しない';
+              statusText = t('review.sidebar.markSkip');
               StatusIcon = X;
               statusColor = 'text-gray-500';
             }

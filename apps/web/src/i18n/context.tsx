@@ -24,12 +24,10 @@ interface I18nContextValue {
   setPreference: (preference: LocalePreference) => void;
   t: (key: TranslationKey | (string & {}), params?: InterpolationParams) => string;
   formatDate: (date: Date | string | number, options?: Intl.DateTimeFormatOptions) => string;
-  formatNumber: (value: number, options?: Intl.NumberFormatOptions) => string;
-  formatRelativeTime: (
-    value: number,
-    unit: Intl.RelativeTimeFormatUnit,
-    options?: Intl.RelativeTimeFormatOptions
-  ) => string;
+  formatRelativeTime: {
+    (date: Date | string | number, options?: Intl.RelativeTimeFormatOptions): string;
+    (value: number, unit: Intl.RelativeTimeFormatUnit, options?: Intl.RelativeTimeFormatOptions): string;
+  };
 }
 
 const STORAGE_KEY = 'kuramori_locale';
@@ -84,11 +82,16 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }, [locale]);
 
   const formatRelativeTime = useMemo(() => {
-    return (
-      val: number,
-      unit: Intl.RelativeTimeFormatUnit,
+    return ((
+      dateOrVal: Date | string | number,
+      unitOrOptions?: Intl.RelativeTimeFormatUnit | Intl.RelativeTimeFormatOptions,
       options?: Intl.RelativeTimeFormatOptions
-    ) => formatWithIntlRelativeTime(val, unit, locale, options);
+    ) => {
+      if (typeof unitOrOptions === 'string') {
+        return formatWithIntlRelativeTime(dateOrVal as number, unitOrOptions, locale, options);
+      }
+      return formatWithIntlRelativeTime(dateOrVal, locale, unitOrOptions);
+    }) as I18nContextValue['formatRelativeTime'];
   }, [locale]);
 
   const value = useMemo<I18nContextValue>(

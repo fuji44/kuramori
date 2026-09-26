@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Copy, Check, FileCode, Columns, AlignJustify } from 'lucide-react';
+import { useI18n } from '../../i18n/context.tsx';
 
 interface ReviewDiffViewerProps {
   snippet?: string;
@@ -108,6 +109,7 @@ export const ReviewDiffViewer: React.FC<ReviewDiffViewerProps> = ({
   replacement = '',
   startLine = 1,
 }) => {
+  const { t } = useI18n();
   const [copied, setCopied] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<'diff' | 'replacement'>('diff');
 
@@ -133,7 +135,7 @@ export const ReviewDiffViewer: React.FC<ReviewDiffViewerProps> = ({
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1.5 text-[#00AFA8] font-mono font-bold text-[11px]">
             <FileCode className="w-3.5 h-3.5" />
-            提案コード差分 (Suggested Changes)
+            {t('review.diff.title')}
           </span>
           <div className="flex items-center gap-1 font-mono text-[10.5px]">
             {addedCount > 0 && <span className="text-emerald-400 font-bold">+{addedCount}</span>}
@@ -154,7 +156,7 @@ export const ReviewDiffViewer: React.FC<ReviewDiffViewerProps> = ({
                     : 'text-gray-400 hover:text-gray-200'
                 }`}
               >
-                差分 (Diff)
+                {t('review.diff.diffMode')}
               </button>
               <button
                 type="button"
@@ -165,7 +167,7 @@ export const ReviewDiffViewer: React.FC<ReviewDiffViewerProps> = ({
                     : 'text-gray-400 hover:text-gray-200'
                 }`}
               >
-                提案コードのみ
+                {t('review.diff.replacementOnlyMode')}
               </button>
             </div>
           )}
@@ -174,18 +176,18 @@ export const ReviewDiffViewer: React.FC<ReviewDiffViewerProps> = ({
           <button
             type="button"
             onClick={handleCopyReplacement}
-            title="提案コードをコピー"
+            title={t('review.diff.copyCodeTooltip')}
             className="flex items-center gap-1 px-2 py-1 rounded bg-[#21262d] hover:bg-[#30363d] text-gray-300 hover:text-white border border-[#30363d] text-[11px] transition-colors"
           >
             {copied ? (
               <>
                 <Check className="w-3 h-3 text-emerald-400" />
-                <span className="text-emerald-400">コピー完了</span>
+                <span className="text-emerald-400">{t('review.diff.copiedCode')}</span>
               </>
             ) : (
               <>
                 <Copy className="w-3 h-3" />
-                <span>コピー</span>
+                <span>{t('review.diff.copyCode')}</span>
               </>
             )}
           </button>

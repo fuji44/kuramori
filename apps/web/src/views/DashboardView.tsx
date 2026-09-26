@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { ReviewItem, AppSettings, ReviewRule, ReviewTrigger, resolveRuleEngineProfile } from '../types.ts';
 import { getPrAnchorId } from '../utils/anchor.ts';
+import { useI18n } from '../i18n/context.tsx';
 
 interface DashboardViewProps {
   items: ReviewItem[];
@@ -31,25 +32,6 @@ interface DashboardViewProps {
   onOpenLog?: (e: React.MouseEvent, jobId: string, error?: string | null) => void;
 }
 
-function formatRelativeTime(isoString: string): string {
-  try {
-    const past = new Date(isoString).getTime();
-    if (isNaN(past)) return '';
-    const diffMs = Date.now() - past;
-    const diffSec = Math.floor(diffMs / 1000);
-    if (diffSec < 60) return 'たった今';
-    const diffMin = Math.floor(diffSec / 60);
-    if (diffMin < 60) return `${diffMin}分前`;
-    const diffHour = Math.floor(diffMin / 60);
-    if (diffHour < 24) return `${diffHour}時間前`;
-    const diffDay = Math.floor(diffHour / 24);
-    if (diffDay < 30) return `${diffDay}日前`;
-    return new Date(isoString).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' });
-  } catch {
-    return '';
-  }
-}
-
 export function DashboardView({
   items,
   settings,
@@ -63,6 +45,8 @@ export function DashboardView({
   onNavigateToSettings,
   onOpenLog,
 }: DashboardViewProps) {
+  const { t, formatRelativeTime } = useI18n();
+
   // Statistics calculations
   const stats = useMemo(() => {
     const unreviewed = items.filter(
@@ -158,10 +142,10 @@ export function DashboardView({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#30363d]">
         <div>
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <span>ダッシュボード</span>
+            <span>{t('dashboard.title')}</span>
           </h2>
           <p className="text-xs text-[#8b949e] mt-1">
-            監視中のプルリクエスト、AIレビューの進行状況、生成レポートのサマリです。
+            {t('dashboard.desc')}
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -171,10 +155,10 @@ export function DashboardView({
               onClick={onRefresh}
               disabled={refreshing}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-white text-xs font-medium rounded-lg border border-[#30363d] shadow-sm transition-colors disabled:opacity-50"
-              title="GitHubの最新状態を取得"
+              title={t('dashboard.refreshGithub')}
             >
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-sky-400' : 'text-[#8b949e]'}`} />
-              <span>{refreshing ? '更新中...' : '最新状態を取得'}</span>
+              <span>{refreshing ? t('dashboard.refreshingGithub') : t('dashboard.refreshGithub')}</span>
             </button>
           )}
           <button
@@ -183,7 +167,7 @@ export function DashboardView({
             className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors"
           >
             <GitPullRequest className="w-3.5 h-3.5" />
-            <span>PR一覧を開く</span>
+            <span>{t('dashboard.openPrList')}</span>
           </button>
         </div>
       </div>
@@ -196,13 +180,13 @@ export function DashboardView({
           className="bg-[#161b22] border border-[#30363d] hover:border-amber-500/50 rounded-xl p-4 cursor-pointer transition-colors"
         >
           <div className="flex items-center justify-between text-neutral-400 mb-2">
-            <span className="text-xs font-medium">未完了 PR</span>
+            <span className="text-xs font-medium">{t('dashboard.unreviewedKpi')}</span>
             <Clock className="w-4 h-4 text-amber-400" />
           </div>
           <div className="text-2xl font-bold text-white font-mono">
             {stats.unreviewed}
           </div>
-          <p className="text-[11px] text-neutral-500 mt-1">対応待ちのPR</p>
+          <p className="text-[11px] text-neutral-500 mt-1">{t('dashboard.unreviewedKpiDesc')}</p>
         </div>
 
         {/* 稼働中ジョブ */}
@@ -215,21 +199,21 @@ export function DashboardView({
           }`}
         >
           <div className="flex items-center justify-between text-neutral-400 mb-2">
-            <span className="text-xs font-medium">実行中 / キュー</span>
+            <span className="text-xs font-medium">{t('dashboard.runningKpi')}</span>
             <Activity className={`w-4 h-4 ${stats.running > 0 ? 'text-sky-400 animate-pulse' : 'text-neutral-500'}`} />
           </div>
           <div className="text-2xl font-bold text-white font-mono flex items-center gap-2">
             <span>{stats.running + stats.queued}</span>
             {stats.running > 0 && (
               <span className="text-[10px] font-normal px-1.5 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-800">
-                実行中 {stats.running}
+                {t('dashboard.runningBadge', { count: stats.running })}
               </span>
             )}
           </div>
           <p className="text-[11px] text-neutral-500 mt-1">
             {stats.running > 0 || stats.queued > 0
-              ? `キュー待機: ${stats.queued} 件`
-              : '稼働中ジョブなし (待機中)'}
+              ? t('dashboard.queuedBadge', { count: stats.queued })
+              : t('dashboard.idleJobs')}
           </p>
         </div>
 
@@ -241,13 +225,13 @@ export function DashboardView({
           }`}
         >
           <div className="flex items-center justify-between text-neutral-400 mb-2">
-            <span className="text-xs font-medium">完了レポート</span>
+            <span className="text-xs font-medium">{t('dashboard.completedKpi')}</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           </div>
           <div className="text-2xl font-bold text-white font-mono">
             {stats.completed}
           </div>
-          <p className="text-[11px] text-neutral-500 mt-1">生成済みレビューレポート</p>
+          <p className="text-[11px] text-neutral-500 mt-1">{t('dashboard.completedKpiDesc')}</p>
         </div>
 
         {/* 要注意 / 注目 */}
@@ -264,7 +248,7 @@ export function DashboardView({
           }`}
         >
           <div className="flex items-center justify-between text-neutral-400 mb-2">
-            <span className="text-xs font-medium">要注意 / 要確認</span>
+            <span className="text-xs font-medium">{t('dashboard.actionRequiredKpi')}</span>
             <AlertTriangle className={`w-4 h-4 ${stats.attention > 0 ? 'text-rose-400' : 'text-neutral-500'}`} />
           </div>
           <div className="text-2xl font-bold text-white font-mono">
@@ -272,8 +256,8 @@ export function DashboardView({
           </div>
           <p className="text-[11px] text-neutral-500 mt-1">
             {stats.attention > 0
-              ? `要修正: ${stats.requestChanges}件 / 失敗: ${stats.failed}件`
-              : '問題は検出されていません'}
+              ? t('dashboard.actionRequiredDesc', { changes: stats.requestChanges, failed: stats.failed })
+              : t('dashboard.noAttentionDesc')}
           </p>
         </div>
       </div>
@@ -287,21 +271,21 @@ export function DashboardView({
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#21262d]">
               <h3 className="text-xs font-bold text-white flex items-center gap-1.5 uppercase tracking-wider">
                 <Clock className="w-3.5 h-3.5 text-amber-400" />
-                <span>対応待ちのレビュー依頼</span>
+                <span>{t('dashboard.pendingPrsSection')}</span>
               </h3>
               <button
                 type="button"
                 onClick={() => onNavigateToReviews('is:unreviewed')}
                 className="text-[11px] text-sky-400 hover:text-sky-300 hover:underline flex items-center gap-1"
               >
-                <span>すべて見る ({stats.unreviewed})</span>
+                <span>{t('dashboard.viewAllPrs', { count: stats.unreviewed })}</span>
                 <ArrowRight className="w-3 h-3" />
               </button>
             </div>
 
             {pendingPrs.length === 0 ? (
               <div className="py-10 text-center text-xs text-neutral-500">
-                現在対応待ちのプルリクエストはありません
+                {t('dashboard.noPendingPrs')}
               </div>
             ) : (
               <div className="space-y-2.5">
@@ -330,12 +314,12 @@ export function DashboardView({
                           {isRunning && (
                             <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-sky-950 text-sky-400 border border-sky-800 shrink-0 animate-pulse flex items-center gap-1">
                               <Activity className="w-2.5 h-2.5" />
-                              <span>レビュー中</span>
+                              <span>{t('dashboard.jobReviewing')}</span>
                             </span>
                           )}
                           {isQueued && (
                             <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-purple-950 text-purple-400 border border-purple-800 shrink-0">
-                              待機中
+                              {t('dashboard.jobQueued')}
                             </span>
                           )}
                           {isFailed && (
@@ -346,10 +330,10 @@ export function DashboardView({
                                 }
                               }}
                               className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-rose-950 text-rose-400 border border-rose-800 shrink-0 flex items-center gap-1 hover:underline"
-                              title="エラーログを表示"
+                              title={t('dashboard.viewErrorLog')}
                             >
                               <AlertCircle className="w-2.5 h-2.5" />
-                              <span>失敗</span>
+                              <span>{t('dashboard.jobFailed')}</span>
                             </span>
                           )}
                         </div>
@@ -381,21 +365,21 @@ export function DashboardView({
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#21262d]">
               <h3 className="text-xs font-bold text-white flex items-center gap-1.5 uppercase tracking-wider">
                 <FileText className="w-3.5 h-3.5 text-emerald-400" />
-                <span>最近のレビューレポート</span>
+                <span>{t('dashboard.recentReportsSection')}</span>
               </h3>
               <button
                 type="button"
                 onClick={() => (onNavigateToReports ? onNavigateToReports() : onNavigateToReviews())}
                 className="text-[11px] text-emerald-400 hover:text-emerald-300 hover:underline flex items-center gap-1"
               >
-                <span>すべて見る ({stats.completed})</span>
+                <span>{t('dashboard.viewAllReports', { count: stats.completed })}</span>
                 <ArrowRight className="w-3 h-3" />
               </button>
             </div>
 
             {recentReports.length === 0 ? (
               <div className="py-10 text-center text-xs text-neutral-500">
-                まだ作成されたレポートはありません
+                {t('dashboard.noReports')}
               </div>
             ) : (
               <div className="space-y-2.5">
@@ -464,14 +448,14 @@ export function DashboardView({
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#21262d]">
               <h3 className="text-xs font-bold text-white flex items-center gap-1.5 uppercase tracking-wider">
                 <Cpu className="w-3.5 h-3.5 text-purple-400" />
-                <span>レビュー自動化ステータス</span>
+                <span>{t('dashboard.automationStatusSection')}</span>
               </h3>
               {onNavigateToSettings && (
                 <button
                   type="button"
                   onClick={() => onNavigateToSettings('general')}
                   className="text-[#8b949e] hover:text-white p-1 rounded hover:bg-[#21262d] transition-colors"
-                  title="設定を開く"
+                  title={t('dashboard.openSettingsTooltip')}
                 >
                   <Sliders className="w-3.5 h-3.5" />
                 </button>
@@ -481,7 +465,7 @@ export function DashboardView({
             <div className="space-y-3 text-xs">
               {/* 自動キュー */}
               <div className="flex items-center justify-between">
-                <span className="text-neutral-400">自動キュー</span>
+                <span className="text-neutral-400">{t('dashboard.autoQueueLabel')}</span>
                 <span
                   className={`px-2 py-0.5 rounded text-[11px] font-mono ${
                     settings.autoQueue
@@ -489,13 +473,13 @@ export function DashboardView({
                       : 'bg-neutral-800 text-neutral-400 border border-neutral-700'
                   }`}
                 >
-                  {settings.autoQueue ? '有効 (Active)' : '手動実行のみ'}
+                  {settings.autoQueue ? t('dashboard.autoQueueActive') : t('dashboard.autoQueueManual')}
                 </span>
               </div>
 
               {/* 既定プロファイル */}
               <div className="flex items-center justify-between">
-                <span className="text-neutral-400">既定プロファイル</span>
+                <span className="text-neutral-400">{t('dashboard.defaultProfileLabel')}</span>
                 <span className="font-mono text-purple-300 truncate max-w-[160px]" title={defaultProfile?.name ?? settings.reviewEngine}>
                   {defaultProfile?.name ?? settings.reviewEngine}
                 </span>
@@ -503,25 +487,25 @@ export function DashboardView({
 
               {/* レビュールール */}
               <div className="flex items-center justify-between">
-                <span className="text-neutral-400">有効ルール</span>
+                <span className="text-neutral-400">{t('dashboard.activeRulesLabel')}</span>
                 <span className="font-mono text-neutral-300">
-                  {enabledRulesCount} / {rules.length} 件
+                  {t('dashboard.rulesCountSuffix', { active: enabledRulesCount, total: rules.length })}
                 </span>
               </div>
 
               {/* トリガー設定 */}
               <div className="flex items-center justify-between">
-                <span className="text-neutral-400">アクティブトリガー</span>
+                <span className="text-neutral-400">{t('dashboard.activeTriggersLabel')}</span>
                 <span className="font-mono text-neutral-300">
-                  {enabledTriggersCount} 件
+                  {t('dashboard.triggersCountSuffix', { count: enabledTriggersCount })}
                 </span>
               </div>
 
               {/* 並列実行枠 */}
               <div className="flex items-center justify-between">
-                <span className="text-neutral-400">最大同時実行</span>
+                <span className="text-neutral-400">{t('dashboard.maxConcurrencyLabel')}</span>
                 <span className="font-mono text-neutral-300">
-                  {settings.globalMaxConcurrency} 並列
+                  {t('dashboard.concurrencySuffix', { count: settings.globalMaxConcurrency })}
                 </span>
               </div>
             </div>
@@ -534,7 +518,7 @@ export function DashboardView({
                   className="w-full py-1.5 px-2 bg-[#0d1117] hover:bg-[#21262d] border border-[#30363d] rounded text-[11px] text-neutral-300 hover:text-white transition-colors flex items-center justify-center gap-1.5"
                 >
                   <FileCode className="w-3 h-3 text-sky-400" />
-                  <span>ルール & プロファイル設定を開く</span>
+                  <span>{t('dashboard.openRulesAndProfiles')}</span>
                 </button>
               </div>
             )}
@@ -545,16 +529,16 @@ export function DashboardView({
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#21262d]">
               <h3 className="text-xs font-bold text-white flex items-center gap-1.5 uppercase tracking-wider">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                <span>判定（Verdict）内訳</span>
+                <span>{t('dashboard.verdictBreakdownSection')}</span>
               </h3>
               <span className="text-[11px] font-mono text-neutral-500">
-                計 {stats.reportTotal} 件
+                {t('dashboard.verdictTotalSuffix', { count: stats.reportTotal })}
               </span>
             </div>
 
             {stats.reportTotal === 0 ? (
               <div className="py-6 text-center text-xs text-neutral-500">
-                まだ判定データがありません
+                {t('dashboard.noVerdicts')}
               </div>
             ) : (
               <div className="space-y-3">
@@ -590,21 +574,21 @@ export function DashboardView({
                       <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
                       <span>APPROVE</span>
                     </span>
-                    <span className="font-mono text-neutral-300">{stats.approve} 件</span>
+                    <span className="font-mono text-neutral-300">{stats.approve}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-1.5 text-neutral-400">
                       <span className="w-2 h-2 rounded-full bg-sky-400 shrink-0" />
                       <span>COMMENT</span>
                     </span>
-                    <span className="font-mono text-neutral-300">{stats.comment} 件</span>
+                    <span className="font-mono text-neutral-300">{stats.comment}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-1.5 text-neutral-400">
                       <span className="w-2 h-2 rounded-full bg-rose-400 shrink-0" />
                       <span>REQUEST CHANGES</span>
                     </span>
-                    <span className="font-mono text-neutral-300">{stats.requestChanges} 件</span>
+                    <span className="font-mono text-neutral-300">{stats.requestChanges}</span>
                   </div>
                 </div>
               </div>
@@ -615,7 +599,7 @@ export function DashboardView({
               <div className="mt-4 pt-3 border-t border-[#21262d]">
                 <div className="text-[11px] font-semibold text-neutral-400 mb-2 flex items-center gap-1.5">
                   <FolderGit2 className="w-3.5 h-3.5 text-sky-400" />
-                  <span>監視リポジトリ ({stats.repos})</span>
+                  <span>{t('dashboard.monitoredReposLabel', { count: stats.repos })}</span>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {repoCounts.map(([repo, count]) => (
@@ -623,7 +607,7 @@ export function DashboardView({
                       key={repo}
                       onClick={() => onNavigateToReviews(`repo:${repo}`)}
                       className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#0d1117] border border-[#21262d] text-neutral-300 hover:border-sky-700/60 cursor-pointer transition-colors"
-                      title={`${repo}: ${count}件のPR`}
+                      title={t('dashboard.repoPrCountTitle', { repo, count })}
                     >
                       {repo.split('/')[1] ?? repo} ({count})
                     </span>

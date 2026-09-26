@@ -46,6 +46,7 @@ import {
   SettingFormFooter,
 } from '../../components/settings/SettingViewLayout.tsx';
 import { AnchoredPopover } from '../../components/AnchoredPopover.tsx';
+import { useI18n } from '../../i18n/context.tsx';
 
 interface EngineSettingsViewProps {
   settings: AppSettings;
@@ -54,8 +55,10 @@ interface EngineSettingsViewProps {
   onShowError: (msg: string) => void;
 }
 
-function CommandPreview({ command, title = '実行コマンドプレビュー' }: { command: string; title?: string }) {
+function CommandPreview({ command, title }: { command: string; title?: string }) {
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
+  const displayTitle = title ?? t('settings.engines.commandPreviewTitle');
 
   const handleCopy = async () => {
     try {
@@ -72,23 +75,23 @@ function CommandPreview({ command, title = '実行コマンドプレビュー' }
       <div className="flex items-center justify-between text-xs text-[#8b949e] mb-1.5">
         <span className="flex items-center gap-1.5 font-semibold text-white/90">
           <Terminal className="w-3.5 h-3.5 text-sky-400" />
-          <span>{title}</span>
+          <span>{displayTitle}</span>
         </span>
         <button
           type="button"
           onClick={handleCopy}
           className="flex items-center gap-1 text-[11px] text-[#8b949e] hover:text-white transition-colors cursor-pointer"
-          title="コマンドをコピー"
+          title={t('settings.engines.copyCommandTooltip')}
         >
           {copied ? (
             <>
               <Check className="w-3 h-3 text-emerald-400" />
-              <span className="text-emerald-400">コピー完了</span>
+              <span className="text-emerald-400">{t('settings.engines.copiedCommand')}</span>
             </>
           ) : (
             <>
               <Copy className="w-3 h-3" />
-              <span>コピー</span>
+              <span>{t('settings.engines.copyCommand')}</span>
             </>
           )}
         </button>
@@ -108,6 +111,7 @@ interface EngineTestButtonProps {
 }
 
 function EngineTestButton({ isTesting, onTest, disabled = false }: EngineTestButtonProps) {
+  const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -119,7 +123,7 @@ function EngineTestButton({ isTesting, onTest, disabled = false }: EngineTestBut
           disabled={disabled || isTesting}
           onClick={() => onTest('version')}
           className="p-1.5 bg-[#21262d] hover:bg-[#30363d] text-[#c9d1d9] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed border-r border-[#30363d] cursor-pointer flex items-center justify-center"
-          title="接続テスト (バージョン確認 ~1秒)"
+          title={t('settings.engines.testConnectionTooltip')}
         >
           {isTesting ? (
             <RefreshCw className="w-3.5 h-3.5 animate-spin text-sky-400" />
@@ -133,7 +137,7 @@ function EngineTestButton({ isTesting, onTest, disabled = false }: EngineTestBut
           disabled={disabled || isTesting}
           onClick={() => setIsOpen((prev) => !prev)}
           className="px-1 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center"
-          title="テスト方法を選択"
+          title={t('settings.engines.testMethodSelect')}
         >
           <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
         </button>
@@ -157,10 +161,10 @@ function EngineTestButton({ isTesting, onTest, disabled = false }: EngineTestBut
             <FlaskConical className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
             <div>
               <div className="font-semibold text-white group-hover:text-sky-300 transition-colors">
-                接続テスト (バージョン確認)
+                {t('settings.engines.testVersionTitle')}
               </div>
               <div className="text-[11px] text-[#8b949e] mt-0.5 leading-tight">
-                CLIバイナリのパス・実行権限を高速検証 (~1秒)
+                {t('settings.engines.testVersionDesc')}
               </div>
             </div>
           </button>
@@ -176,10 +180,10 @@ function EngineTestButton({ isTesting, onTest, disabled = false }: EngineTestBut
             <Play className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
             <div>
               <div className="font-semibold text-white group-hover:text-emerald-300 transition-colors">
-                実行検証 (推論テスト)
+                {t('settings.engines.testInferenceTitle')}
               </div>
               <div className="text-[11px] text-[#8b949e] mt-0.5 leading-tight">
-                テストプロンプトを送信しAI推論の応答を確認 (~10-30秒)
+                {t('settings.engines.testInferenceDesc')}
               </div>
             </div>
           </button>
@@ -195,6 +199,7 @@ export function EngineSettingsView({
   onShowSuccess,
   onShowError,
 }: EngineSettingsViewProps) {
+  const { t } = useI18n();
   const [formSettings, setFormSettings] = useState<AppSettings>(settings);
   const [isCreatingProfile, setIsCreatingProfile] = useState(false);
   const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
@@ -316,7 +321,7 @@ export function EngineSettingsView({
   const handleSaveProfileForm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formName.trim()) {
-      onShowError('実行プロファイル名を入力してください');
+      onShowError(t('settings.engines.nameRequired'));
       return;
     }
 
@@ -418,10 +423,10 @@ export function EngineSettingsView({
 
       setFormSettings(updatedSettings);
       await onSaveSettings(updatedSettings);
-      onShowSuccess(`実行プロファイル「${savedProfile.name}」を保存しました`);
+      onShowSuccess(t('settings.engines.savedProfile', { name: savedProfile.name }));
       handleCancelForm();
     } catch {
-      onShowError('実行プロファイルの保存に失敗しました');
+      onShowError(t('settings.engines.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -429,7 +434,7 @@ export function EngineSettingsView({
 
   const handleDeleteProfile = async (profileId: string) => {
     if (profiles.length <= 1) {
-      onShowError('実行プロファイルを少なくとも1つ登録してください');
+      onShowError(t('settings.engines.requireOneProfile'));
       return;
     }
     const target = profiles.find((p) => p.id === profileId);
@@ -442,7 +447,7 @@ export function EngineSettingsView({
     if (isCurrentDefault && nextProfiles.length > 0) {
       const nextDefaultProfile = nextProfiles.find((profile) => profile.enabled !== false);
       if (!nextDefaultProfile) {
-        onShowError('有効な実行プロファイルを少なくとも1つ残してください');
+        onShowError(t('settings.engines.requireOneActive'));
         return;
       }
       nextProfiles = nextProfiles.map((p) => ({
@@ -466,7 +471,7 @@ export function EngineSettingsView({
 
     setFormSettings(updatedSettings);
     await onSaveSettings(updatedSettings);
-    onShowSuccess(`実行プロファイル「${target.name}」を削除しました`);
+    onShowSuccess(t('settings.engines.deletedProfile', { name: target.name }));
     setConfirmDeleteProfileId(null);
   };
 
@@ -490,7 +495,7 @@ export function EngineSettingsView({
 
     setFormSettings(updatedSettings);
     await onSaveSettings(updatedSettings);
-    onShowSuccess(`実行プロファイル「${duplicated.name}」を複製しました`);
+    onShowSuccess(t('settings.engines.duplicatedProfile', { name: duplicated.name }));
   };
 
   const handleSetDefaultProfile = async (profileId: string) => {
@@ -512,7 +517,7 @@ export function EngineSettingsView({
 
     setFormSettings(updatedSettings);
     await onSaveSettings(updatedSettings);
-    onShowSuccess(`「${target.name}」をシステム既定の実行プロファイルに設定しました`);
+    onShowSuccess(t('settings.engines.setAsDefaultSuccess', { name: target.name }));
   };
 
   const handleToggleProfileEnabled = async (profileId: string) => {
@@ -534,7 +539,7 @@ export function EngineSettingsView({
         (profile) => profile.id !== profileId && profile.enabled !== false,
       );
       if (!nextDefaultProfile) {
-        onShowError('有効な実行プロファイルを少なくとも1つ残してください');
+        onShowError(t('settings.engines.requireOneActive'));
         return;
       }
       if (isCurrentDefault) {
@@ -554,7 +559,7 @@ export function EngineSettingsView({
 
     setFormSettings(nextSettings);
     await onSaveSettings(nextSettings);
-    onShowSuccess(`実行プロファイル「${target.name}」を${enabled ? '有効' : '無効'}にしました`);
+    onShowSuccess(t('settings.engines.statusChanged', { name: target.name, status: enabled ? t('settings.engines.statusEnabled') : t('settings.engines.statusDisabled') }));
   };
 
   const handleTest = async (
@@ -585,12 +590,12 @@ export function EngineSettingsView({
         [targetId]: data,
       }));
       if (data.success) {
-        onShowSuccess(data.message || '接続テストに成功しました');
+        onShowSuccess(data.message || t('settings.engines.testSuccessMsg'));
       } else {
-        onShowError(data.error || 'テストに失敗しました');
+        onShowError(data.error || t('settings.engines.testFailedMsg'));
       }
     } catch (err: any) {
-      const errorMsg = err.message || 'テスト実行エラー';
+      const errorMsg = err.message || t('settings.engines.testError');
       setTestResults((prev) => ({
         ...prev,
         [targetId]: { success: false, mode, error: errorMsg },
@@ -647,7 +652,7 @@ export function EngineSettingsView({
       }
       return parts.join(' ');
     }
-    return `プロセス起動なし (Mock 遅延: ${formMockConfig.delayMs}ms)`;
+    return t('settings.engines.mockNoProcess', { delay: formMockConfig.delayMs });
   })();
 
   // 1. 個別設定フォーム表示モード
@@ -667,13 +672,13 @@ export function EngineSettingsView({
       <div className="max-w-4xl mx-auto space-y-6">
         <SettingFormHeader
           icon={<Cpu className="w-5 h-5" />}
-          backLabel="実行プロファイル一覧に戻る"
+          backLabel={t('common.back')}
           onBack={handleCancelForm}
-          title={editingProfileId ? '実行プロファイルを編集' : '新規実行プロファイルを作成'}
+          title={editingProfileId ? t('settings.editProfile') : t('settings.createProfile')}
           description={
             editingProfileId
-              ? `「${formName || '実行プロファイル'}」のモデル、接続先、推論パラメータを設定します。`
-              : 'Claude Code、Antigravity、Codex の実行プロファイルを定義します。'
+              ? (formName || 'Profile')
+              : t('settings.engineProfilesDesc')
           }
         />
 
@@ -686,27 +691,27 @@ export function EngineSettingsView({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-semibold text-[#8b949e] block mb-1">
-                  実行プロファイル名 *
+                  {t('settings.profileName')} *
                 </label>
                 <input
                   type="text"
                   required
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  placeholder="例: Claude Sonnet / 高速レビュー"
+                  placeholder={t('settings.profileNamePlaceholder')}
                   className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500"
                 />
               </div>
 
               <div>
                 <label className="text-xs font-semibold text-[#8b949e] block mb-1">
-                  説明 (任意)
+                  {t('settings.profileDesc')}
                 </label>
                 <input
                   type="text"
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
-                  placeholder="例: 高速なレビューを行うプロファイル"
+                  placeholder={t('settings.profileDescPlaceholder')}
                   className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500"
                 />
               </div>
@@ -715,7 +720,7 @@ export function EngineSettingsView({
             {/* エンジン種別選択 */}
             <div>
               <label className="text-xs font-semibold text-[#8b949e] block mb-1.5">
-                エンジン種別
+                {t('settings.engineType')}
               </label>
               {!editingProfileId ? (
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
@@ -772,7 +777,7 @@ export function EngineSettingsView({
                     <Box className="w-5 h-5 text-sky-400 shrink-0" />
                     <div>
                       <div className="text-sm font-semibold">Mock</div>
-                      <div className="text-[11px] text-[#8b949e]">テスト用ダミー</div>
+                      <div className="text-[11px] text-[#8b949e]">{t('settings.engines.mockDummy')}</div>
                     </div>
                   </button>
                 </div>
@@ -795,7 +800,7 @@ export function EngineSettingsView({
                   onChange={(e) => setFormIsDefault(e.target.checked)}
                   className="rounded bg-[#0d1117] border-[#30363d] text-sky-500 focus:ring-sky-500/30"
                 />
-                <span>システム既定の実行プロファイルとして使用する（レビュールールでシステム既定を選択した場合に適用）</span>
+                <span>{t('settings.engines.systemDefaultNotice')}</span>
               </label>
             </div>
           </div>
@@ -805,7 +810,7 @@ export function EngineSettingsView({
             <div className="flex items-center gap-2 pb-2 border-b border-[#30363d]/60">
               <Terminal className="w-4 h-4 text-sky-400" />
               <h4 className="text-xs font-semibold text-white uppercase tracking-wider">
-                動作パラメータ設定 ({formEngineType})
+                {t('settings.engines.paramSettings', { type: formEngineType })}
               </h4>
             </div>
 
@@ -853,7 +858,7 @@ export function EngineSettingsView({
               )}
               <div className="space-y-1 min-w-0">
                 <div className="font-semibold">
-                  {currentTestResult.success ? 'テスト成功' : 'テスト失敗'}
+                  {currentTestResult.success ? t('settings.engines.testSuccessBadge') : t('settings.engines.testFailedBadge')}
                   {currentTestResult.version && ` (${currentTestResult.version})`}
                 </div>
                 <div>{currentTestResult.message || currentTestResult.error}</div>
@@ -869,7 +874,7 @@ export function EngineSettingsView({
           {/* Form Actions */}
           <SettingFormFooter
             onCancel={handleCancelForm}
-            submitLabel="実行プロファイルを保存"
+            submitLabel={t('settings.engines.saveProfileBtn')}
             saving={saving}
             extraActions={
               <EngineTestButton
@@ -889,10 +894,10 @@ export function EngineSettingsView({
       {/* Header */}
       <SettingViewHeader
         icon={<Cpu className="w-5 h-5" />}
-        title="AI 実行プロファイル"
-        description="レビューで使う AI CLI やバックエンドの接続先・モデル・動作設定を管理します。"
+        title={t('settings.engineProfilesTitle')}
+        description={t('settings.engineProfilesDesc')}
         action={{
-          label: '実行プロファイルを追加',
+          label: t('settings.newProfileBtn'),
           onClick: handleStartCreate,
         }}
       />
@@ -902,10 +907,10 @@ export function EngineSettingsView({
         {profiles.length === 0 ? (
           <SettingEmptyState
             icon={<Cpu className="w-8 h-8" />}
-            message="実行プロファイルが登録されていません。"
-            description="実行プロファイルを追加して、AI レビューの実行先を設定してください。"
+            message={t('settings.noProfilesMessage')}
+            description={t('settings.noProfilesDesc')}
             action={{
-              label: '実行プロファイルを作成',
+              label: t('settings.newProfileBtn'),
               onClick: handleStartCreate,
             }}
           />
@@ -943,20 +948,20 @@ export function EngineSettingsView({
                   </SettingBadge>
                   {isDef && (
                     <SettingBadge variant="default" icon={<CheckCircle2 className="w-3 h-3" />}>
-                      既定
+                      {t('settings.engines.defaultBadge')}
                     </SettingBadge>
                   )}
-                  {!isEnabled && <SettingBadge variant="muted">無効</SettingBadge>}
+                  {!isEnabled && <SettingBadge variant="muted">{t('settings.engines.disabledBadge')}</SettingBadge>}
                 </>
               }
               description={p.description}
               metadata={
                 <>
                   <div>
-                    モデル: <span className="text-[#c9d1d9]">{model || '未指定'}</span>
+                    {t('settings.engines.modelLabelShort')} <span className="text-[#c9d1d9]">{model || t('settings.engines.modelUnspecified')}</span>
                   </div>
                   <div>
-                    タイムアウト:{' '}
+                    {t('settings.engines.timeoutLabelShort')}{' '}
                     <span className="text-[#c9d1d9]">
                       {p.engineType === 'mock'
                         ? `${(p.config as any).delayMs}ms`
@@ -980,7 +985,7 @@ export function EngineSettingsView({
                       active={isDef}
                       disabled={isDef || !isEnabled}
                       onClick={() => handleSetDefaultProfile(p.id)}
-                      title={isDef ? 'システム既定の実行プロファイルです' : 'この実行プロファイルをシステム既定にする'}
+                      title={isDef ? t('settings.engines.defaultProfileLabel') : t('settings.engines.setAsDefaultTooltip')}
                     >
                       <CheckCircle2 className={`w-3.5 h-3.5 ${isDef ? 'fill-emerald-400/20' : ''}`} />
                     </SettingActionButton>
@@ -988,8 +993,8 @@ export function EngineSettingsView({
                     <SettingActionButton
                       active={isEnabled}
                       onClick={() => handleToggleProfileEnabled(p.id)}
-                      title={isEnabled ? '実行プロファイルを無効にする' : '実行プロファイルを有効にする'}
-                      aria-label={isEnabled ? '実行プロファイルを無効にする' : '実行プロファイルを有効にする'}
+                      title={isEnabled ? t('settings.engines.disableProfileTooltip') : t('settings.engines.enableProfileTooltip')}
+                      aria-label={isEnabled ? t('settings.engines.disableProfileTooltip') : t('settings.engines.enableProfileTooltip')}
                     >
                       <Power className="w-3.5 h-3.5" />
                     </SettingActionButton>
@@ -998,35 +1003,35 @@ export function EngineSettingsView({
                   {/* 管理操作系グループ */}
                   {confirmDeleteProfileId === p.id ? (
                     <div className="flex items-center gap-1 bg-rose-950/60 border border-rose-800/80 rounded-lg p-1">
-                      <span className="text-[11px] text-rose-300 px-1">実行プロファイル「{p.name}」を削除しますか?</span>
+                      <span className="text-[11px] text-rose-300 px-1">{t('settings.engines.confirmDelete', { name: p.name })}</span>
                       <button
                         type="button"
                         onClick={() => handleDeleteProfile(p.id)}
                         className="px-2 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-medium transition-colors cursor-pointer"
                       >
-                        削除
+                        {t('common.delete')}
                       </button>
                       <button
                         type="button"
                         onClick={() => setConfirmDeleteProfileId(null)}
                         className="px-1.5 py-0.5 rounded text-[#8b949e] hover:text-white text-[11px] cursor-pointer"
                       >
-                        戻る
+                        {t('common.back')}
                       </button>
                     </div>
                   ) : (
                     <SettingButtonGroup>
-                      <SettingActionButton onClick={() => handleStartEdit(p)} title="実行プロファイルを編集">
+                      <SettingActionButton onClick={() => handleStartEdit(p)} title={t('settings.engines.editProfileTooltip')}>
                         <Edit2 className="w-3.5 h-3.5" />
                       </SettingActionButton>
-                      <SettingActionButton onClick={() => handleDuplicateProfile(p)} title="実行プロファイルを複製">
+                      <SettingActionButton onClick={() => handleDuplicateProfile(p)} title={t('settings.engines.duplicateProfileTooltip')}>
                         <Copy className="w-3.5 h-3.5" />
                       </SettingActionButton>
                       <SettingActionButton
                         danger
                         disabled={profiles.length <= 1}
                         onClick={() => setConfirmDeleteProfileId(p.id)}
-                        title="実行プロファイルを削除"
+                        title={t('settings.engines.deleteProfileTooltip')}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </SettingActionButton>
@@ -1051,7 +1056,7 @@ export function EngineSettingsView({
                     )}
                     <div className="space-y-0.5 min-w-0">
                       <div className="font-semibold">
-                        {result.success ? 'テスト成功' : 'テスト失敗'}
+                        {result.success ? t('settings.engines.testSuccessBadge') : t('settings.engines.testFailedBadge')}
                         {result.version && ` (${result.version})`}
                       </div>
                       <div className="text-[11px] text-[#8b949e]">{result.message || result.error}</div>

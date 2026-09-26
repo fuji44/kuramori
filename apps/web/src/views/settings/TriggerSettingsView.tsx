@@ -31,6 +31,7 @@ import {
   SettingEmptyState,
   SettingFormFooter,
 } from '../../components/settings/SettingViewLayout.tsx';
+import { useI18n } from '../../i18n/context.tsx';
 
 interface TriggerSettingsViewProps {
   triggers: ReviewTrigger[];
@@ -55,6 +56,7 @@ export function TriggerSettingsView({
   onShowSuccess,
   onShowError,
 }: TriggerSettingsViewProps) {
+  const { t } = useI18n();
   const [editingTriggerId, setEditingTriggerId] = useState<string | null>(null);
   const [isCreatingTrigger, setIsCreatingTrigger] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -139,7 +141,7 @@ export function TriggerSettingsView({
   const handleSubmitTrigger = async (e: React.FormEvent) => {
     e.preventDefault();
     if (triggerForm.ruleIds.length === 0) {
-      onShowError('実行するルールを少なくとも1つ選択してください');
+      onShowError(t('settings.triggers.requireRuleError'));
       return;
     }
 
@@ -166,15 +168,15 @@ export function TriggerSettingsView({
 
       if (editingTriggerId) {
         await onUpdateTrigger(editingTriggerId, payload);
-        onShowSuccess(`トリガー「${triggerForm.name}」を更新しました`);
+        onShowSuccess(t('settings.triggers.updatedSuccess', { name: triggerForm.name }));
         setEditingTriggerId(null);
       } else {
         await onCreateTrigger(payload);
-        onShowSuccess(`新しいトリガー「${triggerForm.name}」を作成しました`);
+        onShowSuccess(t('settings.triggers.createdSuccess', { name: triggerForm.name }));
         setIsCreatingTrigger(false);
       }
     } catch {
-      onShowError('トリガーの保存に失敗しました');
+      onShowError(t('settings.triggers.saveError'));
     } finally {
       setSaving(false);
     }
@@ -183,10 +185,10 @@ export function TriggerSettingsView({
   const handleDelete = async (id: string, name: string) => {
     try {
       await onDeleteTrigger(id);
-      onShowSuccess(`トリガー「${name}」を削除しました`);
+      onShowSuccess(t('settings.triggers.deletedSuccess', { name }));
       setConfirmDeleteId(null);
     } catch {
-      onShowError('トリガーの削除に失敗しました');
+      onShowError(t('settings.triggers.deleteError'));
     }
   };
 
@@ -200,9 +202,9 @@ export function TriggerSettingsView({
         ruleIds: trigger.ruleIds ? [...trigger.ruleIds] : [],
         enabled: trigger.enabled,
       });
-      onShowSuccess(`トリガー「${trigger.name} (Copy)」を作成しました`);
+      onShowSuccess(t('settings.triggers.duplicatedSuccess', { name: trigger.name }));
     } catch {
-      onShowError('トリガーの複製に失敗しました');
+      onShowError(t('settings.triggers.duplicateError'));
     }
   };
 
@@ -213,10 +215,10 @@ export function TriggerSettingsView({
       <div className="max-w-4xl mx-auto space-y-6">
         <SettingFormHeader
           icon={<Zap className="w-5 h-5" />}
-          backLabel="トリガー一覧に戻る"
+          backLabel={t('settings.triggers.backToList')}
           onBack={handleCancelForm}
-          title={editingTriggerId ? 'トリガー設定を編集' : '新規トリガーを作成'}
-          description="対象リポジトリと変更ファイルパスの組み合わせに対して、実行するルールを紐づけます。"
+          title={editingTriggerId ? t('settings.triggers.editTriggerTitle') : t('settings.triggers.createTriggerTitle')}
+          description={t('settings.triggers.formDesc')}
         />
 
         <form
@@ -225,35 +227,35 @@ export function TriggerSettingsView({
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-xs text-[#8b949e] block mb-1">トリガー名 *</label>
+              <label className="text-xs text-[#8b949e] block mb-1">{t('settings.triggers.nameLabel')}</label>
               <input
                 type="text"
                 required
                 value={triggerForm.name}
                 onChange={(e) => setTriggerForm({ ...triggerForm, name: e.target.value })}
-                placeholder="例: Runner パッケージ変更検知"
+                placeholder={t('settings.triggers.namePlaceholder')}
                 className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500"
               />
             </div>
             <div>
-              <label className="text-xs text-[#8b949e] block mb-1">対象リポジトリ *</label>
+              <label className="text-xs text-[#8b949e] block mb-1">{t('settings.triggers.repoLabel')}</label>
               <input
                 type="text"
                 required
                 list="trigger-known-repos"
                 value={triggerForm.repository}
                 onChange={(e) => setTriggerForm({ ...triggerForm, repository: e.target.value })}
-                placeholder="例: fuji44/kuramori (または * で全リポジトリ)"
+                placeholder={t('settings.triggers.repoPlaceholder')}
                 className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
               />
               <datalist id="trigger-known-repos">
-                <option value="*" label="全リポジトリ対象" />
+                <option value="*" label={t('settings.triggers.allReposOption')} />
                 {knownRepositories.map((repo) => (
                   <option key={repo} value={repo} />
                 ))}
               </datalist>
               <span className="text-[11px] text-[#8b949e] mt-1 block">
-                特定のリポジトリ名（owner/repo 形式）または * （全リポジトリ対象）を入力します。
+                {t('settings.triggers.repoHelp')}
               </span>
             </div>
           </div>
@@ -261,33 +263,33 @@ export function TriggerSettingsView({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-xs text-[#8b949e] block mb-1">
-                対象ファイルパス (Globカンマ区切り)
+                {t('settings.triggers.pathsLabel')}
               </label>
               <input
                 type="text"
                 value={triggerForm.paths}
                 onChange={(e) => setTriggerForm({ ...triggerForm, paths: e.target.value })}
-                placeholder="例: packages/runner/**, apps/server/** (空欄で全ファイル対象)"
+                placeholder={t('settings.triggers.pathsPlaceholder')}
                 className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-white font-mono text-xs focus:outline-none focus:border-sky-500"
               />
               <span className="text-[11px] text-[#8b949e] mt-1 block">
-                変更ファイルがこのパスに含まれる場合にルールが発動します。
+                {t('settings.triggers.pathsHelp')}
               </span>
             </div>
 
             <div>
               <label className="text-xs text-[#8b949e] block mb-1">
-                除外ファイルパス (Globカンマ区切り・任意)
+                {t('settings.triggers.ignorePathsLabel')}
               </label>
               <input
                 type="text"
                 value={triggerForm.pathsIgnore}
                 onChange={(e) => setTriggerForm({ ...triggerForm, pathsIgnore: e.target.value })}
-                placeholder="例: **/*.md, **/*.test.ts (空欄で除外なし)"
+                placeholder={t('settings.triggers.ignorePathsPlaceholder')}
                 className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-white font-mono text-xs focus:outline-none focus:border-sky-500"
               />
               <span className="text-[11px] text-[#8b949e] mt-1 block">
-                変更が除外パスのみで構成される場合、実行をスキップします。
+                {t('settings.triggers.ignorePathsHelp')}
               </span>
             </div>
           </div>
@@ -297,10 +299,10 @@ export function TriggerSettingsView({
             <div className="flex items-center justify-between pb-2 border-b border-[#30363d]">
               <div>
                 <label className="text-xs font-semibold text-white block">
-                  発動させるルール (複数選択) *
+                  {t('settings.triggers.rulesToTriggerLabel')}
                 </label>
                 <p className="text-[11px] text-[#8b949e]">
-                  この条件に合致した PR に対して自動投入されるルールを選択してください。
+                  {t('settings.triggers.rulesToTriggerHelp')}
                 </p>
               </div>
               <div className="flex items-center gap-2 text-xs">
@@ -310,7 +312,7 @@ export function TriggerSettingsView({
                   className="flex items-center gap-1 px-2 py-1 rounded bg-[#21262d] hover:bg-[#30363d] text-[#c9d1d9] hover:text-white transition-colors"
                 >
                   <CheckSquare className="w-3.5 h-3.5 text-sky-400" />
-                  <span>すべて選択</span>
+                  <span>{t('settings.triggers.selectAll')}</span>
                 </button>
                 <button
                   type="button"
@@ -318,7 +320,7 @@ export function TriggerSettingsView({
                   className="flex items-center gap-1 px-2 py-1 rounded bg-[#21262d] hover:bg-[#30363d] text-[#c9d1d9] hover:text-white transition-colors"
                 >
                   <Square className="w-3.5 h-3.5 text-[#8b949e]" />
-                  <span>全解除</span>
+                  <span>{t('settings.triggers.deselectAll')}</span>
                 </button>
               </div>
             </div>
@@ -359,17 +361,17 @@ export function TriggerSettingsView({
                           );
                           const isSystemDefault = !rule.engine || rule.engine === 'default';
                           const profileName = isSystemDefault
-                            ? `システム既定（${matched?.name ?? '未設定'}）`
+                            ? t('settings.rules.systemDefaultProfile', { name: matched?.name ?? t('settings.engines.modelUnspecified') })
                             : (matched?.name ?? rule.engine);
                           return (
                             <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#21262d] text-[#8b949e] font-mono">
-                              実行プロファイル: {profileName}
+                              {t('settings.rules.profileBadge', { name: profileName })}
                             </span>
                           );
                         })()}
                         {!rule.enabled && (
                           <span className="text-[10px] px-1.5 py-0.2 rounded bg-neutral-800 text-neutral-400">
-                            無効化中
+                            {t('settings.rules.disabledBadge')}
                           </span>
                         )}
                       </div>
@@ -384,19 +386,19 @@ export function TriggerSettingsView({
 
             <div className="flex items-center gap-2 text-xs text-sky-400/90 pt-1">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>現在 {triggerForm.ruleIds.length} 件のルールが選択されています</span>
+              <span>{t('settings.triggers.selectedRulesCount', { count: triggerForm.ruleIds.length })}</span>
             </div>
           </div>
 
           <SettingFormFooter
             onCancel={handleCancelForm}
-            submitLabel="トリガーを保存"
+            submitLabel={t('settings.triggers.saveTriggerBtn')}
             saving={saving}
             leftContent={
               <Checkbox
                 checked={triggerForm.enabled}
                 onChange={(checked) => setTriggerForm({ ...triggerForm, enabled: checked })}
-                label="トリガーを有効化"
+                label={t('settings.triggers.enableTriggerLabel')}
               />
             }
           />
@@ -409,10 +411,10 @@ export function TriggerSettingsView({
     <div className="max-w-4xl mx-auto space-y-6">
       <SettingViewHeader
         icon={<Zap className="w-5 h-5" />}
-        title="トリガー"
-        description="対象リポジトリやファイル変更パスの条件と、自動実行するルールの紐づけを管理します。"
+        title={t('settings.triggers.title')}
+        description={t('settings.triggers.description')}
         action={{
-          label: '新しいトリガーを追加',
+          label: t('settings.triggers.addTriggerBtn'),
           onClick: handleOpenCreateTrigger,
         }}
       />
@@ -422,10 +424,10 @@ export function TriggerSettingsView({
         {triggers.length === 0 ? (
           <SettingEmptyState
             icon={<Zap className="w-8 h-8" />}
-            message="トリガーがまだ登録されていません。"
-            description="トリガーを登録すると、特定のリポジトリやファイルパス変更時に合致するルールが自動投入されます。"
+            message={t('settings.triggers.noTriggersMessage')}
+            description={t('settings.triggers.noTriggersDesc')}
             action={{
-              label: '最初のトリガーを作成',
+              label: t('settings.triggers.createFirstTrigger'),
               onClick: handleOpenCreateTrigger,
             }}
           />
@@ -442,7 +444,7 @@ export function TriggerSettingsView({
                 badges={
                   !trigger.enabled ? (
                     <SettingBadge variant="muted" icon={<Ban className="w-3 h-3" />}>
-                      無効
+                      {t('settings.triggers.disabledBadge')}
                     </SettingBadge>
                   ) : undefined
                 }
@@ -450,24 +452,24 @@ export function TriggerSettingsView({
                   <>
                     <div className="flex items-center gap-1 font-mono text-[11px] text-sky-400">
                       <FolderGit2 className="w-3.5 h-3.5" />
-                      <span>リポジトリ: {trigger.repository === '*' ? '* (全リポジトリ)' : trigger.repository}</span>
+                      <span>{t('settings.triggers.repoBadge', { repo: trigger.repository === '*' ? t('settings.triggers.allReposOption') : trigger.repository })}</span>
                     </div>
 
                     {trigger.paths && trigger.paths.length > 0 ? (
                       <div className="flex items-center gap-1 font-mono text-[11px] text-teal-400">
                         <FileCode className="w-3.5 h-3.5" />
-                        <span>パス: {trigger.paths.join(', ')}</span>
+                        <span>{t('settings.triggers.pathsBadge', { paths: trigger.paths.join(', ') })}</span>
                       </div>
                     ) : (
                       <div className="flex items-center gap-1 text-[11px] text-[#8b949e]">
                         <FileCode className="w-3.5 h-3.5" />
-                        <span>パス: 全ファイル対象</span>
+                        <span>{t('settings.triggers.allFilesBadge')}</span>
                       </div>
                     )}
 
                     {trigger.pathsIgnore && trigger.pathsIgnore.length > 0 && (
                       <div className="flex items-center gap-1 font-mono text-[11px] text-amber-400/80">
-                        <span>除外: {trigger.pathsIgnore.join(', ')}</span>
+                        <span>{t('settings.triggers.ignoreBadge', { paths: trigger.pathsIgnore.join(', ') })}</span>
                       </div>
                     )}
                   </>
@@ -479,7 +481,7 @@ export function TriggerSettingsView({
                       <SettingActionButton
                         active={trigger.enabled}
                         onClick={() => onUpdateTrigger(trigger.id, { enabled: !trigger.enabled })}
-                        title={trigger.enabled ? 'トリガーを無効化' : 'トリガーを有効化'}
+                        title={trigger.enabled ? t('settings.triggers.disableTriggerTooltip') : t('settings.triggers.enableTriggerTooltip')}
                       >
                         <Power className="w-3.5 h-3.5" />
                       </SettingActionButton>
@@ -488,40 +490,40 @@ export function TriggerSettingsView({
                     {/* 管理操作系グループ */}
                     {isConfirmingDelete ? (
                       <div className="flex items-center gap-1 bg-rose-950/60 border border-rose-800/80 rounded-lg p-1">
-                        <span className="text-[11px] text-rose-300 px-1">「{trigger.name}」を削除しますか?</span>
+                        <span className="text-[11px] text-rose-300 px-1">{t('settings.triggers.confirmDelete', { name: trigger.name })}</span>
                         <button
                           type="button"
                           onClick={() => handleDelete(trigger.id, trigger.name)}
                           className="px-2 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-medium transition-colors cursor-pointer"
                         >
-                          削除
+                          {t('common.delete')}
                         </button>
                         <button
                           type="button"
                           onClick={() => setConfirmDeleteId(null)}
                           className="px-1.5 py-0.5 rounded text-[#8b949e] hover:text-white text-[11px] cursor-pointer"
                         >
-                          戻る
+                          {t('common.back')}
                         </button>
                       </div>
                     ) : (
                       <SettingButtonGroup>
                         <SettingActionButton
                           onClick={() => handleOpenEditTrigger(trigger)}
-                          title="トリガーを編集"
+                          title={t('settings.triggers.editTriggerTooltip')}
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </SettingActionButton>
                         <SettingActionButton
                           onClick={() => handleDuplicateTrigger(trigger)}
-                          title="トリガーを複製"
+                          title={t('settings.triggers.duplicateTriggerTooltip')}
                         >
                           <Copy className="w-3.5 h-3.5" />
                         </SettingActionButton>
                         <SettingActionButton
                           danger
                           onClick={() => setConfirmDeleteId(trigger.id)}
-                          title="トリガーを削除"
+                          title={t('settings.triggers.deleteTriggerTooltip')}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </SettingActionButton>
@@ -531,7 +533,7 @@ export function TriggerSettingsView({
                 }
               >
                 <div className="border-t border-[#30363d]/60 px-4 sm:px-5 py-3 bg-[#0d1117]/30">
-                  <div className="text-[11px] text-[#8b949e] mb-1.5 font-medium">発動ルール ({boundRules.length}件):</div>
+                  <div className="text-[11px] text-[#8b949e] mb-1.5 font-medium">{t('settings.triggers.boundRulesHeader', { count: boundRules.length })}</div>
                   <div className="flex flex-wrap gap-1.5">
                     {boundRules.map((r) => (
                       <SettingBadge
@@ -543,7 +545,7 @@ export function TriggerSettingsView({
                       </SettingBadge>
                     ))}
                     {boundRules.length === 0 && (
-                      <span className="text-xs text-amber-400/80">（紐づくルールがありません）</span>
+                      <span className="text-xs text-amber-400/80">{t('settings.triggers.noBoundRules')}</span>
                     )}
                   </div>
                 </div>

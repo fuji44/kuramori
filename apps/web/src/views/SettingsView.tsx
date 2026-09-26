@@ -11,6 +11,7 @@ import { GeneralSettingsView } from './settings/GeneralSettingsView.tsx';
 import { EngineSettingsView } from './settings/EngineSettingsView.tsx';
 import { RuleSettingsView } from './settings/RuleSettingsView.tsx';
 import { TriggerSettingsView } from './settings/TriggerSettingsView.tsx';
+import { useI18n } from '../i18n/context.tsx';
 
 interface SettingsViewProps {
   subview: 'general' | 'engines' | 'rules' | 'triggers';
@@ -49,6 +50,8 @@ export function SettingsView({
   onShowSuccess,
   onShowError,
 }: SettingsViewProps) {
+  const { t } = useI18n();
+
   return (
     <div className="flex-1 flex flex-col md:flex-row h-full overflow-hidden bg-[#0d1117]">
       {/* Settings Sidebar */}
@@ -56,7 +59,7 @@ export function SettingsView({
         <div className="pb-3 mb-3 border-b border-[#30363d]">
           <div className="flex items-center gap-2.5">
             <Settings className="w-5 h-5 text-sky-400" />
-            <h1 className="text-sm font-bold text-white tracking-tight">設定</h1>
+            <h1 className="text-sm font-bold text-white tracking-tight">{t('settingsView.sidebarTitle')}</h1>
           </div>
         </div>
 
@@ -73,7 +76,7 @@ export function SettingsView({
           >
             <div className="flex items-center gap-2.5">
               <Sliders className="w-4 h-4 text-sky-400" />
-              <span>全般</span>
+              <span>{t('settingsView.generalNav')}</span>
             </div>
           </button>
 
@@ -88,7 +91,7 @@ export function SettingsView({
           >
             <div className="flex items-center gap-2.5">
               <Cpu className="w-4 h-4 text-sky-400" />
-              <span>実行プロファイル</span>
+              <span>{t('settingsView.enginesNav')}</span>
             </div>
             <span className="ml-2 px-1.5 py-0.2 rounded-full bg-[#0d1117] text-sky-400 text-[10px] font-mono border border-sky-900/60">
               {settings.engineProfiles?.length ?? 0}
@@ -106,7 +109,7 @@ export function SettingsView({
           >
             <div className="flex items-center gap-2.5">
               <Shield className="w-4 h-4 text-sky-400" />
-              <span>ルール</span>
+              <span>{t('settingsView.rulesNav')}</span>
             </div>
             <span className="ml-2 px-1.5 py-0.2 rounded-full bg-[#0d1117] text-sky-400 text-[10px] font-mono border border-sky-900/60">
               {rules.length}
@@ -124,7 +127,7 @@ export function SettingsView({
           >
             <div className="flex items-center gap-2.5">
               <Zap className="w-4 h-4 text-sky-400" />
-              <span>トリガー</span>
+              <span>{t('settingsView.triggersNav')}</span>
             </div>
             <span className="ml-2 px-1.5 py-0.2 rounded-full bg-[#0d1117] text-sky-400 text-[10px] font-mono border border-sky-900/60">
               {triggers.length}

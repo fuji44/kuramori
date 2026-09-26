@@ -69,4 +69,14 @@ Deno.test('formatters - formatRelativeTime outputs relative string', () => {
 
   assertEquals(relEn, 'yesterday');
   assertEquals(relJa, '昨日');
+
+  // Test with Date object
+  const oneHourAgo = new Date(Date.now() - 3600 * 1000);
+  const relDateEn = formatRelativeTime(oneHourAgo, 'en');
+  const relDateJa = formatRelativeTime(oneHourAgo, 'ja');
+
+  assertEquals(typeof relDateEn, 'string');
+  assertEquals(typeof relDateJa, 'string');
+  assertEquals(relDateEn.includes('hour'), true);
+  assertEquals(relDateJa.includes('時間'), true);
 });

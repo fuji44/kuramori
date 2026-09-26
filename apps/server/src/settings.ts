@@ -43,6 +43,7 @@ export interface AppSettings {
   };
   engineSettings: EngineSettingsMap;
   engineProfiles: EngineProfile[];
+  displayLanguage?: 'auto' | 'en' | 'ja';
 }
 
 export class SettingsService {
@@ -281,6 +282,11 @@ export class SettingsService {
       ? rawDefaultProfileId
       : engineProfiles.find((p) => p.isDefault)?.id ?? engineProfiles[0]?.id;
 
+    const displayLanguageVal = map.get('display_language');
+    const displayLanguage = (displayLanguageVal === 'en' || displayLanguageVal === 'ja' || displayLanguageVal === 'auto')
+      ? displayLanguageVal
+      : 'auto';
+
     return {
       autoQueue,
       autoQueueIncludeOwn,
@@ -296,6 +302,7 @@ export class SettingsService {
       backendMaxConcurrency,
       engineSettings,
       engineProfiles,
+      displayLanguage,
     };
   }
 
@@ -368,6 +375,9 @@ export class SettingsService {
     }
     if (updates.defaultEngineProfileId !== undefined) {
       await upsert('default_engine_profile_id', updates.defaultEngineProfileId);
+    }
+    if (updates.displayLanguage !== undefined) {
+      await upsert('display_language', updates.displayLanguage);
     }
 
     return this.getAllSettings();

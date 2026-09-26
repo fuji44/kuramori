@@ -24,6 +24,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import type { ReviewReportData, ReviewComment, Severity, LensVerdict } from '@kuramori/core';
+import { useI18n } from '../../i18n/context.tsx';
 
 export type MarkType = 'post' | 'hold' | 'skip';
 
@@ -72,6 +73,7 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
   isCollapsed,
   onToggleCollapse,
 }) => {
+  const { t } = useI18n();
   const [copiedNumber, setCopiedNumber] = React.useState<boolean>(false);
 
   const pr = data.pr;
@@ -240,7 +242,7 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
           <button
             type="button"
             onClick={onToggleCollapse}
-            title="サイドバーを展開"
+            title={t('review.sidebar.expand')}
             className="p-2 rounded-lg bg-[#21262d] hover:bg-[#30363d] text-gray-200 hover:text-white transition-colors border border-[#30363d] shadow-sm"
           >
             <PanelLeftOpen className="w-4 h-4 text-[#00AFA8]" />
@@ -252,7 +254,7 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
               href={pr.url}
               target="_blank"
               rel="noreferrer"
-              title={`PR #${pr.number ?? '0'}: ${pr.title ?? ''} (GitHub で開く)`}
+              title={`PR #${pr.number ?? '0'}: ${pr.title ?? ''} (${t('pulls.openInGithub')})`}
               className="px-1.5 py-1 rounded-md bg-[#0d1117] hover:bg-[#21262d] text-gray-300 hover:text-[#00AFA8] border border-[#30363d] font-mono font-bold text-[10px] text-center transition-colors flex flex-col items-center leading-tight"
             >
               <span className="text-[9px] text-gray-500">PR</span>
@@ -285,7 +287,7 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
                 });
               }
             }}
-            title={`必ず確認 (${mustReviewCount}件)`}
+            title={`${t('review.sidebar.mustReviewShortcut')} (${t('review.sidebar.pendingMustReview', { count: mustReviewCount })})`}
             className={`p-2 rounded-lg transition-all relative border ${
               filters.mustReviewOnly
                 ? 'bg-[#00AFA8]/20 text-[#00AFA8] border-[#00AFA8]/50 shadow-sm'
@@ -305,7 +307,7 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
             <button
               type="button"
               onClick={onResetFilters}
-              title="フィルタ全解除"
+              title={t('review.sidebar.resetFilters')}
               className="p-2 rounded-lg bg-[#0d1117] hover:bg-[#21262d] text-gray-400 hover:text-[#00AFA8] border border-[#30363d] transition-colors"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -316,7 +318,12 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
         {/* 中央: 進捗ミニバー */}
         <div
           className="flex flex-col items-center gap-1.5 w-full my-auto py-3 cursor-default"
-          title={`進捗: 投稿 ${progress.post} / 保留 ${progress.hold} / 不投稿 ${progress.skip} (未選択 ${progress.unset})`}
+          title={t('review.sidebar.progressHover', {
+            post: progress.post,
+            hold: progress.hold,
+            skip: progress.skip,
+            unset: progress.unset,
+          })}
         >
           {/* 縦型プログレスバー */}
           <div className="w-1.5 h-20 rounded-full bg-[#0d1117] overflow-hidden flex flex-col border border-[#30363d]/50">
@@ -335,7 +342,7 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
           <button
             type="button"
             onClick={onOpenExport}
-            title="判断を書き出す"
+            title={t('review.sidebar.exportDecisions')}
             className="p-2 rounded-lg bg-[#ECEDF0] hover:bg-white text-black transition-all shadow-md active:scale-95"
           >
             <Check className="w-4 h-4 stroke-[3]" />
@@ -343,7 +350,7 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
 
           {/* 全体判定バッジ */}
           <span
-            title={`全体判定: ${data.verdict}`}
+            title={t('review.sidebar.overallVerdict', { verdict: data.verdict })}
             className={`w-3 h-3 rounded-full border shadow-sm ${
               data.verdict === 'APPROVE'
                 ? 'bg-emerald-400 border-emerald-500 shadow-emerald-500/50'
@@ -371,7 +378,7 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
               <button
                 type="button"
                 onClick={onToggleCollapse}
-                title="サイドバーを閉じる"
+                title={t('review.sidebar.collapse')}
                 className="p-1 rounded text-gray-400 hover:text-gray-200 hover:bg-[#21262d] transition-colors"
               >
                 <PanelLeftClose className="w-4 h-4" />
@@ -390,7 +397,7 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
           <button
             type="button"
             onClick={handleCopyPrNumber}
-            title="PR番号をコピー"
+            title={t('review.sidebar.copyPrNumber')}
             className="p-1 rounded text-gray-400 hover:text-gray-200 hover:bg-[#21262d] transition-colors"
           >
             {copiedNumber ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -400,7 +407,7 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
               href={pr.url}
               target="_blank"
               rel="noreferrer"
-              title="GitHub PR を開く"
+              title={t('review.sidebar.openGithubPr')}
               className="p-1 rounded text-gray-400 hover:text-[#00AFA8] hover:bg-[#21262d] transition-colors"
             >
               <ExternalLink className="w-3.5 h-3.5" />
@@ -411,7 +418,7 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
         <div className="flex flex-wrap gap-1.5 pt-1">
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#21262d] text-[10.5px] font-semibold text-gray-400">
             <Clock className="w-3 h-3" />
-            <span>第 1 回</span>
+            <span>{t('review.sidebar.roundNum')}</span>
           </span>
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#21262d] text-[10.5px] font-semibold text-gray-400">
             <Settings className="w-3 h-3" />
@@ -445,7 +452,7 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
       {/* 3. 判定の進捗（精査ボード） */}
       <div className="flex flex-col gap-2.5 border-t border-[#30363d]/70 pt-4">
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-bold text-gray-400 tracking-wider">判定の進捗</span>
+          <span className="text-[11px] font-bold text-gray-400 tracking-wider">{t('review.sidebar.progressTitle')}</span>
           <span className="text-xs font-mono font-semibold text-gray-300">
             {progress.post + progress.hold + progress.skip} / {progress.total}
           </span>
@@ -453,9 +460,9 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
 
         {/* 3色プログレスバー */}
         <div className="h-2 w-full rounded-full bg-[#21262d] overflow-hidden flex">
-          <div style={{ width: `${progress.postPct}%` }} className="bg-[#00AFA8] transition-all" title={`投稿: ${progress.post}`} />
-          <div style={{ width: `${progress.holdPct}%` }} className="bg-amber-400 transition-all" title={`保留: ${progress.hold}`} />
-          <div style={{ width: `${progress.skipPct}%` }} className="bg-gray-500 transition-all" title={`不投稿: ${progress.skip}`} />
+          <div style={{ width: `${progress.postPct}%` }} className="bg-[#00AFA8] transition-all" title={`${t('review.sidebar.markPost')}: ${progress.post}`} />
+          <div style={{ width: `${progress.holdPct}%` }} className="bg-amber-400 transition-all" title={`${t('review.sidebar.markHold')}: ${progress.hold}`} />
+          <div style={{ width: `${progress.skipPct}%` }} className="bg-gray-500 transition-all" title={`${t('review.sidebar.markSkip')}: ${progress.skip}`} />
         </div>
 
         {/* 4行進捗リスト */}
@@ -463,28 +470,28 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-2 text-gray-400">
               <span className="w-2 h-2 rounded-full bg-[#00AFA8]" />
-              <span>投稿する</span>
+              <span>{t('review.sidebar.markPost')}</span>
             </span>
             <span className="font-mono font-bold text-gray-200">{progress.post}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-2 text-gray-400">
               <span className="w-2 h-2 rounded-full bg-amber-400" />
-              <span>保留</span>
+              <span>{t('review.sidebar.markHold')}</span>
             </span>
             <span className="font-mono font-bold text-gray-200">{progress.hold}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-2 text-gray-400">
               <span className="w-2 h-2 rounded-full bg-gray-500" />
-              <span>投稿しない</span>
+              <span>{t('review.sidebar.markSkip')}</span>
             </span>
             <span className="font-mono font-bold text-gray-200">{progress.skip}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-2 text-gray-400">
               <span className="w-2 h-2 rounded-full border border-gray-500" />
-              <span>未選択</span>
+              <span>{t('review.sidebar.markUnset')}</span>
             </span>
             <span className="font-mono font-bold text-gray-400">{progress.unset}</span>
           </div>
@@ -494,19 +501,19 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
       {/* 4. 優先ショートカット (Quick Shortcuts) */}
       <div className="flex flex-col gap-2.5 border-t border-[#30363d]/70 pt-4">
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-bold text-gray-400 tracking-wider">優先ショートカット</span>
+          <span className="text-[11px] font-bold text-gray-400 tracking-wider">{t('review.sidebar.quickShortcuts')}</span>
           {hasActiveFilters ? (
             <button
               type="button"
               onClick={onResetFilters}
               className="text-[10.5px] text-[#00AFA8] hover:underline font-semibold flex items-center gap-1 transition-colors"
-              title="すべての絞り込み条件をリセット"
+              title={t('review.sidebar.resetFilters')}
             >
               <RotateCcw className="w-3 h-3" />
-              <span>フィルタ全解除</span>
+              <span>{t('review.sidebar.clearFilters')}</span>
             </button>
           ) : (
-            <span className="text-[10px] text-gray-500">一括絞り込み</span>
+            <span className="text-[10px] text-gray-500">{t('review.sidebar.batchPresets')}</span>
           )}
         </div>
 
@@ -538,7 +545,7 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 font-bold">
               <Sparkles className={`w-3.5 h-3.5 ${filters.mustReviewOnly ? 'text-[#00AFA8]' : 'text-amber-400'}`} />
-              <span>必ず確認（必須レビュー）</span>
+              <span>{t('review.sidebar.mustReviewShortcut')}</span>
             </div>
             <span
               className={`font-mono text-[10.5px] font-bold px-1.5 py-0.5 rounded ${
@@ -547,11 +554,11 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
                   : 'bg-[#161b22] text-gray-400 border border-[#30363d]'
               }`}
             >
-              {mustReviewCount} 件
+              {t('review.sidebar.pendingMustReview', { count: mustReviewCount })}
             </span>
           </div>
           <span className="text-[10.5px] text-gray-400 leading-tight">
-            P1・要検証・採用（未見送り）をまとめて確認
+            {t('review.sidebar.mustReviewHelp')}
           </span>
         </button>
 
@@ -576,7 +583,7 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
                 : 'bg-[#0d1117] text-gray-400 hover:text-gray-200 hover:bg-[#161b22] border-[#30363d]'
             }`}
           >
-            <span>要検証のみ</span>
+            <span>{t('review.sidebar.escalateOnly')}</span>
             <span className="font-mono text-[10.5px] opacity-75">{lensCounts.escalate}</span>
           </button>
 
@@ -599,7 +606,7 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
                 : 'bg-[#0d1117] text-gray-400 hover:text-gray-200 hover:bg-[#161b22] border-[#30363d]'
             }`}
           >
-            <span>採用のみ</span>
+            <span>{t('review.sidebar.promoteOnly')}</span>
             <span className="font-mono text-[10.5px] opacity-75">{lensCounts.promote}</span>
           </button>
 
@@ -622,7 +629,7 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
                 : 'bg-[#0d1117] text-gray-400 hover:text-gray-200 hover:bg-[#161b22] border-[#30363d]'
             }`}
           >
-            <span>P1 重大のみ</span>
+            <span>{t('review.sidebar.p1Only')}</span>
             <span className="font-mono text-[10.5px] opacity-75">{severityCounts.P1}</span>
           </button>
 
@@ -642,7 +649,7 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
                 : 'bg-[#0d1117] text-gray-400 hover:text-gray-200 hover:bg-[#161b22] border-[#30363d]'
             }`}
           >
-            <span>未判断のみ</span>
+            <span>{t('review.sidebar.unsetOnly')}</span>
             <span className="font-mono text-[10.5px] opacity-75">{progress.unset}</span>
           </button>
         </div>
@@ -651,14 +658,14 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
       {/* 5. 語句で絞る */}
       <div className="flex flex-col gap-2 border-t border-[#30363d]/70 pt-4">
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-bold text-gray-400 tracking-wider">語句で絞る</span>
+          <span className="text-[11px] font-bold text-gray-400 tracking-wider">{t('review.sidebar.filterByQuery')}</span>
           {filters.query && (
             <button
               type="button"
               onClick={() => onFilterChange({ query: '' })}
               className="text-[10.5px] text-gray-500 hover:text-gray-300 transition-colors"
             >
-              解除
+              {t('review.sidebar.clearCondition')}
             </button>
           )}
         </div>
@@ -668,7 +675,7 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
             type="text"
             value={filters.query}
             onChange={(e) => onFilterChange({ query: e.target.value })}
-            placeholder="要約・本文・パス"
+            placeholder={t('review.sidebar.searchCommentsPlaceholder')}
             className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg pl-8 pr-3 py-1.5 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-[#00AFA8] transition-colors"
           />
         </div>
@@ -677,14 +684,14 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
       {/* 6. 重大度 (Severity) で絞る - 複数トグル選択 */}
       <div className="flex flex-col gap-2 border-t border-[#30363d]/70 pt-4">
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-bold text-gray-400 tracking-wider">重大度で絞る</span>
+          <span className="text-[11px] font-bold text-gray-400 tracking-wider">{t('review.sidebar.filterBySeverity')}</span>
           {filters.severities.length > 0 && (
             <button
               type="button"
               onClick={() => onFilterChange({ severities: [], mustReviewOnly: false })}
               className="text-[10.5px] text-gray-500 hover:text-gray-300 transition-colors"
             >
-              解除
+              {t('review.sidebar.clearCondition')}
             </button>
           )}
         </div>
@@ -717,23 +724,23 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
       {/* 7. 一次判定 (Lens) で絞る - 複数トグル選択 */}
       <div className="flex flex-col gap-2 border-t border-[#30363d]/70 pt-4">
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-bold text-gray-400 tracking-wider">一次判定 (Lens) で絞る</span>
+          <span className="text-[11px] font-bold text-gray-400 tracking-wider">{t('review.sidebar.filterByLens')}</span>
           {filters.lensVerdicts.length > 0 && (
             <button
               type="button"
               onClick={() => onFilterChange({ lensVerdicts: [], mustReviewOnly: false })}
               className="text-[10.5px] text-gray-500 hover:text-gray-300 transition-colors"
             >
-              解除
+              {t('review.sidebar.clearCondition')}
             </button>
           )}
         </div>
         <div className="flex flex-col gap-1">
           {[
-            { id: 'escalate' as const, label: '要検証 (escalate)', count: lensCounts.escalate, activeBg: 'bg-rose-500/15 text-rose-300 border-rose-500/40 font-semibold' },
-            { id: 'promote' as const, label: '採用 (promote)', count: lensCounts.promote, activeBg: 'bg-blue-500/15 text-blue-300 border-blue-500/40 font-semibold' },
-            { id: 'keep' as const, label: '維持 (keep)', count: lensCounts.keep, activeBg: 'bg-gray-500/15 text-gray-200 border-gray-500/40 font-semibold' },
-            { id: 'drop' as const, label: '見送り (drop)', count: lensCounts.drop, activeBg: 'bg-gray-700/25 text-gray-400 border-gray-600/40 font-semibold' },
+            { id: 'escalate' as const, label: t('review.sidebar.lensEscalate'), count: lensCounts.escalate, activeBg: 'bg-rose-500/15 text-rose-300 border-rose-500/40 font-semibold' },
+            { id: 'promote' as const, label: t('review.sidebar.lensPromote'), count: lensCounts.promote, activeBg: 'bg-blue-500/15 text-blue-300 border-blue-500/40 font-semibold' },
+            { id: 'keep' as const, label: t('review.sidebar.lensKeep'), count: lensCounts.keep, activeBg: 'bg-gray-500/15 text-gray-200 border-gray-500/40 font-semibold' },
+            { id: 'drop' as const, label: t('review.sidebar.lensDrop'), count: lensCounts.drop, activeBg: 'bg-gray-700/25 text-gray-400 border-gray-600/40 font-semibold' },
           ].map((l) => {
             const active = filters.lensVerdicts.includes(l.id);
             return (
@@ -759,14 +766,14 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
       {categoryCounts.length > 0 && (
         <div className="flex flex-col gap-2 border-t border-[#30363d]/70 pt-4">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-gray-400 tracking-wider">カテゴリで絞る</span>
+            <span className="text-[11px] font-bold text-gray-400 tracking-wider">{t('review.sidebar.filterByCategory')}</span>
             {filters.categories.length > 0 && (
               <button
                 type="button"
                 onClick={() => onFilterChange({ categories: [] })}
                 className="text-[10.5px] text-gray-500 hover:text-gray-300 transition-colors"
               >
-                解除
+                {t('review.sidebar.clearCondition')}
               </button>
             )}
           </div>
@@ -799,14 +806,14 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
       {fileOptions.length > 0 && (
         <div className="flex flex-col gap-2 border-t border-[#30363d]/70 pt-4">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-gray-400 tracking-wider">ファイルで絞る</span>
+            <span className="text-[11px] font-bold text-gray-400 tracking-wider">{t('review.sidebar.filterByFile')}</span>
             {filters.file !== 'all' && (
               <button
                 type="button"
                 onClick={() => onFilterChange({ file: 'all' })}
                 className="text-[10.5px] text-gray-500 hover:text-gray-300 transition-colors"
               >
-                解除
+                {t('review.sidebar.clearCondition')}
               </button>
             )}
           </div>
@@ -815,7 +822,7 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
             onChange={(e) => onFilterChange({ file: e.target.value })}
             className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-2.5 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-[#00AFA8] transition-colors truncate"
           >
-            <option value="all">全ファイル ({comments.length})</option>
+            <option value="all">{t('review.sidebar.allFilesWithCount', { count: comments.length })}</option>
             {fileOptions.map(([f, count]) => (
               <option key={f} value={f}>
                 {f.split('/').pop()} ({count})
@@ -828,14 +835,14 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
       {/* 10. タグで絞る */}
       <div className="flex flex-col gap-2 border-t border-[#30363d]/70 pt-4">
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-bold text-gray-400 tracking-wider">タグで絞る</span>
+          <span className="text-[11px] font-bold text-gray-400 tracking-wider">{t('review.sidebar.filterByTag')}</span>
           {filters.tags.length > 0 && (
             <button
               type="button"
               onClick={() => onFilterChange({ tags: [] })}
               className="text-[10.5px] text-gray-500 hover:text-gray-300 transition-colors"
             >
-              解除
+              {t('review.sidebar.clearCondition')}
             </button>
           )}
         </div>
@@ -866,24 +873,24 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
       {/* 11. 判定マークで絞る */}
       <div className="flex flex-col gap-2 border-t border-[#30363d]/70 pt-4">
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-bold text-gray-400 tracking-wider">マークで絞る</span>
+          <span className="text-[11px] font-bold text-gray-400 tracking-wider">{t('review.sidebar.filterByMark')}</span>
           {filters.mark !== 'all' && (
             <button
               type="button"
               onClick={() => onFilterChange({ mark: 'all' })}
               className="text-[10.5px] text-gray-500 hover:text-gray-300 transition-colors"
             >
-              解除
+              {t('review.sidebar.clearCondition')}
             </button>
           )}
         </div>
         <div className="grid grid-cols-2 gap-1.5">
           {[
-            { id: 'all', label: 'すべて', activeBg: 'bg-[#00AFA8]/15 text-[#00AFA8] border-[#00AFA8]/40 font-semibold' },
-            { id: 'post', label: '投稿する', activeBg: 'bg-[#00AFA8]/15 text-[#00AFA8] border-[#00AFA8]/40 font-semibold' },
-            { id: 'hold', label: '保留', activeBg: 'bg-amber-500/15 text-amber-300 border-amber-500/40 font-semibold' },
-            { id: 'skip', label: '投稿しない', activeBg: 'bg-gray-700/25 text-gray-400 border-gray-600/40 font-semibold' },
-            { id: 'unset', label: '未選択', activeBg: 'bg-gray-500/15 text-gray-200 border-gray-500/40 font-semibold' },
+            { id: 'all', label: t('review.sidebar.allMarks'), activeBg: 'bg-[#00AFA8]/15 text-[#00AFA8] border-[#00AFA8]/40 font-semibold' },
+            { id: 'post', label: t('review.sidebar.markPost'), activeBg: 'bg-[#00AFA8]/15 text-[#00AFA8] border-[#00AFA8]/40 font-semibold' },
+            { id: 'hold', label: t('review.sidebar.markHold'), activeBg: 'bg-amber-500/15 text-amber-300 border-amber-500/40 font-semibold' },
+            { id: 'skip', label: t('review.sidebar.markSkip'), activeBg: 'bg-gray-700/25 text-gray-400 border-gray-600/40 font-semibold' },
+            { id: 'unset', label: t('review.sidebar.markUnset'), activeBg: 'bg-gray-500/15 text-gray-200 border-gray-500/40 font-semibold' },
           ].map((m) => {
             const active = filters.mark === m.id;
             return (
@@ -911,21 +918,21 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
           onClick={onOpenExport}
           className="w-full h-10 rounded-xl bg-[#ECEDF0] hover:bg-white text-black font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-95"
         >
-          <span>判断を書き出す</span>
+          <span>{t('review.sidebar.exportDecisions')}</span>
         </button>
         {onClearMarks && (
           <button
             type="button"
             onClick={() => {
-              if (window.confirm('すべての指摘の判断（投稿・保留・投稿しない）とメモをクリアしますか？')) {
+              if (window.confirm(t('review.sidebar.confirmClearAll'))) {
                 onClearMarks();
               }
             }}
             className="w-full h-8 rounded-lg bg-transparent hover:bg-[#21262d] text-gray-400 hover:text-rose-400 text-xs flex items-center justify-center gap-1.5 transition-colors border border-transparent hover:border-rose-500/30"
-            title="すべての指摘の判断（投稿・保留・投稿しない）とメモを初期化"
+            title={t('review.sidebar.clearAll')}
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span>判断をクリア</span>
+            <span>{t('review.sidebar.clearDecisions')}</span>
           </button>
         )}
       </div>

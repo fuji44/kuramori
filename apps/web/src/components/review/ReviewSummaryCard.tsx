@@ -10,8 +10,6 @@ import {
   AlertOctagon,
   Cpu,
   Layers,
-  HelpCircle,
-  ExternalLink,
   BookOpen,
 } from 'lucide-react';
 import type {
@@ -20,6 +18,7 @@ import type {
   ReviewVerdictType,
   ReviewPrMeta,
 } from '@kuramori/core';
+import { useI18n } from '../../i18n/context.tsx';
 
 interface ReviewSummaryCardProps {
   verdict: ReviewVerdictType;
@@ -36,6 +35,8 @@ export const ReviewSummaryCard: React.FC<ReviewSummaryCardProps> = ({
   pr,
   onSelectComment,
 }) => {
+  const { t } = useI18n();
+
   const getVerdictBadge = () => {
     switch (verdict) {
       case 'APPROVE':
@@ -89,7 +90,7 @@ export const ReviewSummaryCard: React.FC<ReviewSummaryCardProps> = ({
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <FileCode className="w-5 h-5 text-indigo-400" />
-            <h2 className="text-base font-semibold text-gray-100">AI レビュー要約</h2>
+            <h2 className="text-base font-semibold text-gray-100">{t('review.summary.title')}</h2>
             <div>{getVerdictBadge()}</div>
           </div>
           {pr && (
@@ -103,7 +104,7 @@ export const ReviewSummaryCard: React.FC<ReviewSummaryCardProps> = ({
                   rel="noreferrer"
                   className="text-indigo-400 hover:underline flex items-center gap-1"
                 >
-                  <BookOpen className="w-3 h-3" /> Story 課題
+                  <BookOpen className="w-3 h-3" /> {t('review.summary.storyIssue')}
                 </a>
               )}
             </div>
@@ -112,7 +113,7 @@ export const ReviewSummaryCard: React.FC<ReviewSummaryCardProps> = ({
           {/* ルール別健全性バッジ列 */}
           {ruleVerdicts.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap pt-2">
-              <span className="text-[11px] text-gray-400 font-medium">ルール別健全性:</span>
+              <span className="text-[11px] text-gray-400 font-medium">{t('review.summary.ruleHealth')}</span>
               {ruleVerdicts.map((rv, idx) => {
                 let badgeColor = 'bg-emerald-950/80 text-emerald-300 border-emerald-800';
                 if (rv.verdict === 'FAIL') {
@@ -143,7 +144,7 @@ export const ReviewSummaryCard: React.FC<ReviewSummaryCardProps> = ({
               <div className="bg-[#0d1117] p-3 rounded-lg border border-rose-500/30">
                 <h3 className="text-xs font-semibold text-rose-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
                   <AlertOctagon className="w-3.5 h-3.5" />
-                  解決する問題
+                  {t('review.summary.problemSolved')}
                 </h3>
                 <p className="text-xs text-gray-200 leading-relaxed">{briefObj.problem}</p>
               </div>
@@ -152,7 +153,7 @@ export const ReviewSummaryCard: React.FC<ReviewSummaryCardProps> = ({
               <div className="bg-[#0d1117] p-3 rounded-lg border border-indigo-500/30">
                 <h3 className="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
                   <Cpu className="w-3.5 h-3.5" />
-                  変更アプローチ
+                  {t('review.summary.changeApproach')}
                 </h3>
                 <p className="text-xs text-gray-200 leading-relaxed">{briefObj.approach}</p>
               </div>
@@ -161,7 +162,7 @@ export const ReviewSummaryCard: React.FC<ReviewSummaryCardProps> = ({
         ) : (
           <div>
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">
-              変更の要約
+              {t('review.summary.changeSummary')}
             </h3>
             <p className="text-sm text-gray-200 leading-relaxed bg-[#0d1117] p-3 rounded-lg border border-[#30363d]/60">
               {briefText}
@@ -174,7 +175,7 @@ export const ReviewSummaryCard: React.FC<ReviewSummaryCardProps> = ({
           <div className="bg-emerald-950/20 p-3 rounded-lg border border-emerald-500/40">
             <h3 className="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
               <ShieldCheck className="w-3.5 h-3.5" />
-              免責範囲（変わらないと言い切れる領域）
+              {t('review.summary.blastRadius')}
             </h3>
             <p className="text-xs text-emerald-200/90 leading-relaxed font-mono">
               {blastRadius}
@@ -188,7 +189,7 @@ export const ReviewSummaryCard: React.FC<ReviewSummaryCardProps> = ({
             {summary.mechanism.why && summary.mechanism.why.length > 0 && (
               <div className="bg-[#0d1117] p-3 rounded-lg border border-[#30363d]/60">
                 <h3 className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2">
-                  不具合が成立していた因果連鎖 (Why)
+                  {t('review.summary.causalChain')}
                 </h3>
                 <ol className="list-decimal list-inside space-y-1 text-xs text-gray-300">
                   {summary.mechanism.why.map((step, idx) => (
@@ -203,7 +204,7 @@ export const ReviewSummaryCard: React.FC<ReviewSummaryCardProps> = ({
             {summary.mechanism.conditions && summary.mechanism.conditions.length > 0 && (
               <div className="bg-[#0d1117] p-3 rounded-lg border border-[#30363d]/60">
                 <h3 className="text-xs font-semibold text-cyan-400 uppercase tracking-wider mb-1.5">
-                  変更が発動する条件 (Conditions)
+                  {t('review.summary.triggerConditions')}
                 </h3>
                 <div className="flex flex-wrap gap-1.5">
                   {summary.mechanism.conditions.map((cond, idx) => (
@@ -224,7 +225,7 @@ export const ReviewSummaryCard: React.FC<ReviewSummaryCardProps> = ({
         <div>
           <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
             <Layers className="w-3.5 h-3.5 text-indigo-400" />
-            中核ロジックの変更箇所
+            {t('review.summary.changedCoreCode')}
           </h3>
           {Array.isArray(summary.changedCode) ? (
             <div className="overflow-x-auto rounded-lg border border-[#30363d]/60 bg-[#0d1117]">
@@ -262,7 +263,7 @@ export const ReviewSummaryCard: React.FC<ReviewSummaryCardProps> = ({
         {summary.authorsDecisions && summary.authorsDecisions.length > 0 && (
           <div className="bg-[#0d1117] p-3 rounded-lg border border-[#30363d]/60 space-y-1.5">
             <h3 className="text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">
-              作者の設計判断と論点
+              {t('review.summary.authorDecisions')}
             </h3>
             <ul className="space-y-1.5 text-xs">
               {summary.authorsDecisions.map((item, idx) => (
@@ -274,7 +275,7 @@ export const ReviewSummaryCard: React.FC<ReviewSummaryCardProps> = ({
                       onClick={() => onSelectComment?.(item.commentId!)}
                       className="text-xs font-mono text-indigo-400 hover:underline bg-indigo-950/40 px-1.5 py-0.5 rounded border border-indigo-500/30 shrink-0"
                     >
-                      {item.commentId} を確認
+                      {t('review.summary.inspectFinding', { id: item.commentId })}
                     </button>
                   )}
                 </li>
@@ -288,7 +289,7 @@ export const ReviewSummaryCard: React.FC<ReviewSummaryCardProps> = ({
           <div>
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
               <GitFork className="w-3.5 h-3.5 text-cyan-400" />
-              影響波及パス ({summary.reachPaths.length})
+              {t('review.summary.reachPaths', { count: summary.reachPaths.length })}
             </h3>
             <div className="flex flex-wrap gap-1.5">
               {summary.reachPaths.map((path, idx) => (
@@ -307,7 +308,7 @@ export const ReviewSummaryCard: React.FC<ReviewSummaryCardProps> = ({
         {metrics && (
           <div className="grid grid-cols-4 gap-2 pt-2 border-t border-[#30363d]/60">
             <div className="bg-[#0d1117] p-2 rounded-lg border border-[#30363d]/40 text-center">
-              <div className="text-xs text-gray-400">分析ファイル</div>
+              <div className="text-xs text-gray-400">{t('review.summary.filesAnalyzed')}</div>
               <div className="text-sm font-semibold text-gray-200">{metrics.filesAnalyzed}</div>
             </div>
             <div className="bg-[#0d1117] p-2 rounded-lg border border-[#30363d]/40 text-center">

@@ -22,6 +22,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import type { Diagram, DiagramNode, ReviewComment } from '@kuramori/core';
+import { useI18n } from '../../i18n/context.tsx';
 
 interface ReviewDiagramProps {
   diagram?: Diagram;
@@ -36,6 +37,7 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
   onSelectNode,
   relatedCommentIds = [],
 }) => {
+  const { t } = useI18n();
   const [scale, setScale] = useState<number>(1);
   const [position, setPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState<boolean>(false);
@@ -122,11 +124,11 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
         if (json.svg) {
           setSvgCache((prev) => ({ ...prev, [targetLayout]: json.svg }));
         } else {
-          throw new Error(json.error || 'SVG の生成に失敗しました');
+          throw new Error(json.error || t('review.diagram.noSvg'));
         }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
-        setCompileError(`レイアウト生成に失敗しました: ${message}`);
+        setCompileError(t('review.diagram.layoutFailed', { error: message }));
       } finally {
         setIsCompiling(false);
       }
@@ -382,7 +384,7 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
   if (!diagram || (!diagram.svg && !diagram.d2Source && (!diagram.nodes || diagram.nodes.length === 0))) {
     return (
       <div className="bg-[#161b22] border border-[#30363d] rounded-2xl p-6 text-center text-gray-400 text-xs">
-        アーキテクチャ・モジュール関係図情報はありません。
+        {t('review.diagram.noDiagramInfo')}
       </div>
     );
   }
@@ -433,7 +435,7 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
     if (diagramComments.length === 0) {
       return (
         <div className="h-full flex items-center justify-center text-center p-4 text-xs text-gray-500">
-          現在のフィルタ条件に一致する指摘はありません
+          {t('review.diagram.noMatchingFindingsInDiagram')}
         </div>
       );
     }
@@ -466,7 +468,7 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
               ? 'bg-[#00AFA8]/10 border-[#00AFA8]/60 shadow-sm'
               : 'bg-[#161b22] border-[#30363d]/70 hover:border-gray-500/60 hover:bg-[#21262d]'
           }`}
-          title={isPinned ? 'クリックでハイライト固定を解除' : 'クリックでハイライトを固定'}
+          title={isPinned ? t('review.diagram.clickToUnpin') : t('review.diagram.clickToPin')}
         >
           <div className="flex items-center justify-between gap-1.5 mb-1.5">
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -484,7 +486,7 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
               {isPinned && (
                 <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#00AFA8] text-black">
                   <Pin className="w-2.5 h-2.5 fill-current" />
-                  <span>固定中</span>
+                  <span>{t('review.diagram.pinned')}</span>
                 </span>
               )}
             </div>
@@ -499,7 +501,7 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
                   setIsFullscreen(false);
                 }
               }}
-              title="指摘の詳細へジャンプ"
+              title={t('review.diagram.jumpToDetail')}
               className="p-1 rounded-md text-gray-400 hover:text-[#00AFA8] hover:bg-[#0d1117] transition-all group-hover:text-gray-200"
             >
               <ArrowRight className="w-4 h-4 hover:translate-x-0.5 transition-transform" />
@@ -512,7 +514,7 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
 
           {nodes.length > 0 && (
             <div className="flex items-center gap-1 flex-wrap pt-1 border-t border-[#30363d]/50">
-              <span className="text-[10px] text-gray-400 font-medium">影響モジュール:</span>
+              <span className="text-[10px] text-gray-400 font-medium">{t('review.diagram.impactedModules')}</span>
               {nodes.map((n) => (
                 <span
                   key={n.id}
@@ -574,15 +576,15 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
       <div className="flex items-center justify-between border-b border-[#30363d]/80 pb-2.5 shrink-0 flex-wrap gap-2">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#00AFA8]/15 text-[#00AFA8]">
-            影響範囲
+            {t('review.diagram.scopeBadge')}
           </span>
           <span className="text-sm font-semibold text-gray-100 flex items-center gap-1.5">
             <Network className="w-4 h-4 text-[#00AFA8]" />
-            モジュール関連・アーキテクチャ図
+            {t('review.diagram.title')}
           </span>
           <span className="hidden md:inline-flex items-center gap-1 text-[11px] text-[#00AFA8] font-medium bg-[#00AFA8]/10 px-2 py-0.5 rounded-full">
             <Sparkles className="w-3 h-3" />
-            指摘ホバーでハイライト連動
+            {t('review.diagram.hoverSparkle')}
           </span>
         </div>
 
@@ -591,10 +593,14 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
           <div className="flex items-center gap-0.5 bg-[#0d1117] p-0.5 rounded-lg border border-[#30363d]">
             <span className="text-[10px] font-semibold text-gray-400 px-1.5 flex items-center gap-1">
               <Layout className="w-3 h-3 text-[#00AFA8]" />
-              <span className="hidden sm:inline">配置:</span>
+              <span className="hidden sm:inline">{t('review.diagram.layoutLabel')}</span>
             </span>
             {(['tala', 'elk', 'dagre'] as const).map((l) => {
-              const labels = { tala: 'TALA (標準)', elk: 'ELK (整列)', dagre: 'DAGRE (階層)' };
+              const labels = {
+                tala: t('review.diagram.layoutTala'),
+                elk: t('review.diagram.layoutElk'),
+                dagre: t('review.diagram.layoutDagre'),
+              };
               const active = currentLayout === l;
               return (
                 <button
@@ -607,7 +613,7 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
                       ? 'bg-[#00AFA8]/20 text-[#00AFA8] font-bold border border-[#00AFA8]/40 shadow-sm'
                       : 'text-gray-400 hover:text-gray-200 hover:bg-[#21262d] border border-transparent'
                   } ${isCompiling ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  title={`${labels[l]} レイアウトエンジンに切り替え`}
+                  title={labels[l]}
                 >
                   {l.toUpperCase()}
                 </button>
@@ -625,11 +631,11 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
                 ? 'bg-[#00AFA8]/20 text-[#00AFA8] border-[#00AFA8]/40'
                 : 'bg-[#21262d] text-gray-400 hover:text-gray-200 border-[#30363d]'
             }`}
-            title={layoutMode === 'split' ? '縦並び（図を全幅化）に切り替え' : '横並び（左右分割）に切り替え'}
+            title={layoutMode === 'split' ? t('review.diagram.viewStacked') : t('review.diagram.viewSplit')}
           >
             {layoutMode === 'split' ? <Rows className="w-3.5 h-3.5" /> : <Columns className="w-3.5 h-3.5" />}
             <span className="hidden sm:inline text-[11px]">
-              {layoutMode === 'split' ? '縦並び' : '横並び'}
+              {layoutMode === 'split' ? t('review.diagram.viewStacked') : t('review.diagram.viewSplit')}
             </span>
           </button>
 
@@ -641,11 +647,11 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
                 ? 'bg-[#21262d] text-gray-300 hover:text-white border-[#30363d]'
                 : 'bg-[#00AFA8]/20 text-[#00AFA8] border-[#00AFA8]/40'
             }`}
-            title={showCommentsPanel ? '指摘一覧を非表示にして図を最大幅にする' : '指摘一覧を表示'}
+            title={showCommentsPanel ? t('review.diagram.hideComments') : t('review.diagram.showComments')}
           >
             {showCommentsPanel ? <PanelRightClose className="w-3.5 h-3.5" /> : <PanelRightOpen className="w-3.5 h-3.5" />}
             <span className="hidden sm:inline text-[11px]">
-              {showCommentsPanel ? '指摘隠す' : '指摘表示'}
+              {showCommentsPanel ? t('review.diagram.hideComments') : t('review.diagram.showComments')}
             </span>
           </button>
 
@@ -660,10 +666,10 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
                   ? 'bg-[#00AFA8]/20 text-[#00AFA8] border-[#00AFA8]/40'
                   : 'bg-[#21262d] text-gray-400 hover:text-gray-200 border-[#30363d]'
               }`}
-              title="図の定義ソースコード表示切替"
+              title={t('review.diagram.toggleSourceTitle')}
             >
               <Code className="w-3.5 h-3.5" />
-              <span className="text-[11px]">定義</span>
+              <span className="text-[11px]">{t('review.diagram.toggleSource')}</span>
             </button>
           )}
 
@@ -671,21 +677,21 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
           <button
             onClick={handleZoomIn}
             className="p-1.5 bg-[#21262d] hover:bg-[#30363d] text-gray-300 rounded-lg border border-[#30363d]"
-            title="拡大"
+            title={t('review.diagram.zoomIn')}
           >
             <ZoomIn className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={handleZoomOut}
             className="p-1.5 bg-[#21262d] hover:bg-[#30363d] text-gray-300 rounded-lg border border-[#30363d]"
-            title="縮小"
+            title={t('review.diagram.zoomOut')}
           >
             <ZoomOut className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={handleReset}
             className="p-1.5 bg-[#21262d] hover:bg-[#30363d] text-gray-300 rounded-lg border border-[#30363d]"
-            title="位置・倍率をリセット"
+            title={t('review.diagram.resetView')}
           >
             <RotateCcw className="w-3.5 h-3.5" />
           </button>
@@ -700,10 +706,10 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
                 ? 'bg-[#00AFA8] text-black border-[#00AFA8] font-bold'
                 : 'bg-[#21262d] hover:bg-[#30363d] text-gray-300 border-[#30363d]'
             }`}
-            title={isFullscreen ? '全画面を解除 (Esc)' : '図を全画面（最大化）表示'}
+            title={isFullscreen ? t('review.diagram.exitFullscreen') : t('review.diagram.fullscreen')}
           >
             {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-            <span className="text-[11px]">{isFullscreen ? '縮小' : '全画面'}</span>
+            <span className="text-[11px]">{isFullscreen ? t('review.diagram.exitFullscreen') : t('review.diagram.fullscreen')}</span>
           </button>
         </div>
       </div>
@@ -741,7 +747,7 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
               <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center z-10">
                 <div className="px-4 py-2.5 rounded-xl bg-[#161b22] border border-[#00AFA8]/40 text-xs font-semibold text-[#00AFA8] flex items-center gap-2.5 shadow-xl animate-in fade-in">
                   <Loader2 className="w-4 h-4 animate-spin text-[#00AFA8]" />
-                  <span>レイアウト再計算中 ({currentLayout.toUpperCase()})...</span>
+                  <span>{t('review.diagram.recompilingLayout', { layout: currentLayout.toUpperCase() })}</span>
                 </div>
               </div>
             )}
@@ -757,14 +763,14 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
                 dangerouslySetInnerHTML={{ __html: cleanSvg }}
               />
             ) : (
-              <div className="text-gray-400 text-xs">SVG レンダリング情報がありません。</div>
+              <div className="text-gray-400 text-xs">{t('review.diagram.noSvg')}</div>
             )}
 
             {showWheelHint && (
               <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center pointer-events-none transition-opacity animate-in fade-in duration-100">
                 <div className="px-4 py-2 rounded-xl bg-[#161b22]/90 border border-[#30363d] text-xs font-semibold text-gray-200 flex items-center gap-2 shadow-lg">
                   <Command className="w-3.5 h-3.5 text-[#00AFA8]" />
-                  <span>⌘ / Ctrl + スクロールで図を拡大縮小</span>
+                  <span>{t('review.diagram.wheelHint')}</span>
                 </div>
               </div>
             )}
@@ -779,14 +785,14 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
             <div className="p-3 border-b border-[#30363d]/70 bg-[#161b22]/70 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-1.5">
                 <MessageSquareCode className="w-4 h-4 text-[#00AFA8]" />
-                <span className="text-xs font-bold text-gray-200">関連する指摘</span>
+                <span className="text-xs font-bold text-gray-200">{t('review.diagram.relatedFindings')}</span>
                 <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#00AFA8]/20 text-[#00AFA8]">
                   {diagramComments.length}
                 </span>
               </div>
               <span className="text-[10px] text-gray-400 flex items-center gap-1">
                 <Layers className="w-3 h-3 text-gray-400" />
-                クリックで固定
+                {t('review.diagram.clickToPin')}
               </span>
             </div>
 
@@ -812,7 +818,7 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
               <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center z-10">
                 <div className="px-4 py-2.5 rounded-xl bg-[#161b22] border border-[#00AFA8]/40 text-xs font-semibold text-[#00AFA8] flex items-center gap-2.5 shadow-xl animate-in fade-in">
                   <Loader2 className="w-4 h-4 animate-spin text-[#00AFA8]" />
-                  <span>レイアウト再計算中 ({currentLayout.toUpperCase()})...</span>
+                  <span>{t('review.diagram.recompilingLayout', { layout: currentLayout.toUpperCase() })}</span>
                 </div>
               </div>
             )}
@@ -828,14 +834,14 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
                 dangerouslySetInnerHTML={{ __html: cleanSvg }}
               />
             ) : (
-              <div className="text-gray-400 text-xs">SVG レンダリング情報がありません。</div>
+              <div className="text-gray-400 text-xs">{t('review.diagram.noSvg')}</div>
             )}
 
             {showWheelHint && (
               <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center pointer-events-none transition-opacity animate-in fade-in duration-100">
                 <div className="px-4 py-2 rounded-xl bg-[#161b22]/90 border border-[#30363d] text-xs font-semibold text-gray-200 flex items-center gap-2 shadow-lg">
                   <Command className="w-3.5 h-3.5 text-[#00AFA8]" />
-                  <span>⌘ / Ctrl + スクロールで図を拡大縮小</span>
+                  <span>{t('review.diagram.wheelHint')}</span>
                 </div>
               </div>
             )}
@@ -847,12 +853,12 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
               <div className="p-2.5 px-3.5 border-b border-[#30363d]/70 bg-[#161b22]/70 flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <MessageSquareCode className="w-4 h-4 text-[#00AFA8]" />
-                  <span className="text-xs font-bold text-gray-200">関連する指摘</span>
+                  <span className="text-xs font-bold text-gray-200">{t('review.diagram.relatedFindings')}</span>
                   <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#00AFA8]/20 text-[#00AFA8]">
                     {diagramComments.length}
                   </span>
                 </div>
-                <span className="text-[10px] text-gray-400">クリックでハイライト固定</span>
+                <span className="text-[10px] text-gray-400">{t('review.diagram.clickToPin')}</span>
               </div>
               <div className="p-2.5 max-h-[260px] overflow-y-auto grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5">
                 {renderCommentCards()}
@@ -865,25 +871,25 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
       {/* 凡例フッターストリップ */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl bg-[#0d1117] border border-[#30363d]/70 text-[11px] text-gray-300 shrink-0">
         <div className="flex flex-wrap items-center gap-3.5">
-          <span className="text-gray-400 font-semibold text-[10.5px] uppercase tracking-wider">凡例:</span>
+          <span className="text-gray-400 font-semibold text-[10.5px] uppercase tracking-wider">{t('review.diagram.legend')}</span>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded bg-[#3b1717] border border-[#f43f5e]" />
-            <span>変更・指摘対象 (Modified)</span>
+            <span>{t('review.diagram.legendModified')}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded bg-[#134e4a] border border-[#00AFA8]" />
-            <span>中核サービス (Service)</span>
+            <span>{t('review.diagram.legendService')}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-sm bg-[#292524] border border-[#f59e0b]" />
-            <span>永続層・DB (Repository)</span>
+            <span>{t('review.diagram.legendRepository')}</span>
           </div>
         </div>
         <div className="text-gray-400 text-[10.5px] flex items-center gap-3">
-          <span>ホバー: プレビュー</span>
-          <span>カードクリック: 固定化</span>
-          <span>→ ボタン: 指摘詳細へジャンプ</span>
-          {isFullscreen && <span className="text-[#00AFA8]">Esc: 全画面解除</span>}
+          <span>{t('review.diagram.legendHover')}</span>
+          <span>{t('review.diagram.legendCardClick')}</span>
+          <span>{t('review.diagram.legendJump')}</span>
+          {isFullscreen && <span className="text-[#00AFA8]">{t('review.diagram.legendEsc')}</span>}
         </div>
       </div>
     </figure>

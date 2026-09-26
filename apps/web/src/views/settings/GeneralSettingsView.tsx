@@ -23,13 +23,15 @@ export function GeneralSettingsView({
   onShowSuccess,
   onShowError,
 }: GeneralSettingsViewProps) {
-  const { preference, setPreference, t } = useI18n();
+  const { preference, t } = useI18n();
   const [formSettings, setFormSettings] = useState<AppSettings>(settings);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setFormSettings(settings);
   }, [settings]);
+
+  const selectedLang = formSettings.displayLanguage ?? preference;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,9 +69,9 @@ export function GeneralSettingsView({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
             <button
               type="button"
-              onClick={() => setPreference('auto')}
+              onClick={() => setFormSettings((prev) => ({ ...prev, displayLanguage: 'auto' }))}
               className={`p-3 rounded-lg border text-left transition-all ${
-                preference === 'auto'
+                selectedLang === 'auto'
                   ? 'border-sky-500 bg-sky-950/30 text-white ring-1 ring-sky-500/50'
                   : 'border-[#30363d] bg-[#0d1117] text-[#8b949e] hover:border-[#484f58] hover:text-[#c9d1d9]'
               }`}
@@ -80,9 +82,9 @@ export function GeneralSettingsView({
 
             <button
               type="button"
-              onClick={() => setPreference('en')}
+              onClick={() => setFormSettings((prev) => ({ ...prev, displayLanguage: 'en' }))}
               className={`p-3 rounded-lg border text-left transition-all ${
-                preference === 'en'
+                selectedLang === 'en'
                   ? 'border-sky-500 bg-sky-950/30 text-white ring-1 ring-sky-500/50'
                   : 'border-[#30363d] bg-[#0d1117] text-[#8b949e] hover:border-[#484f58] hover:text-[#c9d1d9]'
               }`}
@@ -93,15 +95,15 @@ export function GeneralSettingsView({
 
             <button
               type="button"
-              onClick={() => setPreference('ja')}
+              onClick={() => setFormSettings((prev) => ({ ...prev, displayLanguage: 'ja' }))}
               className={`p-3 rounded-lg border text-left transition-all ${
-                preference === 'ja'
+                selectedLang === 'ja'
                   ? 'border-sky-500 bg-sky-950/30 text-white ring-1 ring-sky-500/50'
                   : 'border-[#30363d] bg-[#0d1117] text-[#8b949e] hover:border-[#484f58] hover:text-[#c9d1d9]'
               }`}
             >
               <div className="text-xs font-semibold">{t('settings.languageJa')}</div>
-              <div className="text-[10px] text-[#8b949e] mt-1">日本語 UI</div>
+              <div className="text-[10px] text-[#8b949e] mt-1">{t('settings.languageJaSub')}</div>
             </button>
           </div>
         </div>
@@ -120,7 +122,7 @@ export function GeneralSettingsView({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
             <div className="bg-[#0d1117] border border-[#30363d] rounded-lg p-3">
               <label className="text-xs font-medium text-white block mb-1">
-                システム全体 最大並列
+                {t('settings.globalConcurrency')}
               </label>
               <input
                 type="number"
@@ -135,12 +137,12 @@ export function GeneralSettingsView({
                 }
                 className="w-full bg-[#161b22] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
               />
-              <span className="text-[10px] text-[#8b949e] mt-1 block">全バックエンド合算</span>
+              <span className="text-[10px] text-[#8b949e] mt-1 block">{t('settings.globalConcurrencyDesc')}</span>
             </div>
 
             <div className="bg-[#0d1117] border border-[#30363d] rounded-lg p-3">
               <label className="text-xs font-medium text-white block mb-1">
-                Antigravity 最大並列
+                {t('settings.antigravityConcurrency')}
               </label>
               <input
                 type="number"
@@ -158,12 +160,12 @@ export function GeneralSettingsView({
                 }
                 className="w-full bg-[#161b22] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
               />
-              <span className="text-[10px] text-[#8b949e] mt-1 block">agy CLI プロセス数</span>
+              <span className="text-[10px] text-[#8b949e] mt-1 block">{t('settings.antigravityConcurrencyDesc')}</span>
             </div>
 
             <div className="bg-[#0d1117] border border-[#30363d] rounded-lg p-3">
               <label className="text-xs font-medium text-white block mb-1">
-                Claude Code 最大並列
+                {t('settings.claudeConcurrency')}
               </label>
               <input
                 type="number"
@@ -181,20 +183,20 @@ export function GeneralSettingsView({
                 }
                 className="w-full bg-[#161b22] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
               />
-              <span className="text-[10px] text-[#8b949e] mt-1 block">claude -p プロセス数</span>
+              <span className="text-[10px] text-[#8b949e] mt-1 block">{t('settings.claudeConcurrencyDesc')}</span>
             </div>
 
             <div className="bg-[#0d1117] border border-[#30363d] rounded-lg p-3">
-              <label className="text-xs font-medium text-white block mb-1">Codex 最大並列</label>
+              <label className="text-xs font-medium text-white block mb-1">{t('settings.codexConcurrency')}</label>
               <input type="number" min={1} max={10} value={formSettings.backendMaxConcurrency?.codex ?? 1}
                 onChange={(e) => setFormSettings({ ...formSettings, backendMaxConcurrency: { ...formSettings.backendMaxConcurrency, codex: parseInt(e.target.value, 10) || 1 } })}
                 className="w-full bg-[#161b22] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500" />
-              <span className="text-[10px] text-[#8b949e] mt-1 block">codex exec プロセス数</span>
+              <span className="text-[10px] text-[#8b949e] mt-1 block">{t('settings.codexConcurrencyDesc')}</span>
             </div>
 
             <div className="bg-[#0d1117] border border-[#30363d] rounded-lg p-3">
               <label className="text-xs font-medium text-white block mb-1">
-                Mock 最大並列
+                {t('settings.mockConcurrency')}
               </label>
               <input
                 type="number"
@@ -212,7 +214,7 @@ export function GeneralSettingsView({
                 }
                 className="w-full bg-[#161b22] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
               />
-              <span className="text-[10px] text-[#8b949e] mt-1 block">テスト用ジョブ数</span>
+              <span className="text-[10px] text-[#8b949e] mt-1 block">{t('settings.mockConcurrencyDesc')}</span>
             </div>
           </div>
         </div>

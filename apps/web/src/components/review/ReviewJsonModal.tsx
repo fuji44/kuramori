@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { X, Copy, Check, Download, ExternalLink, FileCode } from 'lucide-react';
 import type { ReviewReportData } from '@kuramori/core';
+import { useI18n } from '../../i18n/context.tsx';
 
 interface ReviewJsonModalProps {
   isOpen: boolean;
@@ -50,6 +51,7 @@ export const ReviewJsonModal: React.FC<ReviewJsonModalProps> = ({
   data,
   reportId,
 }) => {
+  const { t } = useI18n();
   const [copied, setCopied] = useState<boolean>(false);
 
   const jsonString = useMemo(() => {
@@ -116,7 +118,7 @@ export const ReviewJsonModal: React.FC<ReviewJsonModalProps> = ({
             </div>
             <div>
               <h3 className="text-sm font-bold text-gray-100 flex items-center gap-2">
-                <span>レビュー結果 JSON</span>
+                <span>{t('review.jsonModal.title')}</span>
                 {data.pr?.number && (
                   <span className="font-mono text-xs text-[#00AFA8]">#{data.pr.number}</span>
                 )}
@@ -124,9 +126,9 @@ export const ReviewJsonModal: React.FC<ReviewJsonModalProps> = ({
               <div className="flex items-center gap-2 text-[11px] text-gray-400 font-mono mt-0.5">
                 <span>{sizeKb} KB</span>
                 <span>·</span>
-                <span>{highlightedLines.length} 行</span>
+                <span>{t('review.jsonModal.linesCount', { count: highlightedLines.length })}</span>
                 <span>·</span>
-                <span>{data.comments?.length ?? 0} 指摘</span>
+                <span>{t('review.jsonModal.findingsCount', { count: data.comments?.length ?? 0 })}</span>
               </div>
             </div>
           </div>
@@ -141,10 +143,10 @@ export const ReviewJsonModal: React.FC<ReviewJsonModalProps> = ({
                   ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
                   : 'bg-[#21262d] hover:bg-[#30363d] text-gray-200 border-[#30363d]'
               }`}
-              title="JSONをクリップボードにコピー"
+              title={t('review.jsonModal.copy')}
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copied ? 'コピー完了' : 'コピー'}</span>
+              <span>{copied ? t('review.jsonModal.copied') : t('review.jsonModal.copy')}</span>
             </button>
 
             {/* ダウンロードボタン */}
@@ -152,10 +154,10 @@ export const ReviewJsonModal: React.FC<ReviewJsonModalProps> = ({
               type="button"
               onClick={handleDownload}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#21262d] hover:bg-[#30363d] text-gray-200 border border-[#30363d] transition-colors"
-              title="JSONファイルをダウンロード"
+              title={t('review.jsonModal.download')}
             >
               <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">保存</span>
+              <span className="hidden sm:inline">{t('review.jsonModal.download')}</span>
             </button>
 
             {/* Raw JSON リンク */}
@@ -164,10 +166,10 @@ export const ReviewJsonModal: React.FC<ReviewJsonModalProps> = ({
               target="_blank"
               rel="noreferrer"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#21262d] hover:bg-[#30363d] text-gray-200 border border-[#30363d] transition-colors"
-              title="APIエンドポイントでRaw JSONを開く"
+              title="Raw JSON"
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Raw</span>
+              <span className="hidden sm:inline">{t('review.jsonModal.raw')}</span>
             </a>
 
             <div className="w-px h-5 bg-[#30363d] mx-1" />
@@ -177,7 +179,7 @@ export const ReviewJsonModal: React.FC<ReviewJsonModalProps> = ({
               type="button"
               onClick={onClose}
               className="p-1.5 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-[#21262d] transition-colors"
-              title="閉じる"
+              title={t('review.jsonModal.close')}
             >
               <X className="w-4 h-4" />
             </button>
@@ -186,7 +188,7 @@ export const ReviewJsonModal: React.FC<ReviewJsonModalProps> = ({
 
         {/* シンタックスハイライト凡例ストリップ */}
         <div className="px-6 py-2 bg-[#12161c] border-b border-[#30363d]/60 flex items-center gap-4 text-[10.5px] font-mono shrink-0 select-none overflow-x-auto">
-          <span className="text-gray-400 uppercase tracking-wider font-semibold">凡例:</span>
+          <span className="text-gray-400 uppercase tracking-wider font-semibold">{t('review.jsonModal.legend')}</span>
           <span className="flex items-center gap-1 text-[#7ee787]">
             <span className="w-2 h-2 rounded-full bg-[#7ee787]/80" /> key
           </span>
@@ -234,7 +236,7 @@ export const ReviewJsonModal: React.FC<ReviewJsonModalProps> = ({
             onClick={onClose}
             className="px-4 py-1.5 rounded-lg text-xs font-semibold text-gray-300 hover:text-white bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] transition-colors"
           >
-            閉じる
+            {t('review.jsonModal.close')}
           </button>
         </div>
       </div>

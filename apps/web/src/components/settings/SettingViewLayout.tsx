@@ -1,5 +1,6 @@
 import React, { ReactNode } from 'react';
 import { ArrowLeft, Plus, Save } from 'lucide-react';
+import { useI18n } from '../../i18n/context.tsx';
 
 export interface SettingViewHeaderProps {
   icon: ReactNode;
@@ -140,13 +141,16 @@ export interface SettingFormFooterProps {
  */
 export function SettingFormFooter({
   onCancel,
-  cancelLabel = 'キャンセル',
+  cancelLabel,
   submitLabel,
   saving = false,
   disabled = false,
   leftContent,
   extraActions,
 }: SettingFormFooterProps) {
+  const { t } = useI18n();
+  const resolvedCancelLabel = cancelLabel ?? t('common.cancel');
+
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-[#30363d]">
       <div>{leftContent}</div>
@@ -157,7 +161,7 @@ export function SettingFormFooter({
           onClick={onCancel}
           className="px-4 py-2 rounded-lg text-xs font-medium text-[#8b949e] hover:text-white bg-[#21262d] hover:bg-[#30363d] transition-colors cursor-pointer"
         >
-          {cancelLabel}
+          {resolvedCancelLabel}
         </button>
         <button
           type="submit"
@@ -165,7 +169,7 @@ export function SettingFormFooter({
           className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium text-white bg-sky-600 hover:bg-sky-500 transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
         >
           <Save className="w-3.5 h-3.5" />
-          <span>{saving ? '保存中...' : submitLabel}</span>
+          <span>{saving ? t('common.saving') : submitLabel}</span>
         </button>
       </div>
     </div>

@@ -24,6 +24,7 @@ import type {
   LensVerdict,
   ReviewPrMeta,
 } from '@kuramori/core';
+import { useI18n } from '../../i18n/context.tsx';
 
 export type DecisionType = 'post' | 'hold' | 'ignore';
 
@@ -47,6 +48,10 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
   activeCommentId,
   onSelectComment,
 }) => {
+  const { t, locale } = useI18n();
+  const isJa = locale === 'ja';
+  const openBracket = isJa ? '【' : '[';
+  const closeBracket = isJa ? '】' : ']';
   const [selectedSeverity, setSelectedSeverity] = useState<Severity | 'ALL'>('ALL');
   const [selectedCategory, setSelectedCategory] = useState<FindingCategory | 'ALL'>('ALL');
   const [selectedDecision, setSelectedDecision] = useState<DecisionType | 'ALL' | 'UNSET'>('ALL');
@@ -106,7 +111,7 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
   };
 
   const handleClearDecisions = () => {
-    if (confirm('すべての指摘の判断とメモをクリアしますか？')) {
+    if (confirm(t('review.commentsList.confirmClear'))) {
       setDecisions({});
     }
   };
@@ -120,50 +125,50 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
   // クリップボードへ構造化テキストを書き出す
   const handleCopyExportText = async () => {
     const lines: string[] = [
-      `# PR レビュー精査結果 — レポート ID: ${reportId}`,
-      `日時: ${new Date().toISOString()}`,
-      `内訳: 投稿する: ${postCount}件 / 保留: ${holdCount}件 / 投稿しない: ${ignoreCount}件 / 未選択: ${unsetCount}件`,
+      `# PR Review Decisions — Report ID: ${reportId}`,
+      `Date: ${new Date().toISOString()}`,
+      `Summary: Post: ${postCount} / Hold: ${holdCount} / Skip: ${ignoreCount} / Undecided: ${unsetCount}`,
       '',
     ];
 
     // 1. 投稿する
-    lines.push('## 【投稿する指摘】 (この内容で GitHub レビューに投稿してください)');
+    lines.push('## 【Post】 (To be posted on GitHub review)');
     const postComments = comments.filter((c) => decisions[c.id]?.status === 'post');
     if (postComments.length === 0) {
-      lines.push('（なし）');
+      lines.push('(None)');
     } else {
       for (const c of postComments) {
         const d = decisions[c.id];
         lines.push(`### [${c.id}] ${c.title} (${c.severity} / ${c.tag || 'MUST'} / ${c.category})`);
-        lines.push(`- 場所: \`${c.path}:${c.line}\``);
-        if (c.problem) lines.push(`- 問題: ${c.problem}`);
-        if (c.proposal) lines.push(`- 改善案: ${c.proposal}`);
-        if (c.relationToExisting) lines.push(`- 既存レビューとの関係: ${c.relationToExisting}`);
-        if (d?.note) lines.push(`- 追記事項・レビュアーメモ: **${d.note}**`);
+        lines.push(`- Location: \`${c.path}:${c.line}\``);
+        if (c.problem) lines.push(`- Problem: ${c.problem}`);
+        if (c.proposal) lines.push(`- Proposal: ${c.proposal}`);
+        if (c.relationToExisting) lines.push(`- Relation: ${c.relationToExisting}`);
+        if (d?.note) lines.push(`- Reviewer Note: **${d.note}**`);
         lines.push('');
       }
     }
 
     // 2. 保留
-    lines.push('## 【保留・要相談の指摘】 (チーム内で議論が必要です)');
+    lines.push('## 【Hold】 (Pending team discussion)');
     const holdComments = comments.filter((c) => decisions[c.id]?.status === 'hold');
     if (holdComments.length === 0) {
-      lines.push('（なし）');
+      lines.push('(None)');
     } else {
       for (const c of holdComments) {
         const d = decisions[c.id];
         lines.push(`### [${c.id}] ${c.title} (${c.severity} / ${c.tag || 'MUST'})`);
-        lines.push(`- 場所: \`${c.path}:${c.line}\``);
-        if (d?.note) lines.push(`- 保留理由・論点: **${d.note}**`);
+        lines.push(`- Location: \`${c.path}:${c.line}\``);
+        if (d?.note) lines.push(`- Discussion Point: **${d.note}**`);
         lines.push('');
       }
     }
 
     // 3. 投稿しない
-    lines.push('## 【投稿しない指摘】 (今回は見送り)');
+    lines.push('## 【Skip】 (Do not post)');
     const ignoreComments = comments.filter((c) => decisions[c.id]?.status === 'ignore');
     if (ignoreComments.length === 0) {
-      lines.push('（なし）');
+      lines.push('(None)');
     } else {
       for (const c of ignoreComments) {
         const d = decisions[c.id];
@@ -177,7 +182,7 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
       setCopied(true);
       setTimeout(() => setCopied(false), 3000);
     } catch {
-      prompt('クリップボードにコピーできませんでした。以下のテキストを手動でコピーしてください:', fullText);
+      prompt(t('review.commentsList.copyFailedPrompt'), fullText);
     }
   };
 
@@ -187,11 +192,11 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
       case 'MUST':
         return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">MUST</span>;
       case 'Q':
-        return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">Q (質問)</span>;
+        return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">Q</span>;
       case 'IMO':
-        return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">IMO (私見)</span>;
+        return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">IMO</span>;
       case 'NIT':
-        return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-500/20 text-gray-300 border border-gray-500/30">NIT (些細)</span>;
+        return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-500/20 text-gray-300 border border-gray-500/30">NIT</span>;
       default:
         return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">{t}</span>;
     }
@@ -294,7 +299,7 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
             )}
             {isOutdated && (
               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-600/30">
-                outdated (後続変更の可能性)
+                {t('review.commentsList.outdatedBadge')}
               </span>
             )}
           </div>
@@ -311,10 +316,10 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
                   ? 'bg-emerald-600 text-white shadow-sm'
                   : 'text-gray-400 hover:text-emerald-300 hover:bg-emerald-950/30'
               }`}
-              title="この指摘を GitHub レビューに投稿する"
+              title={t('review.commentsList.postBtnTitle')}
             >
               <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-              <span className="leading-none">投稿する</span>
+              <span className="leading-none">{t('review.commentsList.postBtn')}</span>
             </button>
 
             <button
@@ -327,10 +332,10 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
                   ? 'bg-amber-600 text-white shadow-sm'
                   : 'text-gray-400 hover:text-amber-300 hover:bg-amber-950/30'
               }`}
-              title="保留・後で相談する"
+              title={t('review.commentsList.holdBtnTitle')}
             >
               <Clock className="w-3.5 h-3.5 shrink-0" />
-              <span className="leading-none">保留</span>
+              <span className="leading-none">{t('review.commentsList.holdBtn')}</span>
             </button>
 
             <button
@@ -343,10 +348,10 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
                   ? 'bg-gray-600 text-white shadow-sm'
                   : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
               }`}
-              title="投稿しない（後景化）"
+              title={t('review.commentsList.skipBtnTitle')}
             >
               <Ban className="w-3.5 h-3.5 shrink-0" />
-              <span className="leading-none">投稿しない</span>
+              <span className="leading-none">{t('review.commentsList.skipBtn')}</span>
             </button>
           </div>
         </div>
@@ -364,10 +369,10 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
                 rel="noreferrer"
                 onClick={(e) => e.stopPropagation()}
                 className="text-[11px] text-gray-400 hover:text-indigo-300 flex items-center gap-1 ml-1"
-                title="GitHubのコミット固定行リンクを開く"
+                title={t('review.commentsList.openInGithubTitle')}
               >
                 <GitCommit className="w-3 h-3" />
-                <span>GitHubで開く</span>
+                <span>{t('review.commentsList.openInGithub')}</span>
                 <ExternalLink className="w-2.5 h-2.5" />
               </a>
             )}
@@ -378,33 +383,33 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
         <div className="space-y-2 text-xs bg-[#0d1117] p-3 rounded-lg border border-[#30363d]/60">
           {comment.problem ? (
             <div>
-              <span className="font-semibold text-rose-400">【問題】: </span>
+              <span className="font-semibold text-rose-400">{openBracket}{t('review.commentsList.problemLabel')}{closeBracket}: </span>
               <span className="text-gray-300 leading-relaxed whitespace-pre-wrap">{comment.problem}</span>
             </div>
           ) : (
             <div>
-              <span className="font-semibold text-rose-400">【指摘詳細】: </span>
+              <span className="font-semibold text-rose-400">{openBracket}{t('review.commentsList.detailLabel')}{closeBracket}: </span>
               <span className="text-gray-300 leading-relaxed whitespace-pre-wrap">{comment.body}</span>
             </div>
           )}
 
           {comment.proposal && (
             <div>
-              <span className="font-semibold text-emerald-400">【改善案】: </span>
+              <span className="font-semibold text-emerald-400">{openBracket}{t('review.commentsList.proposalLabel')}{closeBracket}: </span>
               <span className="text-gray-300 leading-relaxed whitespace-pre-wrap">{comment.proposal}</span>
             </div>
           )}
 
           {comment.relationToExisting && (
             <div>
-              <span className="font-semibold text-cyan-400">【既存レビューとの関係】: </span>
+              <span className="font-semibold text-cyan-400">{openBracket}{t('review.commentsList.relationLabel')}{closeBracket}: </span>
               <span className="text-gray-300 leading-relaxed">{comment.relationToExisting}</span>
             </div>
           )}
 
           {comment.lens?.reason && (
             <div className="text-[11px] text-purple-300/80 pt-1 border-t border-[#30363d]/40">
-              <span className="font-semibold">【判定理由】: </span>
+              <span className="font-semibold">{openBracket}{t('review.commentsList.reasonLabel')}{closeBracket}: </span>
               {comment.lens.reason}
             </div>
           )}
@@ -413,7 +418,7 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
         {/* outdated 時の diffHunk 提示 */}
         {isOutdated && comment.location?.origin?.diffHunk && (
           <div className="bg-amber-950/20 border border-amber-500/30 rounded-lg p-2.5 space-y-1 font-mono text-xs">
-            <div className="text-[10px] text-amber-400">作成時点の diff hunk:</div>
+            <div className="text-[10px] text-amber-400">{t('review.commentsList.outdatedDiffHunk')}</div>
             <pre className="text-gray-300 overflow-x-auto whitespace-pre p-1">
               {comment.location.origin.diffHunk}
             </pre>
@@ -425,7 +430,7 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
           <div className="bg-[#0d1117] border border-[#30363d] rounded-lg p-2.5 space-y-1.5 font-mono text-xs">
             {comment.suggestion.snippet && (
               <div>
-                <div className="text-[10px] text-gray-500 uppercase">既存コード:</div>
+                <div className="text-[10px] text-gray-500 uppercase">{t('review.commentsList.existingCode')}</div>
                 <pre className="text-rose-400 bg-rose-950/20 p-1.5 rounded overflow-x-auto">
                   - {comment.suggestion.snippet}
                 </pre>
@@ -433,7 +438,7 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
             )}
             {comment.suggestion.replacement && (
               <div>
-                <div className="text-[10px] text-gray-500 uppercase">推奨修正:</div>
+                <div className="text-[10px] text-gray-500 uppercase">{t('review.commentsList.recommendedFix')}</div>
                 <pre className="text-emerald-400 bg-emerald-950/20 p-1.5 rounded overflow-x-auto">
                   + {comment.suggestion.replacement}
                 </pre>
@@ -450,7 +455,7 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
             value={decision.note || ''}
             onChange={(e) => handleSetNote(comment.id, e.target.value)}
             onClick={(e) => e.stopPropagation()}
-            placeholder="判断理由や追記メモを入力（クリップボード書き出しに反映されます）..."
+            placeholder={t('review.commentsList.notePlaceholder')}
             className="w-full bg-[#0d1117] text-xs text-gray-200 border border-[#30363d] rounded px-2.5 py-1.5 outline-none focus:border-indigo-500"
           />
         </div>
@@ -464,19 +469,19 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
       <div className="sticky top-0 z-10 bg-[#161b22] p-3 rounded-xl border border-[#30363d] shadow-lg space-y-2.5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-gray-200">精査ボード:</span>
+            <span className="text-xs font-semibold text-gray-200">{t('review.commentsList.reviewBoard')}</span>
             <div className="flex items-center gap-1 text-xs">
               <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-medium">
-                投稿: {postCount}
+                {t('review.commentsList.postCount', { count: postCount })}
               </span>
               <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-medium">
-                保留: {holdCount}
+                {t('review.commentsList.holdCount', { count: holdCount })}
               </span>
               <span className="px-2 py-0.5 rounded-full bg-gray-500/20 text-gray-300 border border-gray-500/30 font-medium">
-                不投稿: {ignoreCount}
+                {t('review.commentsList.ignoreCount', { count: ignoreCount })}
               </span>
               <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-medium">
-                未選択: {unsetCount}
+                {t('review.commentsList.unsetCount', { count: unsetCount })}
               </span>
             </div>
           </div>
@@ -486,20 +491,20 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
               onClick={() => handleBulkMark('post')}
               className="px-2 py-1 bg-[#21262d] hover:bg-[#30363d] text-gray-300 rounded text-xs transition-colors"
             >
-              全件投稿マーク
+              {t('review.commentsList.markAllPost')}
             </button>
             <button
               onClick={() => handleBulkMark('post', 'MUST')}
               className="px-2 py-1 bg-[#21262d] hover:bg-[#30363d] text-rose-300 rounded text-xs transition-colors"
-              title="MUSTの指摘をまとめて投稿マーク"
+              title={t('review.commentsList.markMustPostTitle')}
             >
-              MUST投稿
+              {t('review.commentsList.markMustPost')}
             </button>
             <button
               onClick={handleClearDecisions}
               className="px-2 py-1 bg-[#21262d] hover:bg-[#30363d] text-gray-400 hover:text-rose-300 rounded text-xs transition-colors"
             >
-              クリア
+              {t('review.commentsList.clearDecisions')}
             </button>
             <button
               onClick={handleCopyExportText}
@@ -510,7 +515,7 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
               }`}
             >
               {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copied ? 'コピー完了！' : '引き継ぎテキストをコピー'}</span>
+              <span>{copied ? t('review.commentsList.copiedHandoff') : t('review.commentsList.copyHandoff')}</span>
             </button>
           </div>
         </div>
@@ -519,7 +524,7 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#30363d]/60 text-xs">
           <div className="flex items-center gap-2">
             <Filter className="w-3.5 h-3.5 text-gray-400" />
-            <span className="text-gray-400">重要度:</span>
+            <span className="text-gray-400">{t('review.commentsList.severityFilter')}</span>
             {(['ALL', 'P1', 'P2', 'P3'] as const).map((s) => (
               <button
                 key={s}
@@ -536,7 +541,7 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-gray-400">判断状態:</span>
+            <span className="text-gray-400">{t('review.commentsList.statusFilter')}</span>
             {(['ALL', 'post', 'hold', 'ignore', 'UNSET'] as const).map((d) => (
               <button
                 key={d}
@@ -547,7 +552,7 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
                     : 'bg-[#0d1117] text-gray-400 hover:text-gray-200'
                 }`}
               >
-                {d === 'ALL' ? 'すべて' : d === 'UNSET' ? '未選択' : d}
+                {d === 'ALL' ? t('review.commentsList.allStatus') : d === 'UNSET' ? t('review.commentsList.unsetStatus') : d}
               </button>
             ))}
           </div>
@@ -557,7 +562,7 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
       {/* 指摘一覧 (Lens による構造的展開) */}
       {filteredComments.length === 0 ? (
         <div className="p-8 text-center bg-[#161b22] border border-[#30363d] rounded-xl text-gray-400 text-sm">
-          条件に一致する指摘コメントはありません。
+          {t('review.commentsList.noMatchingComments')}
         </div>
       ) : (
         <div className="space-y-4">
@@ -566,7 +571,7 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-rose-400 text-xs font-bold uppercase tracking-wider">
                 <AlertCircle className="w-4 h-4" />
-                <span>Escalate: 最優先確認 ({groupedComments.escalate.length})</span>
+                <span>{t('review.commentsList.escalateGroup', { count: groupedComments.escalate.length })}</span>
               </div>
               {groupedComments.escalate.map(renderCommentCard)}
             </div>
@@ -577,7 +582,7 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-amber-400 text-xs font-bold uppercase tracking-wider">
                 <Sparkles className="w-4 h-4" />
-                <span>Promote: 推奨論点 ({groupedComments.promote.length})</span>
+                <span>{t('review.commentsList.promoteGroup', { count: groupedComments.promote.length })}</span>
               </div>
               {groupedComments.promote.map(renderCommentCard)}
             </div>
@@ -601,9 +606,9 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
               >
                 <span className="flex items-center gap-2 font-medium">
                   {collapsedLens.drop ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  見送り・採用見送り候補 (Drop: {groupedComments.drop.length}件)
+                  {t('review.commentsList.dropGroup', { count: groupedComments.drop.length })}
                 </span>
-                <span className="text-[11px] opacity-70">※ 疑いを残さないため消さずに保持</span>
+                <span className="text-[11px] opacity-70">{t('review.commentsList.dropNote')}</span>
               </button>
 
               {!collapsedLens.drop && (
