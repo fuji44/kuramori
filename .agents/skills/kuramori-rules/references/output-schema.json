@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "ReviewRuleProfilerOutput",
-  "description": "Output schema for review-rule-profiler skill, defining rules and triggers for review-base",
+  "description": "Output schema for kuramori-rules skill, defining rules and triggers for kuramori",
   "type": "object",
   "required": ["repository", "rules", "triggers"],
   "additionalProperties": false,
@@ -13,7 +13,7 @@
     },
     "rules": {
       "type": "array",
-      "description": "List of path-specific review rules to be registered in review-base",
+      "description": "List of path-specific review rules to be registered in kuramori",
       "minItems": 1,
       "items": {
         "$ref": "#/definitions/ReviewRuleDefinition"
