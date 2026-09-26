@@ -10,7 +10,8 @@ import type { GitHubPoller } from './poller.ts';
 import type { ReviewQueue } from './queue.ts';
 import type { SettingsService } from './settings.ts';
 import { compileD2ToSvg, generateStandaloneReviewHtml, resolveEngineEnvironment } from '@review-base/runner';
-import { openapiSpec, renderSwaggerUiHtml } from './openapi.ts';
+import { openapiSpec } from './openapi.ts';
+import { Scalar } from '@scalar/hono-api-reference';
 
 export interface ApiDependencies {
   db: AppDatabase;
@@ -76,13 +77,17 @@ export function createApi(deps: ApiDependencies) {
 
   app.use('*', cors());
 
-  // OpenAPI Specification and Interactive Documentation
+  // OpenAPI Specification and Interactive Documentation (Scalar API Reference)
   app.get('/api/openapi.json', (c) => c.json(openapiSpec));
-  app.get('/api/doc', (c) => c.html(renderSwaggerUiHtml('/api/openapi.json')));
-  app.get('/api/ui', (c) => c.html(renderSwaggerUiHtml('/api/openapi.json')));
+  app.get(
+    '/api/doc',
+    Scalar({
+      url: '/api/openapi.json',
+      pageTitle: 'review-base API Reference',
+    }),
+  );
   app.get('/openapi.json', (c) => c.redirect('/api/openapi.json'));
   app.get('/doc', (c) => c.redirect('/api/doc'));
-  app.get('/ui', (c) => c.redirect('/api/doc'));
 
   // List all review requests with their latest review status and report info
   app.get('/api/pulls', async (c) => {

@@ -206,5 +206,5 @@ Post each rule and trigger using the contracts retrieved from OpenAPI:
 
 ### 4. Verification & Fallback
 - Verify the HTTP status code (200 / 201). If review-base returns success, report the newly registered rules and triggers with their IDs.
-- Inform the user that registered rules and live OpenAPI docs can be inspected in the browser at `${REVIEW_BASE_URL:-http://localhost:3456}/api/doc` (Swagger UI).
+- Inform the user that registered rules and live OpenAPI docs can be inspected in the browser at `${REVIEW_BASE_URL:-http://localhost:3456}/api/doc` (Scalar API Reference).
 - If the review-base server is currently offline or unreachable, output the validated JSON along with the exact `curl` commands so the user can register them once the server is up.
