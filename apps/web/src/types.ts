@@ -163,6 +163,7 @@ export interface ReviewRule {
   description: string;
   category: string;
   engine: string;
+  engineProfileId?: string;
   instructions: string;
   engineOverride?: EngineOverrideConfig;
   trigger?: RuleTrigger;
@@ -170,6 +171,35 @@ export interface ReviewRule {
   enabled: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export function resolveRuleEngineProfile(
+  ruleEngine?: string | null,
+  profiles?: EngineProfile[],
+  defaultProfileId?: string,
+): EngineProfile | undefined {
+  if (!profiles || profiles.length === 0) {
+    return undefined;
+  }
+  const defaultProfile = profiles.find((p) => p.id === defaultProfileId)
+    ?? profiles.find((p) => p.isDefault)
+    ?? profiles[0];
+
+  if (!ruleEngine || ruleEngine === 'default') {
+    return defaultProfile;
+  }
+
+  const exact = profiles.find((p) => p.id === ruleEngine);
+  if (exact) {
+    return exact;
+  }
+
+  const byType = profiles.find((p) => p.engineType === ruleEngine);
+  if (byType) {
+    return byType;
+  }
+
+  return defaultProfile;
 }
 
 export interface AppSettings {

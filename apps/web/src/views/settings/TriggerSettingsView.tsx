@@ -17,7 +17,7 @@ import {
   Power,
   Copy,
 } from 'lucide-react';
-import { AppSettings, ReviewTrigger, ReviewRule } from '../../types.ts';
+import { AppSettings, ReviewTrigger, ReviewRule, resolveRuleEngineProfile } from '../../types.ts';
 import { Checkbox } from '../../components/Checkbox.tsx';
 import {
   SettingCard,
@@ -351,9 +351,22 @@ export function TriggerSettingsView({
                         <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#161b22] text-sky-400 border border-sky-800/40">
                           {rule.category}
                         </span>
-                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#21262d] text-[#8b949e] font-mono">
-                          実行プロファイル: {settings.engineProfiles?.find((profile) => profile.id === rule.engine)?.name ?? 'システム既定'}
-                        </span>
+                        {(() => {
+                          const matched = resolveRuleEngineProfile(
+                            rule.engineProfileId ?? rule.engine,
+                            settings.engineProfiles,
+                            settings.defaultEngineProfileId,
+                          );
+                          const isSystemDefault = !rule.engine || rule.engine === 'default';
+                          const profileName = isSystemDefault
+                            ? `システム既定（${matched?.name ?? '未設定'}）`
+                            : (matched?.name ?? rule.engine);
+                          return (
+                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#21262d] text-[#8b949e] font-mono">
+                              実行プロファイル: {profileName}
+                            </span>
+                          );
+                        })()}
                         {!rule.enabled && (
                           <span className="text-[10px] px-1.5 py-0.2 rounded bg-neutral-800 text-neutral-400">
                             無効化中

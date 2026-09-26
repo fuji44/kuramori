@@ -15,7 +15,7 @@ import {
   Power,
   Copy,
 } from 'lucide-react';
-import { ReviewRule, AppSettings } from '../../types.ts';
+import { ReviewRule, AppSettings, resolveRuleEngineProfile } from '../../types.ts';
 import { Checkbox } from '../../components/Checkbox.tsx';
 import {
   SettingCard,
@@ -96,12 +96,21 @@ export function RuleSettingsView({
   };
 
   const handleOpenEditRule = (rule: ReviewRule) => {
+    const matched = resolveRuleEngineProfile(
+      rule.engineProfileId ?? rule.engine,
+      settings?.engineProfiles,
+      settings?.defaultEngineProfileId,
+    );
+    const engineValue = !rule.engine || rule.engine === 'default'
+      ? 'default'
+      : (matched?.id ?? rule.engine);
+
     setRuleForm({
       id: rule.id,
       name: rule.name,
       description: rule.description,
       category: rule.category,
-      engine: settings?.engineProfiles?.some((profile) => profile.id === rule.engine) ? rule.engine : 'default',
+      engine: engineValue,
       instructions: rule.instructions,
       cancelInProgress: rule.concurrency?.cancelInProgress ?? true,
       enabled: rule.enabled,
@@ -358,10 +367,16 @@ export function RuleSettingsView({
                     <SettingBadge variant="primary">{rule.category}</SettingBadge>
 
                     {(() => {
-                      const matchedProfile = settings?.engineProfiles?.find((p) => p.id === rule.engine)
-                        ?? settings?.engineProfiles?.find((p) => p.id === settings?.defaultEngineProfileId);
-                      const label = matchedProfile?.name ?? rule.engine;
-                      const engineType = matchedProfile?.engineType ?? rule.engine;
+                      const matchedProfile = resolveRuleEngineProfile(
+                        rule.engineProfileId ?? rule.engine,
+                        settings?.engineProfiles,
+                        settings?.defaultEngineProfileId,
+                      );
+                      const isSystemDefault = !rule.engine || rule.engine === 'default';
+                      const label = isSystemDefault
+                        ? `システム既定（${matchedProfile?.name ?? '未設定'}）`
+                        : (matchedProfile?.name ?? rule.engine);
+                      const engineType = matchedProfile?.engineType;
                       return (
                         <SettingBadge
                           variant="neutral"
@@ -381,13 +396,17 @@ export function RuleSettingsView({
                     })()}
 
                     {(() => {
-                      const profile = settings?.engineProfiles?.find((p) => p.id === rule.engine);
+                      const profile = resolveRuleEngineProfile(
+                        rule.engineProfileId ?? rule.engine,
+                        settings?.engineProfiles,
+                        settings?.defaultEngineProfileId,
+                      );
                       return profile && settings?.enabledEngines && !settings.enabledEngines.includes(profile.engineType);
                     })() && (
-                        <SettingBadge variant="warning" icon={<AlertCircle className="w-3 h-3" />}>
-                          エンジン種別無効化中
-                        </SettingBadge>
-                      )}
+                      <SettingBadge variant="warning" icon={<AlertCircle className="w-3 h-3" />}>
+                        エンジン種別無効化中
+                      </SettingBadge>
+                    )}
 
                     {isDefault && (
                       <SettingBadge variant="default" icon={<CheckCircle2 className="w-3 h-3" />}>
