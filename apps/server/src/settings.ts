@@ -276,9 +276,10 @@ export class SettingsService {
       }
     }
 
-    const defaultEngineProfileId = map.get('default_engine_profile_id')
-      ?? engineProfiles.find((p) => p.isDefault)?.id
-      ?? engineProfiles[0]?.id;
+    const rawDefaultProfileId = map.get('default_engine_profile_id');
+    const defaultEngineProfileId = engineProfiles.some((p) => p.id === rawDefaultProfileId)
+      ? rawDefaultProfileId
+      : engineProfiles.find((p) => p.isDefault)?.id ?? engineProfiles[0]?.id;
 
     return {
       autoQueue,
