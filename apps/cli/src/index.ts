@@ -4,8 +4,9 @@ import { createRunCommand } from './commands/run.ts';
 import { createServeCommand } from './commands/serve.ts';
 import { createDoctorCommand } from './commands/doctor.ts';
 import { createPathsCommand } from './commands/paths.ts';
+import denoJson from '../deno.json' with { type: 'json' };
 
-const VERSION = '0.1.0';
+const VERSION: string = denoJson.version;
 
 export function createCliCommand() {
   return new Command()
