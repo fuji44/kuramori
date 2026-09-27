@@ -109,21 +109,49 @@ deno task compile
 
 ---
 
-## 7. Automated Release Pipeline & Supply Chain Security
+## 7. Release Strategy & Supply Chain Security
 
-`kuramori` employs an automated, modern release pipeline using **Release Please** and **GitHub Artifact Attestations** to ensure supply chain integrity:
+`kuramori` adheres to modern software supply chain security standards while keeping release orchestration lightweight, deterministic, and free of extraneous configuration files.
 
-1. **Release PR Pattern**:
-   - Every merge to `main` with Conventional Commits (`feat:`, `fix:`, `chore:`, etc.) triggers Release Please to open or update a Release PR.
-   - When maintainers merge the Release PR, GitHub Actions automatically cuts the release tag (e.g. `v0.1.0`), creates the GitHub Release, and builds multi-platform binaries.
+### 7.1 Core Security Principles
 
-2. **Cross-Platform Compilation**:
-   - Binaries are built for Linux (x86_64, arm64), macOS (Intel, Apple Silicon), and Windows (x86_64).
-   - Embedded Web UI assets are bundled directly into the standalone binary.
+1. **No Manual Tag Pushing**:
+   - Pushing tags directly (`git push origin v1.0.0`) is strictly prohibited. Manual tags bypass branch protection rules and allow unverified commits to be released.
+2. **Ephemeral CI-Only Builds**:
+   - Release binaries are built exclusively within GitHub Actions environments, preventing local machine contamination.
+3. **Branch Protection Enforcement**:
+   - Only commits that have successfully passed all automated tests, linting, type-checks, and compilation checks on protected branches (`main`) can ever be released.
+4. **Cryptographic Provenance (SLSA Level 3)**:
+   - All release archives are cryptographically attested and signed via GitHub Artifact Attestations using Sigstore and GitHub OIDC tokens.
 
-3. **Supply Chain Attestation (SLSA Level 3)**:
-   - All release archives (`.tar.gz`, `.zip`) and checksums are cryptographically signed using GitHub Artifact Attestations (`actions/attest-build-provenance`).
-   - Users and organizations can verify binary integrity and origin using GitHub CLI:
-     ```bash
-     gh attestation verify kuramori-v0.1.0-linux-amd64.tar.gz --owner <owner>
-     ```
+### 7.2 Release Procedure (Version Bump on Merge)
+
+Releases are triggered automatically when a version bump is merged into `main`:
+
+1. **Bump Version in Pull Request**:
+   - Create a PR updating the `"version"` field in both [`deno.json`](../deno.json) and [`apps/cli/deno.json`](../apps/cli/deno.json) (e.g. `"0.1.0"` ➔ `"0.2.0"`).
+   - CI automatically verifies that root and CLI versions are synchronized.
+2. **Review & Merge**:
+   - Once all CI checks pass, merge the PR into `main`.
+3. **Automated Release Execution**:
+   - The `.github/workflows/release.yaml` workflow triggers upon push to `main`.
+   - It checks whether the Git tag corresponding to the current version (`v${VERSION}`) already exists.
+   - If the tag does not exist:
+     - Deno compiles standalone executables with bundled Web UI for 5 cross-platform targets:
+       - Linux x86_64 (`kuramori-vX.Y.Z-linux-amd64.tar.gz`)
+       - Linux ARM64 (`kuramori-vX.Y.Z-linux-arm64.tar.gz`)
+       - macOS Intel (`kuramori-vX.Y.Z-darwin-amd64.tar.gz`)
+       - macOS Apple Silicon (`kuramori-vX.Y.Z-darwin-arm64.tar.gz`)
+       - Windows x86_64 (`kuramori-vX.Y.Z-windows-amd64.zip`)
+     - Generates SHA-256 checksums (`checksums.txt`).
+     - Cryptographically signs all artifacts with `actions/attest-build-provenance`.
+     - Automatically creates the Git tag and GitHub Release with auto-generated release notes derived from merged PRs.
+   - If the version has not been bumped, the release job exits immediately without action.
+
+### 7.3 Verifying Binary Provenance
+
+End users and enterprise security teams can independently verify that a downloaded binary was built by GitHub Actions from the official `kuramori` repository:
+
+```bash
+gh attestation verify kuramori-v0.1.0-linux-amd64.tar.gz --owner <owner>
+```
