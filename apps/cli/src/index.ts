@@ -1,0 +1,38 @@
+import { Command } from '@cliffy/command';
+import { CompletionsCommand } from '@cliffy/command/completions';
+import { createRunCommand } from './commands/run.ts';
+import { createServeCommand } from './commands/serve.ts';
+import { createDoctorCommand } from './commands/doctor.ts';
+
+const VERSION = '0.1.0';
+
+export function createCliCommand() {
+  return new Command()
+    .name('kuramori')
+    .version(VERSION)
+    .description('kuramori - Automated PR Review Management Platform')
+    .command('run', createRunCommand())
+    .command('serve', createServeCommand())
+    .command('doctor', createDoctorCommand())
+    .command('completions', new CompletionsCommand());
+}
+
+export async function main(rawArgs: string[] = Deno.args): Promise<void> {
+  let args = [...rawArgs];
+
+  // Backward compatibility: route directly to 'run' if -r or --repo is provided as first flag
+  const firstArg = args[0];
+  if (
+    firstArg !== undefined &&
+    (firstArg === '-r' || firstArg === '--repo' || firstArg.startsWith('--repo='))
+  ) {
+    args = ['run', ...args];
+  }
+
+  const cli = createCliCommand();
+  await cli.parse(args);
+}
+
+if (import.meta.main) {
+  await main();
+}
