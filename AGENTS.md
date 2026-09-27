@@ -63,3 +63,4 @@ Consult the following documents using `view_file` when specific domain knowledge
 | **Rules, Triggers & 4-Block Prompts** | [docs/rules-and-triggers.md](docs/rules-and-triggers.md) |
 | **REST API Reference & OpenAPI** | [docs/api.md](docs/api.md) |
 | **Operations & Troubleshooting** | [docs/operations.md](docs/operations.md) |
+| **Development & Contributing** | [docs/development.md](docs/development.md) |

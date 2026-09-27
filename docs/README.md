@@ -15,6 +15,7 @@ This directory serves as the **Single Source of Truth (SSOT)** for `kuramori`'s 
 | **[rules-and-triggers.md](rules-and-triggers.md)** | Reviewers / AI Agents | Path-based triggers (Glob matching), 4-block instruction templates, and noise filters |
 | **[api.md](api.md)** | Users / AI Agents | REST API catalog, OpenAPI 3.1 specification, Scalar interactive documentation, and curl examples |
 | **[operations.md](operations.md)** | Operators / AI Agents | Service lifecycle, job log inspection, and temporary worktree troubleshooting |
+| **[development.md](development.md)** | Contributors / AI Agents | Development environment setup, deterministic commands, testing, and compilation |
 
 ---
 
