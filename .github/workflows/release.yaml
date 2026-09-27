@@ -8,27 +8,43 @@ on:
 permissions: {}
 
 jobs:
-  release-please:
-    name: Release Please (PR / Tag)
+  check-version:
+    name: Check Version Bump
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     outputs:
-      release_created: ${{ steps.release.outputs.release_created }}
-      tag_name: ${{ steps.release.outputs.tag_name }}
+      should_release: ${{ steps.check.outputs.should_release }}
+      version: ${{ steps.check.outputs.version }}
+      tag_name: ${{ steps.check.outputs.tag_name }}
     steps:
-      - name: Release Please
-        id: release
-        uses: google-github-actions/release-please-action@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          config-file: release-please-config.json
-          manifest-file: .release-please-manifest.json
+          fetch-depth: 0
+
+      - name: Check if tag exists for current version
+        id: check
+        run: |
+          VERSION=$(jq -r .version deno.json)
+          TAG_NAME="v${VERSION}"
+          echo "Current package version: ${VERSION}"
+          echo "Target release tag: ${TAG_NAME}"
+
+          if git rev-parse "${TAG_NAME}" >/dev/null 2>&1; then
+            echo "Tag ${TAG_NAME} already exists. Skipping release."
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Tag ${TAG_NAME} does not exist. Triggering release!"
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+            echo "tag_name=${TAG_NAME}" >> "$GITHUB_OUTPUT"
+          fi
 
   build-and-release:
     name: Build & Attest Release Binaries
-    needs: release-please
-    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    needs: check-version
+    if: needs.check-version.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -48,7 +64,7 @@ jobs:
 
       - name: Compile and Archive Multi-Platform Binaries
         env:
-          TAG: ${{ needs.release-please.outputs.tag_name }}
+          TAG: ${{ needs.check-version.outputs.tag_name }}
         run: |
           mkdir -p dist-release
 
@@ -87,9 +103,12 @@ jobs:
         with:
           subject-path: 'dist-release/*'
 
-      - name: Upload Release Assets to GitHub Release
+      - name: Create GitHub Release and Upload Assets
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ needs.release-please.outputs.tag_name }}
+          TAG: ${{ needs.check-version.outputs.tag_name }}
         run: |
-          gh release upload "$TAG" dist-release/* --clobber
+          gh release create "$TAG" dist-release/* \
+            --title "$TAG" \
+            --generate-notes \
+            --target "$GITHUB_SHA"

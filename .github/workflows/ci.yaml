@@ -36,3 +36,13 @@ jobs:
 
       - name: Standalone Binary Compile Check
         run: deno task compile
+
+      - name: Verify Version Sync
+        run: |
+          ROOT_VER=$(jq -r .version deno.json)
+          CLI_VER=$(jq -r .version apps/cli/deno.json)
+          if [ "$ROOT_VER" != "$CLI_VER" ]; then
+            echo "Error: Root version ($ROOT_VER) does not match apps/cli version ($CLI_VER)"
+            exit 1
+          fi
+          echo "Verified version sync: $ROOT_VER"
