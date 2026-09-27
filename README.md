@@ -27,13 +27,19 @@
 
 #### Option 1: Standalone Binary (Recommended)
 
-Download the pre-compiled standalone binary for your platform from GitHub Releases, make it executable, and move it to your `PATH`:
+Download the pre-compiled archive for your platform from [GitHub Releases](https://github.com/fuji44/kuramori/releases/latest), unpack it, and move the `kuramori` executable to your `PATH`:
 
 ```bash
 # Example for Linux x86_64
-curl -fsSL https://github.com/fuji44/kuramori/releases/latest/download/kuramori-linux-x86_64 -o /usr/local/bin/kuramori
-chmod +x /usr/local/bin/kuramori
+curl -fsSL https://github.com/fuji44/kuramori/releases/latest/download/kuramori-v0.1.0-linux-amd64.tar.gz | tar -xz
+sudo mv kuramori /usr/local/bin/
 ```
+
+> [!TIP]
+> All official release assets include cryptographic provenance signed via **GitHub Artifact Attestations**. You can verify binary authenticity using GitHub CLI:
+> ```bash
+> gh attestation verify kuramori-*-linux-amd64.tar.gz --owner fuji44
+> ```
 
 #### Option 2: Build from Source
 

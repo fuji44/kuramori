@@ -106,3 +106,24 @@ deno task compile
 # 3. Test compiled binary
 ./bin/kuramori --help
 ```
+
+---
+
+## 7. Automated Release Pipeline & Supply Chain Security
+
+`kuramori` employs an automated, modern release pipeline using **Release Please** and **GitHub Artifact Attestations** to ensure supply chain integrity:
+
+1. **Release PR Pattern**:
+   - Every merge to `main` with Conventional Commits (`feat:`, `fix:`, `chore:`, etc.) triggers Release Please to open or update a Release PR.
+   - When maintainers merge the Release PR, GitHub Actions automatically cuts the release tag (e.g. `v0.1.0`), creates the GitHub Release, and builds multi-platform binaries.
+
+2. **Cross-Platform Compilation**:
+   - Binaries are built for Linux (x86_64, arm64), macOS (Intel, Apple Silicon), and Windows (x86_64).
+   - Embedded Web UI assets are bundled directly into the standalone binary.
+
+3. **Supply Chain Attestation (SLSA Level 3)**:
+   - All release archives (`.tar.gz`, `.zip`) and checksums are cryptographically signed using GitHub Artifact Attestations (`actions/attest-build-provenance`).
+   - Users and organizations can verify binary integrity and origin using GitHub CLI:
+     ```bash
+     gh attestation verify kuramori-v0.1.0-linux-amd64.tar.gz --owner <owner>
+     ```
