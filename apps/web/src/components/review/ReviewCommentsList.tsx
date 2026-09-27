@@ -24,6 +24,7 @@ import type {
   ReviewPrMeta,
 } from '@kuramori/core';
 import { useI18n } from '../../i18n/context.tsx';
+import { assertNever } from '../../utils/assert.ts';
 
 export type DecisionType = 'post' | 'hold' | 'ignore';
 
@@ -207,8 +208,10 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
         return <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-rose-950/60 text-rose-400 border border-rose-600/40">P1 (Blocker)</span>;
       case 'P2':
         return <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-950/60 text-amber-400 border border-amber-600/40">P2 (Warning)</span>;
-      default:
+      case 'P3':
         return <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-950/60 text-blue-400 border border-blue-600/40">P3 (Note)</span>;
+      default:
+        return assertNever(severity);
     }
   };
 

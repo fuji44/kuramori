@@ -20,6 +20,7 @@ import type {
   ReviewPrMeta,
 } from '@kuramori/core';
 import { useI18n } from '../../i18n/context.tsx';
+import { assertNever } from '../../utils/assert.ts';
 
 interface ReviewSummaryCardProps {
   verdict: ReviewVerdictType;
@@ -55,13 +56,14 @@ export const ReviewSummaryCard: React.FC<ReviewSummaryCardProps> = ({
           </span>
         );
       case 'COMMENT':
-      default:
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30">
             <AlertTriangle className="w-4 h-4 text-blue-400" />
             COMMENT
           </span>
         );
+      default:
+        return assertNever(verdict);
     }
   };
 

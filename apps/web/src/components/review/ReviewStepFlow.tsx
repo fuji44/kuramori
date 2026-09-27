@@ -2,6 +2,7 @@ import type React from 'react';
 import { ArrowDown, AlertCircle, Sparkles, RefreshCw, CircleDot } from 'lucide-react';
 import type { CallFlow, CallFlowStep } from '@kuramori/core';
 import { useI18n } from '../../i18n/context.tsx';
+import { assertNever } from '../../utils/assert.ts';
 
 interface ReviewStepFlowProps {
   callFlow?: CallFlow;
@@ -46,13 +47,14 @@ export const ReviewStepFlow: React.FC<ReviewStepFlowProps> = ({
           borderClass: 'border-indigo-500/40',
         };
       case 'unchanged':
-      default:
         return {
           icon: <CircleDot className="w-4 h-4 text-gray-500" />,
           badge: 'UNCHANGED',
           badgeClass: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
           borderClass: 'border-gray-700/50',
         };
+      default:
+        return assertNever(status);
     }
   };
 

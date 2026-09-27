@@ -16,7 +16,8 @@ import {
   PanelLeftOpen,
   Info,
 } from 'lucide-react';
-import type { ReviewReportData, ReviewComment, MarkType } from '@kuramori/core';
+import type { ReviewReportData, ReviewComment, MarkType, LensVerdict } from '@kuramori/core';
+import { assertNever } from '../../utils/assert.ts';
 import { useI18n } from '../../i18n/context.tsx';
 import { ReviewDiagram } from './ReviewDiagram.tsx';
 import { ReviewDiffViewer } from './ReviewDiffViewer.tsx';
@@ -105,10 +106,10 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
     return meanings[key] ?? t('review.main.tagMeanings.imo');
   };
 
-  const getLensMeta = (lens?: string) => {
-    if (!lens) return undefined;
-    const style = LENS_STYLES[lens] ?? 'text-gray-400 bg-gray-500/10 border-gray-500/30';
-    switch (lens) {
+  const getLensMeta = (verdict?: LensVerdict) => {
+    if (!verdict) return undefined;
+    const style = LENS_STYLES[verdict] ?? 'text-gray-400 bg-gray-500/10 border-gray-500/30';
+    switch (verdict) {
       case 'escalate':
         return { label: t('review.main.lensMeanings.escalateLabel'), desc: t('review.main.lensMeanings.escalateDesc'), color: style };
       case 'promote':
@@ -118,7 +119,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
       case 'drop':
         return { label: t('review.main.lensMeanings.dropLabel'), desc: t('review.main.lensMeanings.dropDesc'), color: style };
       default:
-        return { label: lens, desc: '', color: style };
+        return assertNever(verdict);
     }
   };
 
@@ -709,7 +710,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
             const currentMemo = memos[c.id] || '';
             const tagStyle = TAG_STYLES[c.tag ?? 'IMO'] || TAG_STYLES.IMO;
             const tagMeaning = getTagMeaning(c.tag);
-            const lensMeta = getLensMeta(c.lens);
+            const lensMeta = getLensMeta(c.lens?.verdict);
             const fileUrl = getFileUrl(c);
             const isActive = activeCommentId === c.id;
 
