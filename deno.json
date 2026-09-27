@@ -22,6 +22,9 @@
     "./apps/web"
   ],
   "lint": {
+    "plugins": [
+      "./tools/lint-rules/boundaries.ts"
+    ],
     "rules": {
       "tags": ["recommended", "react"],
       "include": [
@@ -47,8 +50,8 @@
   },
   "tasks": {
     "lint": "deno lint",
-    "check": "deno check packages/core/src/index.ts packages/i18n/src/index.ts packages/runner/src/cli.ts apps/server/src/index.ts",
-    "test": "deno test --allow-all packages/i18n/src/index.test.ts packages/core/src/types/review.test.ts packages/core/src/storage/local-storage.test.ts packages/core/src/schema/review-report.test.ts packages/runner/src/worktree.test.ts packages/runner/src/gatekeeper/validator.test.ts packages/runner/src/context/collector.test.ts packages/runner/src/diagram/d2-compiler.test.ts packages/runner/src/pipeline/rule-matcher.test.ts packages/runner/src/pipeline/runner-pipeline.test.ts packages/runner/src/engines/environment.test.ts packages/runner/src/engines/claude-code.test.ts packages/runner/src/engines/codex.test.ts apps/server/src/api.test.ts apps/server/src/aggregator.test.ts apps/server/src/e2e.test.ts apps/web/src/utils/query-parser.test.ts apps/web/src/utils/url-params.test.ts apps/web/src/utils/route.test.ts apps/web/src/utils/anchor.test.ts apps/web/src/utils/search-suggestions.test.ts",
+    "check": "deno check packages/core/src/index.ts packages/i18n/src/index.ts packages/runner/src/cli.ts apps/server/src/index.ts tools/lint-rules/boundaries.ts",
+    "test": "deno test --allow-all tools/lint-rules/boundaries.test.ts packages/i18n/src/index.test.ts packages/core/src/types/review.test.ts packages/core/src/storage/local-storage.test.ts packages/core/src/schema/review-report.test.ts packages/runner/src/worktree.test.ts packages/runner/src/gatekeeper/validator.test.ts packages/runner/src/context/collector.test.ts packages/runner/src/diagram/d2-compiler.test.ts packages/runner/src/pipeline/rule-matcher.test.ts packages/runner/src/pipeline/runner-pipeline.test.ts packages/runner/src/engines/environment.test.ts packages/runner/src/engines/claude-code.test.ts packages/runner/src/engines/codex.test.ts apps/server/src/api.test.ts apps/server/src/aggregator.test.ts apps/server/src/e2e.test.ts apps/web/src/utils/query-parser.test.ts apps/web/src/utils/url-params.test.ts apps/web/src/utils/route.test.ts apps/web/src/utils/anchor.test.ts apps/web/src/utils/search-suggestions.test.ts",
     "test:e2e": "deno test --allow-all apps/server/src/e2e.test.ts",
 
     "build:web": "deno task --cwd apps/web build",
