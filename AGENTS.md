@@ -22,7 +22,9 @@ Always use the deterministic `deno task` commands to verify changes rather than 
 | `deno task build` | Production build of web frontend and schema documentation |
 | `deno task dev:server` | Start backend server with file watch mode (`http://127.0.0.1:3456`) |
 | `deno task dev:web` | Start frontend Vite HMR development server |
-| `deno task runner --repo <owner/repo> --pr <num>` | Run standalone review runner script |
+| `deno task cli [command]` | Run kuramori unified CLI script |
+| `deno task compile` | Compile unified kuramori standalone binary (`bin/kuramori`) |
+| `deno task compile:runner` | Compile standalone review runner binary (`bin/kuramori-runner`) |
 
 ---
 
