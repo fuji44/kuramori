@@ -33,3 +33,6 @@ jobs:
 
       - name: Test Suite
         run: deno task test
+
+      - name: Standalone Binary Compile Check
+        run: deno task compile
