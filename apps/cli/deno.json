@@ -1,6 +1,6 @@
 {
   "name": "@kuramori/cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "exports": "./src/index.ts",
   "imports": {
     "@kuramori/core": "../../packages/core/src/index.ts",
