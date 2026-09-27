@@ -10,18 +10,18 @@ export function createServeCommand() {
     .option('-H, --host <hostname:string>', 'Host address to bind', {
       default: Deno.env.get('HOST') ?? '127.0.0.1',
     })
-    .option('--db <url:string>', 'SQLite database URL', {
-      default: Deno.env.get('DATABASE_URL') ?? 'file:data/kuramori.db',
-    })
-    .option('--reports-dir <dir:string>', 'Directory for review reports', {
-      default: Deno.env.get('REPORTS_DIR') ?? './data/reports',
-    })
+    .option('--db <url:string>', 'SQLite database URL (default: XDG data directory)')
+    .option('--reports-dir <dir:string>', 'Directory for review reports (default: XDG data directory)')
+    .option('--cache-dir <dir:string>', 'Directory for git cache (default: XDG cache directory)')
+    .option('--worktree-dir <dir:string>', 'Directory for worktrees (default: XDG cache directory)')
     .action(async (options) => {
       await bootstrap({
         port: options.port,
         hostname: options.host,
         dbUrl: options.db,
         reportsDir: options.reportsDir,
+        cacheDir: options.cacheDir,
+        worktreeDir: options.worktreeDir,
       });
     });
 }

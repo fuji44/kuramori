@@ -3,6 +3,7 @@ import { CompletionsCommand } from '@cliffy/command/completions';
 import { createRunCommand } from './commands/run.ts';
 import { createServeCommand } from './commands/serve.ts';
 import { createDoctorCommand } from './commands/doctor.ts';
+import { createPathsCommand } from './commands/paths.ts';
 
 const VERSION = '0.1.0';
 
@@ -14,6 +15,7 @@ export function createCliCommand() {
     .command('run', createRunCommand())
     .command('serve', createServeCommand())
     .command('doctor', createDoctorCommand())
+    .command('paths', createPathsCommand())
     .command('completions', new CompletionsCommand());
 }
 

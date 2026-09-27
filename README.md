@@ -59,8 +59,8 @@ To remove `kuramori` from your system:
 # 1. Remove the standalone binary
 rm -f /usr/local/bin/kuramori
 
-# 2. (Optional) Remove runtime data, database, and cached worktrees
-rm -rf ./data ./.worktrees
+# 2. (Optional) Remove storage and cache directories (XDG compliant)
+rm -rf "$(kuramori paths --data)" "$(kuramori paths --cache)"
 ```
 
 ---
@@ -115,6 +115,7 @@ kuramori doctor --help
 | **`kuramori run`** | Execute automated review for a pull request (`--repo`, `--pr`, `--engine`, `--model`, etc.) |
 | **`kuramori serve`** | Start background review queue, GitHub poller, and web dashboard (`--port`, `--host`, `--db`) |
 | **`kuramori doctor`** | Inspect system dependencies (`git`, `gh`, `d2`), AI engines, and environment variables |
+| **`kuramori paths`** | Display and inspect storage, database, and cache directory paths (`--data`, `--cache`, `--json`) |
 | **`kuramori completions`** | Generate shell completion scripts for Bash, Zsh, or Fish |
 
 ### Shell Completions

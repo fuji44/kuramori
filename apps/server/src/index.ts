@@ -1,7 +1,12 @@
 import { Hono } from 'hono';
 import { dirname, fromFileUrl, join, resolve } from '@std/path';
 import { createDb, initDatabase } from './db/index.ts';
-import { LocalFileReportStorage, GitHubProvider } from '@kuramori/core';
+import {
+  LocalFileReportStorage,
+  GitHubProvider,
+  resolveKuramoriPaths,
+  ensureKuramoriDirectories,
+} from '@kuramori/core';
 import { ReviewQueue } from './queue.ts';
 import { GitHubPoller } from './poller.ts';
 import { createApi } from './api.ts';
@@ -12,13 +17,18 @@ export interface ServerOptions {
   hostname?: string;
   dbUrl?: string;
   reportsDir?: string;
+  cacheDir?: string;
+  worktreeDir?: string;
 }
 
 export async function bootstrap(options: ServerOptions = {}) {
+  const defaultPaths = await resolveKuramoriPaths();
+  await ensureKuramoriDirectories(defaultPaths);
+
   const port = options.port ?? parseInt(Deno.env.get('PORT') ?? '3456', 10);
   const hostname = options.hostname ?? Deno.env.get('HOST') ?? '127.0.0.1';
-  const dbUrl = options.dbUrl ?? Deno.env.get('DATABASE_URL') ?? 'file:data/kuramori.db';
-  const reportsDir = resolve(options.reportsDir ?? Deno.env.get('REPORTS_DIR') ?? './data/reports');
+  const dbUrl = options.dbUrl ?? Deno.env.get('DATABASE_URL') ?? `file:${defaultPaths.databaseFile}`;
+  const reportsDir = resolve(options.reportsDir ?? Deno.env.get('REPORTS_DIR') ?? defaultPaths.reportsDir);
   const logsDir = join(dirname(reportsDir), 'logs');
 
   const { db, client } = createDb(dbUrl);
@@ -28,7 +38,13 @@ export async function bootstrap(options: ServerOptions = {}) {
   const vcsProvider = new GitHubProvider();
   const settingsService = new SettingsService(db);
 
-  const queue = new ReviewQueue(db, storage, { reportsDir, vcsProvider, settingsService });
+  const queue = new ReviewQueue(db, storage, {
+    reportsDir,
+    vcsProvider,
+    settingsService,
+    cacheDir: options.cacheDir ?? defaultPaths.gitCacheDir,
+    worktreeDir: options.worktreeDir ?? defaultPaths.worktreeDir,
+  });
   const poller = new GitHubPoller(vcsProvider, db, queue, settingsService);
 
   // Start polling in background
