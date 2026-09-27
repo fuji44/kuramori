@@ -12,6 +12,8 @@
     "@std/cli/parse-args": "jsr:@std/cli@^1.0.14/parse-args",
     "@std/path": "jsr:@std/path@^1.0.8",
     "@std/path/": "jsr:/@std/path@^1.0.8/",
+    "drizzle-orm": "npm:drizzle-orm@^0.38.3",
+    "drizzle-orm/": "npm:/drizzle-orm@^0.38.3/",
     "zod": "jsr:@zod/zod@^4.6.5"
   },
   "workspace": [
@@ -49,17 +51,18 @@
     ]
   },
   "tasks": {
-    "lint": "deno lint",
-    "check": "deno check packages/core/src/index.ts packages/i18n/src/index.ts packages/runner/src/cli.ts apps/server/src/index.ts tools/lint-rules/boundaries.ts",
-    "test": "deno test --allow-all tools/lint-rules/boundaries.test.ts packages/i18n/src/index.test.ts packages/core/src/types/review.test.ts packages/core/src/storage/local-storage.test.ts packages/core/src/schema/review-report.test.ts packages/runner/src/worktree.test.ts packages/runner/src/gatekeeper/validator.test.ts packages/runner/src/context/collector.test.ts packages/runner/src/diagram/d2-compiler.test.ts packages/runner/src/pipeline/rule-matcher.test.ts packages/runner/src/pipeline/runner-pipeline.test.ts packages/runner/src/engines/environment.test.ts packages/runner/src/engines/claude-code.test.ts packages/runner/src/engines/codex.test.ts apps/server/src/api.test.ts apps/server/src/aggregator.test.ts apps/server/src/e2e.test.ts apps/web/src/utils/query-parser.test.ts apps/web/src/utils/url-params.test.ts apps/web/src/utils/route.test.ts apps/web/src/utils/anchor.test.ts apps/web/src/utils/search-suggestions.test.ts",
+    "lint": "deno lint && deno task check:doc",
+    "check": "deno check packages/core/src/index.ts packages/i18n/src/index.ts packages/runner/src/cli.ts apps/server/src/index.ts tools/lint-rules/boundaries.ts tools/generate-db-docs.ts",
+    "test": "deno test --allow-all tools/generate-db-docs.test.ts tools/lint-rules/boundaries.test.ts packages/i18n/src/index.test.ts packages/core/src/types/review.test.ts packages/core/src/storage/local-storage.test.ts packages/core/src/schema/review-report.test.ts packages/runner/src/worktree.test.ts packages/runner/src/gatekeeper/validator.test.ts packages/runner/src/context/collector.test.ts packages/runner/src/diagram/d2-compiler.test.ts packages/runner/src/pipeline/rule-matcher.test.ts packages/runner/src/pipeline/runner-pipeline.test.ts packages/runner/src/engines/environment.test.ts packages/runner/src/engines/claude-code.test.ts packages/runner/src/engines/codex.test.ts apps/server/src/api.test.ts apps/server/src/aggregator.test.ts apps/server/src/e2e.test.ts apps/web/src/utils/query-parser.test.ts apps/web/src/utils/url-params.test.ts apps/web/src/utils/route.test.ts apps/web/src/utils/anchor.test.ts apps/web/src/utils/search-suggestions.test.ts",
     "test:e2e": "deno test --allow-all apps/server/src/e2e.test.ts",
 
     "build:web": "deno task --cwd apps/web build",
-    "build": "deno task build:web",
+    "build:doc": "deno run --allow-read --allow-write tools/generate-db-docs.ts",
+    "check:doc": "deno run --allow-read tools/generate-db-docs.ts --check",
+    "build": "deno task build:web && deno task build:doc",
     "start": "deno run --allow-all apps/server/src/index.ts",
     "dev:server": "deno run --allow-all --watch apps/server/src/index.ts",
     "dev:web": "deno task --cwd apps/web dev",
-    "runner": "deno run --allow-all packages/runner/src/cli.ts",
-    "verify:local-llm": "deno run --allow-all packages/runner/scripts/verify-local-llm.ts"
+    "runner": "deno run --allow-all packages/runner/src/cli.ts"
   }
 }

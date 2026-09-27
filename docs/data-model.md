@@ -4,51 +4,45 @@ This document defines the entity definitions, database schema (SQLite / Drizzle 
 
 ---
 
-## 1. Entity-Relationship Diagram (ERD)
+## 1. Entity-Relationship Diagram (ERD) & Schema Catalog
+
+<!-- BEGIN_SCHEMA_DOCS -->
 
 ```mermaid
 erDiagram
-    review_requests ||--o{ review_jobs : "has"
-    review_jobs ||--o| review_reports : "generates"
-    review_jobs ||--o{ review_rule_results : "produces"
-    review_rules ||--o{ review_jobs : "triggers"
-    review_rules ||--o{ review_rule_results : "evaluated_in"
-    review_triggers }o--o{ review_rules : "binds"
+    review_jobs ||--o{ review_reports : "references"
+    review_jobs ||--o{ review_rule_results : "references"
+    review_requests ||--o{ review_jobs : "references"
+    review_requests ||--o{ review_reports : "references"
+    review_requests ||--o{ review_rule_results : "references"
+    review_rules ||--o{ review_jobs : "references"
+    review_rules ||--o{ review_rule_results : "references"
 
-    review_requests {
-        text id PK "Format: provider:owner/repo#number"
-        text user_id
-        text provider "github etc."
-        text repository "owner/repo"
-        integer number "PR number"
-        text title
-        text author
-        text url
-        text source_branch
-        text target_branch
-        text head_sha
-        integer is_draft "0 or 1"
-        integer is_own "0 or 1"
-        text labels "JSON string"
-        text milestone
-        text assignees "JSON string"
-        integer additions
-        integer deletions
-        text state "open | closed | merged"
+    app_settings {
+        text key PK
+        text value
+        text updated_at
+    }
+
+    pull_filters {
+        text id PK
+        text name
+        text description
+        text query
         text created_at
         text updated_at
     }
 
     review_jobs {
-        text id PK "UUID"
+        text id PK
         text request_id FK
         text user_id
-        text status "pending | queued | running | completed | failed"
-        text engine "Profile ID or Engine Type (e.g., default-claude, antigravity)"
+        text status
+        text engine
         text started_at
         text completed_at
         text error
-        text report_id FK
+        text report_id
         text rule_id FK
         text rule_name
         text rule_category
@@ -56,72 +50,208 @@ erDiagram
     }
 
     review_reports {
-        text id PK "Format: report-<requestId>-<timestamp>"
+        text id PK
         text job_id FK
         text request_id FK
         text user_id
         text summary
-        text verdict "APPROVE | COMMENT | REQUEST_CHANGES"
+        text verdict
         text created_at
     }
 
-    review_rules {
-        text id PK "e.g., rule-correctness"
-        text name
-        text description
-        text category "correctness | security | architecture etc."
-        text engine "default | Profile ID (e.g., default-claude) | Engine Type"
-        text instructions "4-block prompt instructions"
-        text trigger_json "Trigger event criteria"
-        text concurrency_json "Concurrency and cancellation options"
-        text engine_override_json "Model/effort overrides"
-        integer enabled "0 or 1"
+    review_requests {
+        text id PK
+        text user_id
+        text provider
+        text repository
+        integer number
+        text title
+        text author
+        text url
+        text source_branch
+        text target_branch
+        text head_sha
+        integer additions
+        integer deletions
+        integer_boolean is_draft
+        integer_boolean is_own
+        text state
         text created_at
         text updated_at
-    }
-
-    review_triggers {
-        text id PK "e.g., trigger-server"
-        text name
-        text repository "owner/repo or *"
-        text paths_json "Target Glob list"
-        text paths_ignore_json "Ignored Glob list"
-        text rule_ids_json "Array of rule IDs"
-        integer enabled "0 or 1"
-        text created_at
-        text updated_at
+        text labels
+        text milestone
+        text assignees
     }
 
     review_rule_results {
-        text id PK "UUID"
+        text id PK
         text job_id FK
         text request_id FK
         text rule_id FK
         text rule_name
         text category
         text head_sha
-        text verdict "APPROVE | COMMENT | REQUEST_CHANGES"
+        text verdict
         text summary
-        text findings "JSON (array of findings)"
-        text metadata "JSON (tokens, model info)"
+        text findings
+        text metadata
         text created_at
     }
 
-    pull_filters {
-        text id PK "UUID"
+    review_rules {
+        text id PK
         text name
         text description
-        text query "Search query string"
+        text category
+        text engine
+        text instructions
+        text_JSON trigger_json
+        text_JSON concurrency_json
+        text_JSON engine_override_json
+        integer_boolean enabled
         text created_at
         text updated_at
     }
 
-    app_settings {
-        text key PK
-        text value "JSON or scalar value"
+    review_triggers {
+        text id PK
+        text name
+        text repository
+        text_JSON paths_json
+        text_JSON paths_ignore_json
+        text_JSON rule_ids_json
+        integer_boolean enabled
+        text created_at
         text updated_at
     }
 ```
+
+### Table Catalog
+
+#### `app_settings`
+
+| Column | Type | Constraints | Default |
+| :--- | :--- | :--- | :--- |
+| `key` | `text` | **PK**, NOT NULL | - |
+| `value` | `text` | NOT NULL | - |
+| `updated_at` | `text` | NOT NULL | - |
+
+#### `pull_filters`
+
+| Column | Type | Constraints | Default |
+| :--- | :--- | :--- | :--- |
+| `id` | `text` | **PK**, NOT NULL | - |
+| `name` | `text` | NOT NULL | - |
+| `description` | `text` | NOT NULL | `` |
+| `query` | `text` | NOT NULL | `` |
+| `created_at` | `text` | NOT NULL | - |
+| `updated_at` | `text` | NOT NULL | - |
+
+#### `review_jobs`
+
+| Column | Type | Constraints | Default |
+| :--- | :--- | :--- | :--- |
+| `id` | `text` | **PK**, NOT NULL | - |
+| `request_id` | `text` | FK, NOT NULL | - |
+| `user_id` | `text` | NOT NULL | `default` |
+| `status` | `text` | NOT NULL | `pending` |
+| `engine` | `text` | NOT NULL | `claude-code` |
+| `started_at` | `text` | - | - |
+| `completed_at` | `text` | - | - |
+| `error` | `text` | - | - |
+| `report_id` | `text` | - | - |
+| `rule_id` | `text` | FK | - |
+| `rule_name` | `text` | - | - |
+| `rule_category` | `text` | - | - |
+| `head_sha` | `text` | - | - |
+
+#### `review_reports`
+
+| Column | Type | Constraints | Default |
+| :--- | :--- | :--- | :--- |
+| `id` | `text` | **PK**, NOT NULL | - |
+| `job_id` | `text` | FK, NOT NULL | - |
+| `request_id` | `text` | FK, NOT NULL | - |
+| `user_id` | `text` | NOT NULL | `default` |
+| `summary` | `text` | - | - |
+| `verdict` | `text` | - | - |
+| `created_at` | `text` | NOT NULL | - |
+
+#### `review_requests`
+
+| Column | Type | Constraints | Default |
+| :--- | :--- | :--- | :--- |
+| `id` | `text` | **PK**, NOT NULL | - |
+| `user_id` | `text` | NOT NULL | `default` |
+| `provider` | `text` | NOT NULL | `github` |
+| `repository` | `text` | NOT NULL | - |
+| `number` | `integer` | NOT NULL | - |
+| `title` | `text` | NOT NULL | - |
+| `author` | `text` | NOT NULL | - |
+| `url` | `text` | NOT NULL | - |
+| `source_branch` | `text` | NOT NULL | `` |
+| `target_branch` | `text` | NOT NULL | `` |
+| `head_sha` | `text` | NOT NULL | `` |
+| `additions` | `integer` | - | - |
+| `deletions` | `integer` | - | - |
+| `is_draft` | `integer (boolean)` | NOT NULL | `false` |
+| `is_own` | `integer (boolean)` | NOT NULL | `false` |
+| `state` | `text` | NOT NULL | `open` |
+| `created_at` | `text` | NOT NULL | - |
+| `updated_at` | `text` | NOT NULL | - |
+| `labels` | `text` | - | - |
+| `milestone` | `text` | - | - |
+| `assignees` | `text` | - | - |
+
+#### `review_rule_results`
+
+| Column | Type | Constraints | Default |
+| :--- | :--- | :--- | :--- |
+| `id` | `text` | **PK**, NOT NULL | - |
+| `job_id` | `text` | FK, NOT NULL | - |
+| `request_id` | `text` | FK, NOT NULL | - |
+| `rule_id` | `text` | FK, NOT NULL | - |
+| `rule_name` | `text` | NOT NULL | - |
+| `category` | `text` | NOT NULL | - |
+| `head_sha` | `text` | NOT NULL | - |
+| `verdict` | `text` | NOT NULL | - |
+| `summary` | `text` | NOT NULL | - |
+| `findings` | `text` | NOT NULL | - |
+| `metadata` | `text` | - | - |
+| `created_at` | `text` | NOT NULL | - |
+
+#### `review_rules`
+
+| Column | Type | Constraints | Default |
+| :--- | :--- | :--- | :--- |
+| `id` | `text` | **PK**, NOT NULL | - |
+| `name` | `text` | NOT NULL | - |
+| `description` | `text` | NOT NULL | `` |
+| `category` | `text` | NOT NULL | `general` |
+| `engine` | `text` | NOT NULL | `default` |
+| `instructions` | `text` | NOT NULL | - |
+| `trigger_json` | `text (JSON)` | NOT NULL | `{}` |
+| `concurrency_json` | `text (JSON)` | - | - |
+| `engine_override_json` | `text (JSON)` | - | - |
+| `enabled` | `integer (boolean)` | NOT NULL | `true` |
+| `created_at` | `text` | NOT NULL | - |
+| `updated_at` | `text` | NOT NULL | - |
+
+#### `review_triggers`
+
+| Column | Type | Constraints | Default |
+| :--- | :--- | :--- | :--- |
+| `id` | `text` | **PK**, NOT NULL | - |
+| `name` | `text` | NOT NULL | - |
+| `repository` | `text` | NOT NULL | - |
+| `paths_json` | `text (JSON)` | - | - |
+| `paths_ignore_json` | `text (JSON)` | - | - |
+| `rule_ids_json` | `text (JSON)` | NOT NULL | - |
+| `enabled` | `integer (boolean)` | NOT NULL | `true` |
+| `created_at` | `text` | NOT NULL | - |
+| `updated_at` | `text` | NOT NULL | - |
+
+<!-- END_SCHEMA_DOCS -->
 
 ---
 
