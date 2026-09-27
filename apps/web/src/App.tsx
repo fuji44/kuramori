@@ -434,12 +434,7 @@ export default function App() {
               alt="kuramori"
               className="w-8 h-8 shrink-0 select-none"
             />
-            <div className="flex items-center gap-2">
-              <h1 className="text-base font-bold text-white tracking-tight">kuramori</h1>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-sky-950 text-sky-400 border border-sky-800/80 font-mono">
-                MVP
-              </span>
-            </div>
+            <h1 className="text-base font-bold text-white tracking-tight">kuramori</h1>
           </div>
 
           <div className="h-4 w-px bg-[#30363d]" />
