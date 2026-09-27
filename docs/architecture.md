@@ -19,6 +19,7 @@ The codebase is organized as a Deno 2 monorepo workspace divided into two distin
 ```mermaid
 flowchart TD
     subgraph AppsArea["apps (Executable Targets)"]
+        CliApp["apps/cli<br>(Unified CLI / Subcommand Dispatcher)"]
         ServerApp["apps/server<br>(Hono / Drizzle / Poller / Queue / Aggregator)"]
         WebApp["apps/web<br>(Vite / React / UI)"]
     end
@@ -29,6 +30,9 @@ flowchart TD
         I18nPkg["packages/i18n<br>(UI Dictionaries / Translator)"]
     end
 
+    CliApp --> ServerApp
+    CliApp --> RunnerPkg
+    CliApp --> CorePkg
     ServerApp --> RunnerPkg
     ServerApp --> CorePkg
     ServerApp --> I18nPkg
@@ -40,8 +44,8 @@ flowchart TD
 ### 2.1 `apps` (Applications / Execution Targets)
 - **Definition**: Entry points that initialize runtimes, load configurations, and assemble dependencies (Composition Root).
 - **Responsibilities**:
-  - Accept external network requests (HTTP, WebSocket, UI interactions).
-  - Never imported as libraries by other packages.
+  - Accept external network requests (HTTP, WebSocket, UI interactions) and command line invocations (`apps/cli`).
+  - Never imported as libraries by reusable packages.
 
 ### 2.2 `packages` (Shared Modules / Reusable Units)
 - **Definition**: Reusable business logic, contracts, execution units, and localization dictionaries independent of application hosting frameworks.
