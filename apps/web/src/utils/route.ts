@@ -3,6 +3,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { parseUrlParams, buildUrlSearch, type FilterUrlParams } from './url-params.ts';
+import { assertNever } from './assert.ts';
 
 export type SettingsSubview = 'general' | 'engines' | 'rules' | 'triggers' | 'licenses';
 
@@ -93,6 +94,8 @@ export function buildRouteUrl(route: AppRoute): string {
       return `/reports/${encodeURIComponent(route.reportId)}`;
     case 'settings':
       return `/settings/${route.subview}`;
+    default:
+      return assertNever(route);
   }
 }
 
