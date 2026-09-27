@@ -7,8 +7,8 @@ import { MockReviewEngine } from './engines/mock.ts';
 import { CodexEngine } from './engines/codex.ts';
 import type { ReviewEngine } from '@kuramori/core';
 
-async function main() {
-  const args = parseArgs(Deno.args, {
+export async function runCli(rawArgs: string[] = Deno.args) {
+  const args = parseArgs(rawArgs, {
     string: [
       'repo',
       'pr',
@@ -32,7 +32,7 @@ async function main() {
 
   if (args.help || !args.repo || !args.pr) {
     console.log(`
-Usage: kuramori [options]
+Usage: kuramori run [options]
 
 Options:
   -r, --repo <owner/repo>     GitHub repository (required)
@@ -117,5 +117,5 @@ Options:
 }
 
 if (import.meta.main) {
-  await main();
+  await runCli();
 }
