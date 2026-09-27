@@ -123,6 +123,9 @@ deno task compile
    - Only commits that have successfully passed all automated tests, linting, type-checks, and compilation checks on protected branches (`main`) can ever be released.
 4. **Cryptographic Provenance (SLSA Level 3)**:
    - All release archives are cryptographically attested and signed via GitHub Artifact Attestations using Sigstore and GitHub OIDC tokens.
+5. **Action Commit SHA Pinning & Dependabot Automation**:
+   - All external GitHub Actions in workflows are pinned to immutable, full 40-character commit SHAs instead of mutable tags to eliminate supply chain tampering.
+   - Version tracking comments and weekly automated SHA update pull requests are maintained via Dependabot ([`.github/dependabot.yaml`](../.github/dependabot.yaml)).
 
 ### 7.2 Release Procedure (Version Bump on Merge)
 
