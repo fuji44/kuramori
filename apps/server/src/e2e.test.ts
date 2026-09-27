@@ -39,9 +39,11 @@ Deno.test('Server E2E - start HTTP server and verify endpoints via fetch', async
 
   // Serve static UI if built
   const webDistPath = fromFileUrl(new URL('../../web/dist', import.meta.url));
+  let hasWebDist = false;
   try {
     const distStat = await Deno.stat(webDistPath);
     if (distStat.isDirectory) {
+      hasWebDist = true;
       app.get('*', async (c) => {
         if (c.req.path.startsWith('/api/')) {
           return c.text('API not found', 404);
@@ -137,22 +139,24 @@ Deno.test('Server E2E - start HTTP server and verify endpoints via fetch', async
     assertEquals(engineData.success, true);
     assertEquals(engineData.version, 'mock-engine 1.0.0');
 
-    // 7. Test Web UI HTML fallback
-    const rootRes = await fetch(`${baseUrl}/`);
-    assertEquals(rootRes.status, 200);
-    const rootHtml = await rootRes.text();
-    assertStringIncludes(rootHtml, 'kuramori');
+    // 7. Test Web UI HTML fallback (if built)
+    if (hasWebDist) {
+      const rootRes = await fetch(`${baseUrl}/`);
+      assertEquals(rootRes.status, 200);
+      const rootHtml = await rootRes.text();
+      assertStringIncludes(rootHtml, 'kuramori');
 
-    // 8. Test Favicon & Brand Icons
-    const faviconRes = await fetch(`${baseUrl}/favicon.svg`);
-    assertEquals(faviconRes.status, 200);
-    assertEquals(faviconRes.headers.get('Content-Type'), 'image/svg+xml');
-    const faviconSvg = await faviconRes.text();
-    assertStringIncludes(faviconSvg, '<svg');
+      // 8. Test Favicon & Brand Icons
+      const faviconRes = await fetch(`${baseUrl}/favicon.svg`);
+      assertEquals(faviconRes.status, 200);
+      assertEquals(faviconRes.headers.get('Content-Type'), 'image/svg+xml');
+      const faviconSvg = await faviconRes.text();
+      assertStringIncludes(faviconSvg, '<svg');
 
-    const icoRes = await fetch(`${baseUrl}/favicon.ico`);
-    assertEquals(icoRes.status, 200);
-    assertEquals(icoRes.headers.get('Content-Type'), 'image/x-icon');
+      const icoRes = await fetch(`${baseUrl}/favicon.ico`);
+      assertEquals(icoRes.status, 200);
+      assertEquals(icoRes.headers.get('Content-Type'), 'image/x-icon');
+    }
   } finally {
     // Graceful shutdown
     await server.shutdown();

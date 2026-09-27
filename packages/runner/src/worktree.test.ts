@@ -30,6 +30,7 @@ Deno.test('WorktreeManager - prepareWorktree and cleanup with local bare repo', 
     await Deno.writeTextFile(join(localClone, 'file.txt'), 'hello world');
     await run('git add file.txt', localClone);
     await run('git commit -m initial-commit', localClone);
+    await run('git branch -M main', localClone);
     await run('git push origin main', localClone);
 
     // Push simulated PR ref: refs/pull/42/head
