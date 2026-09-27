@@ -7,11 +7,18 @@ import { GitHubPoller } from './poller.ts';
 import { createApi } from './api.ts';
 import { SettingsService } from './settings.ts';
 
-async function bootstrap() {
-  const port = parseInt(Deno.env.get('PORT') ?? '3456', 10);
-  const hostname = Deno.env.get('HOST') ?? '127.0.0.1';
-  const dbUrl = Deno.env.get('DATABASE_URL') ?? 'file:data/kuramori.db';
-  const reportsDir = resolve(Deno.env.get('REPORTS_DIR') ?? './data/reports');
+export interface ServerOptions {
+  port?: number;
+  hostname?: string;
+  dbUrl?: string;
+  reportsDir?: string;
+}
+
+export async function bootstrap(options: ServerOptions = {}) {
+  const port = options.port ?? parseInt(Deno.env.get('PORT') ?? '3456', 10);
+  const hostname = options.hostname ?? Deno.env.get('HOST') ?? '127.0.0.1';
+  const dbUrl = options.dbUrl ?? Deno.env.get('DATABASE_URL') ?? 'file:data/kuramori.db';
+  const reportsDir = resolve(options.reportsDir ?? Deno.env.get('REPORTS_DIR') ?? './data/reports');
   const logsDir = join(dirname(reportsDir), 'logs');
 
   const { db, client } = createDb(dbUrl);
