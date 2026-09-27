@@ -17,9 +17,9 @@ Always use the deterministic `deno task` commands to verify changes rather than 
 | Command | Purpose |
 | :--- | :--- |
 | `deno task check` | TypeScript type-check across all packages and apps |
-| `deno task lint` | Static analysis and code quality verification |
+| `deno task lint` | Static analysis, architectural boundaries, and schema doc sync verification |
 | `deno task test` | Execute the entire test suite |
-| `deno task build` | Production build of the web frontend (Vite + React) |
+| `deno task build` | Production build of web frontend and schema documentation |
 | `deno task dev:server` | Start backend server with file watch mode (`http://127.0.0.1:3456`) |
 | `deno task dev:web` | Start frontend Vite HMR development server |
 | `deno task runner --repo <owner/repo> --pr <num>` | Run standalone review runner script |
