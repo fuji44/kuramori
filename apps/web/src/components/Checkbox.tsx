@@ -1,4 +1,4 @@
-import React from 'react';
+import type React from 'react';
 import { CheckSquare, Square } from 'lucide-react';
 
 export interface CheckboxProps {

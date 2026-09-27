@@ -1,21 +1,23 @@
-import React from 'react';
+import type React from 'react';
 import {
   Settings,
   Shield,
   Sliders,
   Cpu,
   Zap,
+  Scale,
 } from 'lucide-react';
-import { AppSettings, ReviewRule, ReviewTrigger } from '../types.ts';
+import type { AppSettings, ReviewRule, ReviewTrigger } from '../types.ts';
 import { GeneralSettingsView } from './settings/GeneralSettingsView.tsx';
 import { EngineSettingsView } from './settings/EngineSettingsView.tsx';
 import { RuleSettingsView } from './settings/RuleSettingsView.tsx';
 import { TriggerSettingsView } from './settings/TriggerSettingsView.tsx';
+import { LicenseSettingsView } from './settings/LicenseSettingsView.tsx';
 import { useI18n } from '../i18n/context.tsx';
 
 interface SettingsViewProps {
-  subview: 'general' | 'engines' | 'rules' | 'triggers';
-  onNavigateSubview: (subview: 'general' | 'engines' | 'rules' | 'triggers') => void;
+  subview: 'general' | 'engines' | 'rules' | 'triggers' | 'licenses';
+  onNavigateSubview: (subview: 'general' | 'engines' | 'rules' | 'triggers' | 'licenses') => void;
   settings: AppSettings;
   rules: ReviewRule[];
   triggers?: ReviewTrigger[];
@@ -133,6 +135,20 @@ export function SettingsView({
               {triggers.length}
             </span>
           </button>
+          <button
+            type="button"
+            onClick={() => onNavigateSubview('licenses')}
+            className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors shrink-0 border ${
+              subview === 'licenses'
+                ? 'bg-sky-950 text-white border-sky-800/80 shadow-sm'
+                : 'border-transparent text-[#8b949e] hover:text-white hover:bg-[#21262d]'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <Scale className="w-4 h-4 text-sky-400" />
+              <span>{t('settingsView.licensesNav')}</span>
+            </div>
+          </button>
         </nav>
       </aside>
 
@@ -182,6 +198,10 @@ export function SettingsView({
             onShowSuccess={onShowSuccess}
             onShowError={onShowError}
           />
+        )}
+
+        {subview === 'licenses' && (
+          <LicenseSettingsView />
         )}
       </main>
     </div>

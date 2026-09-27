@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import type React from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { ReviewComment, MarkType } from '@kuramori/core';
 import { ArrowUp, Check, Clock, X, HelpCircle } from 'lucide-react';
 import { useI18n } from '../../i18n/context.tsx';
@@ -75,13 +76,13 @@ export const ReviewOutlineBar: React.FC<ReviewOutlineBarProps> = ({
     if (container) {
       container.addEventListener('scroll', handleScrollOrResize, { passive: true });
     }
-    window.addEventListener('resize', handleScrollOrResize, { passive: true });
+    globalThis.addEventListener('resize', handleScrollOrResize, { passive: true });
 
     return () => {
       if (container) {
         container.removeEventListener('scroll', handleScrollOrResize);
       }
-      window.removeEventListener('resize', handleScrollOrResize);
+      globalThis.removeEventListener('resize', handleScrollOrResize);
     };
   }, [scrollContainerRef]);
 
@@ -108,7 +109,7 @@ export const ReviewOutlineBar: React.FC<ReviewOutlineBarProps> = ({
     if (scrollContainerRef?.current) {
       scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      globalThis.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 

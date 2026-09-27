@@ -1,5 +1,9 @@
 # kuramori (蔵守)
 
+[![CI](https://github.com/fuji44/kuramori/actions/workflows/ci.yml/badge.svg)](https://github.com/fuji44/kuramori/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Deno 2](https://img.shields.io/badge/deno-v2.0+-green.svg)](https://deno.com)
+
 > **Pre-emptive, deep AI code reviews before humans read the PR. Visualized with architectural D2 vector diagrams and structured actionable reports.**
 
 `kuramori` is an automated code review platform that monitors GitHub Pull Requests, launches autonomous AI agents (Claude Code, Google Antigravity, OpenAI Codex, Local LLMs) inside isolated Git worktrees, and serves structured review reports with interactive dependency diagrams and StepFlows.
@@ -46,6 +50,9 @@ kuramori/
 ### 1. Launch Service (One Command)
 
 ```bash
+# Clone and setup environment
+cp .env.example .env
+
 # Build frontend web assets
 deno task build
 
@@ -53,8 +60,8 @@ deno task build
 deno task start
 ```
 
-Open [http://localhost:3456](http://localhost:3456) in your browser.
-Interactive API documentation is available at [http://localhost:3456/api/doc](http://localhost:3456/api/doc).
+Open [http://127.0.0.1:3456](http://127.0.0.1:3456) in your browser.
+Interactive API documentation is available at [http://127.0.0.1:3456/api/doc](http://127.0.0.1:3456/api/doc).
 
 ### 2. Development Mode
 
@@ -83,8 +90,14 @@ deno task --cwd packages/runner compile
 # TypeScript type check
 deno task check
 
+# Static analysis and linting
+deno task lint
+
 # Execute full test suite
 deno task test
+
+# Build production bundle
+deno task build
 ```
 
 ---
@@ -100,3 +113,18 @@ All architectural guidelines and domain specifications are cataloged in [docs/RE
 - **[Rules & Triggers Guide](docs/rules-and-triggers.md)**: Glob path matching, 4-block instructions, and noise filtering.
 - **[REST API Reference](docs/api.md)**: Endpoint catalog, OpenAPI 3.1 specification, and Scalar docs.
 - **[Operations & Troubleshooting](docs/operations.md)**: Service management, log inspection, and worktree cleanup.
+
+---
+
+## 🤝 Community & Contributing
+
+- **[Contributing Guide](CONTRIBUTING.md)**: Setup, architectural rules, coding standards, and PR workflows.
+- **[Code of Conduct](CODE_OF_CONDUCT.md)**: Contributor Covenant v2.1.
+- **[Security Policy](SECURITY.md)**: Responsible vulnerability disclosure.
+
+---
+
+## 📄 License
+
+kuramori is licensed under the [MIT License](LICENSE).
+Third-party component notices and licenses are documented in [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).

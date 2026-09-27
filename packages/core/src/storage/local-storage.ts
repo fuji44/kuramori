@@ -43,7 +43,9 @@ export class LocalFileReportStorage implements ReportStorage {
           // 次回のためにキャッシュ保存
           try {
             await Deno.writeTextFile(filePath, html);
-          } catch {}
+          } catch {
+            // キャッシュ書き込み失敗時は生成した HTML をそのまま返す
+          }
           return html;
         }
         return null;

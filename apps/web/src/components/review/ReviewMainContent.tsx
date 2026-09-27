@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+import type React from 'react';
+import { useState, useRef } from 'react';
 import {
   ExternalLink,
   ChevronDown,
@@ -10,14 +11,10 @@ import {
   GitCommit,
   Layers,
   FileCode,
-  ShieldAlert,
   ShieldCheck,
   ArrowRight,
   PanelLeftOpen,
-  Sparkles,
   Info,
-  Flame,
-  HelpCircle,
 } from 'lucide-react';
 import type { ReviewReportData, ReviewComment, MarkType } from '@kuramori/core';
 import { useI18n } from '../../i18n/context.tsx';
@@ -157,10 +154,6 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
   };
 
   const allOpened = comments.length > 0 && comments.every((c) => openMap[c.id] !== false);
-
-  // located と global に分類
-  const locatedComments = comments.filter((c) => Boolean(c.path));
-  const globalComments = comments.filter((c) => !c.path);
 
   // GitHub パーマリンク生成
   const getFileUrl = (comment: ReviewComment) => {
@@ -503,7 +496,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
                       {st.commentId && (
                         <button
                           type="button"
-                          onClick={() => onSelectComment(st.commentId!)}
+                          onClick={() => st.commentId && onSelectComment(st.commentId)}
                           className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-[#00AFA8]/15 text-[#00AFA8] hover:bg-[#00AFA8]/30"
                         >
                           {st.commentId}
@@ -566,7 +559,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
               <div
                 key={idx}
                 className={`flex items-start justify-between gap-3 ${idx > 0 ? 'pt-3' : ''} ${
-                  idx < summary.authorsDecisions!.length - 1 ? 'pb-3' : ''
+                  idx < (summary.authorsDecisions?.length ?? 0) - 1 ? 'pb-3' : ''
                 }`}
               >
                 <div className="flex items-start gap-2.5 flex-1 min-w-0">
@@ -576,7 +569,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
                 {item.commentId && (
                   <button
                     type="button"
-                    onClick={() => onSelectComment(item.commentId!)}
+                    onClick={() => item.commentId && onSelectComment(item.commentId)}
                     className="shrink-0 px-2.5 py-1 rounded bg-[#21262d] hover:bg-[#00AFA8]/20 text-[#00AFA8] border border-[#30363d] hover:border-[#00AFA8]/40 font-mono text-xs font-bold transition-colors flex items-center gap-1.5"
                     title={t('review.main.jumpToFinding', { id: item.commentId })}
                   >
@@ -614,7 +607,7 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#30363d]/70">
-                  {(summary.reachPaths as any[]).map((row, i) => (
+                  {(summary.reachPaths as Array<{ caller?: string; condition?: string; effect?: string }>).map((row, i) => (
                     <tr key={i} className="hover:bg-[#1f242c]/50">
                       <td className="p-3 font-mono text-gray-200">{row.caller}</td>
                       <td className="p-3 font-mono text-gray-400">{row.condition}</td>
@@ -949,12 +942,12 @@ export const ReviewMainContent: React.FC<ReviewMainContentProps> = ({
 
       {/* 9. 相互検証の透明性 (Transparency) */}
       {data.transparency && (() => {
-        const trans = data.transparency as any;
-        const rawCount = trans.rawFindingCount ?? trans.rawFindingsCount ?? data.comments.length;
-        const aggCount = trans.aggregatedCount ?? trans.synthesizedFindingsCount ?? data.comments.length;
+        const trans = data.transparency as Record<string, unknown>;
+        const rawCount = Number(trans.rawFindingCount ?? trans.rawFindingsCount ?? data.comments.length);
+        const aggCount = Number(trans.aggregatedCount ?? trans.synthesizedFindingsCount ?? data.comments.length);
         const dupCount = Math.max(0, rawCount - aggCount);
-        const refSpecs: Array<any> = trans.referencedSpecs ?? trans.specsReferenced ?? [];
-        const unrefSpecs: Array<any> = trans.unreferencedSpecs ?? trans.specsMissing ?? [];
+        const refSpecs = (trans.referencedSpecs ?? trans.specsReferenced ?? []) as Array<string | { name?: string; path?: string }>;
+        const unrefSpecs = (trans.unreferencedSpecs ?? trans.specsMissing ?? []) as Array<string | { name?: string; path?: string }>;
 
         return (
           <section className="flex flex-col gap-4 w-full border-t border-[#30363d] pt-8">

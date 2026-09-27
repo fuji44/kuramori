@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
-import { ReviewItem } from '../types.ts';
+import type { ReviewItem } from '../types.ts';
 import { ReviewReportView } from '../components/review/ReviewReportView.tsx';
 import { useI18n } from '../i18n/context.tsx';
 

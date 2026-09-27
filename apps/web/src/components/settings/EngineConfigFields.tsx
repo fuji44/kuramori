@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Sliders, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
-import {
+import type {
   AntigravityEngineConfig,
   ClaudeCodeEngineConfig,
   MockEngineConfig,
@@ -84,7 +84,7 @@ export function AntigravityFields({
               onChange={(e) => {
                 const raw = e.target.value;
                 if (raw === '') {
-                  onChange({ timeoutSeconds: '' as any });
+                  onChange({ timeoutSeconds: undefined });
                 } else {
                   const num = parseInt(raw, 10);
                   if (!isNaN(num)) {
@@ -617,7 +617,7 @@ export function ClaudeCodeFields({
               onChange={(e) => {
                 const raw = e.target.value;
                 if (raw === '') {
-                  onChange({ timeoutSeconds: '' as any });
+                  onChange({ timeoutSeconds: undefined });
                 } else {
                   const num = parseInt(raw, 10);
                   if (!isNaN(num)) {
@@ -1058,7 +1058,7 @@ export function MockFields({
           onChange={(e) => {
             const raw = e.target.value;
             if (raw === '') {
-              onChange({ delayMs: isOverride ? undefined : ('' as any) });
+              onChange({ delayMs: undefined });
             } else {
               const num = parseInt(raw, 10);
               if (!isNaN(num)) {
@@ -1091,8 +1091,8 @@ export function MockFields({
 
 export interface EngineConfigFieldsProps {
   engine: string;
-  values: Record<string, any>;
-  onChange: (updates: Record<string, any>) => void;
+  values: Record<string, unknown>;
+  onChange: (updates: Record<string, unknown>) => void;
   isOverride?: boolean;
   disabled?: boolean;
   showAdvanced?: boolean;

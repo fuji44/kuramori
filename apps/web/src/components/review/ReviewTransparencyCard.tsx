@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import type React from 'react';
+import { useState } from 'react';
 import { Shield, ChevronDown, ChevronRight, ExternalLink, CheckCircle, AlertCircle } from 'lucide-react';
 import type { ReviewTransparency } from '@kuramori/core';
 import { useI18n } from '../../i18n/context.tsx';
@@ -18,6 +19,7 @@ export const ReviewTransparencyCard: React.FC<ReviewTransparencyCardProps> = ({
   return (
     <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-4 shadow-sm space-y-3">
       <button
+        type="button"
         onClick={() => setCollapsed(!collapsed)}
         className="w-full flex items-center justify-between text-left"
       >

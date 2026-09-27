@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import type React from 'react';
+import { useState } from 'react';
 import { X, Copy, Check } from 'lucide-react';
 import { useI18n } from '../../i18n/context.tsx';
 

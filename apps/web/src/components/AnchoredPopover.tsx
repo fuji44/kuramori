@@ -1,4 +1,5 @@
-import React, { useLayoutEffect, useRef } from 'react';
+import type React from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 export type PopoverPlacement = 'top-end' | 'bottom-end' | 'bottom-start' | 'bottom-stretch';
@@ -64,7 +65,7 @@ export function AnchoredPopover({
     const observer = new ResizeObserver(updatePosition);
     observer.observe(anchor);
     observer.observe(popover);
-    window.addEventListener('resize', updatePosition);
+    globalThis.addEventListener('resize', updatePosition);
     let animationFrame: number | undefined;
     let stopTrackingTimer: number | undefined;
     const stopTracking = () => {
@@ -82,16 +83,16 @@ export function AnchoredPopover({
         };
         animationFrame = requestAnimationFrame(track);
       }
-      window.clearTimeout(stopTrackingTimer);
-      stopTrackingTimer = window.setTimeout(stopTracking, 120);
+      globalThis.clearTimeout(stopTrackingTimer);
+      stopTrackingTimer = globalThis.setTimeout(stopTracking, 120);
     };
-    window.addEventListener('scroll', trackDuringScroll, { capture: true, passive: true });
+    globalThis.addEventListener('scroll', trackDuringScroll, { capture: true, passive: true });
     return () => {
       observer.disconnect();
-      window.removeEventListener('resize', updatePosition);
-      window.removeEventListener('scroll', trackDuringScroll, true);
+      globalThis.removeEventListener('resize', updatePosition);
+      globalThis.removeEventListener('scroll', trackDuringScroll, true);
       stopTracking();
-      window.clearTimeout(stopTrackingTimer);
+      globalThis.clearTimeout(stopTrackingTimer);
     };
   }, [anchorRef, maxPanelHeight, placement]);
 

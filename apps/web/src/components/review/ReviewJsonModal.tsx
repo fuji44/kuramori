@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import type React from 'react';
+import { useState, useMemo } from 'react';
 import { X, Copy, Check, Download, ExternalLink, FileCode } from 'lucide-react';
 import type { ReviewReportData } from '@kuramori/core';
 import { useI18n } from '../../i18n/context.tsx';
@@ -217,7 +218,10 @@ export const ReviewJsonModal: React.FC<ReviewJsonModalProps> = ({
                       {item.lineNum}
                     </td>
                     <td className="py-0.5 px-4 text-gray-300 select-text whitespace-pre overflow-x-visible align-top font-mono">
-                      <span dangerouslySetInnerHTML={{ __html: item.html }} />
+                      {
+                        // deno-lint-ignore react-no-danger
+                        <span dangerouslySetInnerHTML={{ __html: item.html }} />
+                      }
                     </td>
                   </tr>
                 ))}

@@ -1,6 +1,26 @@
 import type { ListReviewRequestsOptions, VCSProvider } from '../interfaces/vcs-provider.ts';
 import type { ReviewRequest, ReviewLabel, VCSUser } from '../types/review.ts';
 
+interface GhRawGraphQLNode {
+  number: number;
+  title: string;
+  url: string;
+  isDraft?: boolean;
+  state?: string;
+  createdAt: string;
+  updatedAt: string;
+  author?: { login?: string };
+  repository?: { nameWithOwner?: string };
+  milestone?: { title?: string } | null;
+  labels?: { nodes?: Array<{ name: string; color?: string; description?: string }> };
+  assignees?: { nodes?: Array<{ login: string; avatarUrl?: string }> };
+  headRefName?: string;
+  baseRefName?: string;
+  headRefOid?: string;
+  additions?: number;
+  deletions?: number;
+}
+
 interface GhSearchPrItem {
   id?: string;
   number: number;
@@ -80,9 +100,9 @@ export class GitHubProvider implements VCSProvider {
     }
 
     const json = JSON.parse(new TextDecoder().decode(output.stdout));
-    const nodes = json?.data?.search?.nodes || [];
+    const nodes: GhRawGraphQLNode[] = json?.data?.search?.nodes || [];
 
-    return nodes.map((node: any) => ({
+    return nodes.map((node: GhRawGraphQLNode) => ({
       number: node.number,
       title: node.title,
       url: node.url,
@@ -92,13 +112,13 @@ export class GitHubProvider implements VCSProvider {
       updatedAt: node.updatedAt,
       author: { login: node.author?.login || 'unknown' },
       repository: { nameWithOwner: node.repository?.nameWithOwner || '' },
-      milestone: node.milestone ? { title: node.milestone.title } : null,
-      labels: (node.labels?.nodes || []).map((l: any) => ({
+      milestone: node.milestone ? { title: node.milestone.title ?? '' } : null,
+      labels: (node.labels?.nodes || []).map((l) => ({
         name: l.name,
         color: l.color,
         description: l.description,
       })),
-      assignees: (node.assignees?.nodes || []).map((a: any) => ({
+      assignees: (node.assignees?.nodes || []).map((a) => ({
         login: a.login,
         avatarUrl: a.avatarUrl,
       })),
@@ -270,13 +290,13 @@ export class GitHubProvider implements VCSProvider {
     const currentUser = await this.getCurrentUser();
     const isOwn = currentUser !== null ? currentUser.login === data.author.login : false;
 
-    const labels: ReviewLabel[] = (data.labels || []).map((l: any) => ({
+    const labels: ReviewLabel[] = (data.labels || []).map((l: { name: string; color?: string; description?: string }) => ({
       name: l.name,
       color: l.color,
       description: l.description,
     }));
 
-    const assignees = (data.assignees || []).map((a: any) => ({
+    const assignees = (data.assignees || []).map((a: { login: string; avatarUrl?: string }) => ({
       login: a.login,
       avatarUrl: a.avatarUrl,
     }));
@@ -322,7 +342,7 @@ export class GitHubProvider implements VCSProvider {
     return new TextDecoder().decode(output.stdout);
   }
 
-  async getCloneUrl(repository: string): Promise<string> {
-    return `https://github.com/${repository}.git`;
+  getCloneUrl(repository: string): Promise<string> {
+    return Promise.resolve(`https://github.com/${repository}.git`);
   }
 }

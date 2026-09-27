@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import type React from 'react';
+import { useMemo } from 'react';
 
 import {
   CheckCircle2,
@@ -270,9 +271,10 @@ export const ReviewSummaryCard: React.FC<ReviewSummaryCardProps> = ({
                 <li key={idx} className="flex items-start gap-2 text-gray-300">
                   <span className="text-indigo-400 font-bold">•</span>
                   <span className="flex-1 leading-relaxed">{item.decision}</span>
-                  {item.commentId && (
+                  {item.commentId !== undefined && (
                     <button
-                      onClick={() => onSelectComment?.(item.commentId!)}
+                      type="button"
+                      onClick={() => onSelectComment?.(item.commentId)}
                       className="text-xs font-mono text-indigo-400 hover:underline bg-indigo-950/40 px-1.5 py-0.5 rounded border border-indigo-500/30 shrink-0"
                     >
                       {t('review.summary.inspectFinding', { id: item.commentId })}

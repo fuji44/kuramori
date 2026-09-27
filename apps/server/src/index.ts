@@ -5,11 +5,11 @@ import { LocalFileReportStorage, GitHubProvider } from '@kuramori/core';
 import { ReviewQueue } from './queue.ts';
 import { GitHubPoller } from './poller.ts';
 import { createApi } from './api.ts';
-import { ClaudeCodeEngine, MockReviewEngine } from '@kuramori/runner';
 import { SettingsService } from './settings.ts';
 
 async function bootstrap() {
   const port = parseInt(Deno.env.get('PORT') ?? '3456', 10);
+  const hostname = Deno.env.get('HOST') ?? '127.0.0.1';
   const dbUrl = Deno.env.get('DATABASE_URL') ?? 'file:data/kuramori.db';
   const reportsDir = resolve(Deno.env.get('REPORTS_DIR') ?? './data/reports');
   const logsDir = join(dirname(reportsDir), 'logs');
@@ -89,7 +89,8 @@ async function bootstrap() {
     // web/dist not built yet; API mode
   }
 
-  console.log(`Server started at http://localhost:${port}`);
+  const hostDisplay = hostname === '0.0.0.0' ? 'localhost' : hostname;
+  console.log(`Server started at http://${hostDisplay}:${port}`);
 
   const shutdown = () => {
     console.log('Shutting down server gracefully...');
@@ -101,7 +102,7 @@ async function bootstrap() {
   Deno.addSignalListener('SIGINT', shutdown);
   Deno.addSignalListener('SIGTERM', shutdown);
 
-  Deno.serve({ port }, app.fetch);
+  Deno.serve({ port, hostname }, app.fetch);
 }
 
 if (import.meta.main) {

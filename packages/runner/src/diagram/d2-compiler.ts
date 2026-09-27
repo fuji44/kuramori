@@ -1,4 +1,4 @@
-import type { Diagram, DiagramNode, DiagramEdge } from '@kuramori/core';
+import type { Diagram, DiagramNode } from '@kuramori/core';
 import { D2 } from '@d2lang/d2';
 
 /**
@@ -12,7 +12,7 @@ export async function compileD2ToSvg(
   const theme = options?.theme ?? 200; // 200: Dark mode theme (Catppuccin Mocha風)
 
   // 1. @d2lang/d2 JS (WASM) ラッパーを第一優先で使用
-  let d2Instance: any = null;
+  let d2Instance: InstanceType<typeof D2> | null = null;
   try {
     d2Instance = new D2();
     const result = await d2Instance.compile(d2Source, {
@@ -22,7 +22,7 @@ export async function compileD2ToSvg(
     });
     const rawSvg = await d2Instance.render(result.diagram, result.renderOptions);
     return postProcessSvg(rawSvg);
-  } catch (jsErr: any) {
+  } catch (jsErr: unknown) {
     // tala で例外が起きた場合は elk でリトライ
     if (layout === 'tala' && d2Instance) {
       try {
@@ -60,7 +60,8 @@ export async function compileD2ToSvg(
       // CLI がない場合は元の JS エラーをスロー
     }
 
-    throw new Error(`D2 JS compilation failed: ${jsErr.message || jsErr}`);
+    const jsErrMsg = jsErr instanceof Error ? jsErr.message : String(jsErr);
+    throw new Error(`D2 JS compilation failed: ${jsErrMsg}`);
   } finally {
     if (d2Instance && typeof d2Instance.dispose === 'function') {
       try {

@@ -574,8 +574,14 @@ export const ja = {
     enginesNav: 'AI 実行設定',
     rulesNav: 'レビュールール',
     triggersNav: '自動トリガー',
+    licensesNav: 'ライセンス',
   },
   settings: {
+    licenses: {
+      title: 'オープンソースライセンス',
+      description: 'kuramori で使用されているサードパーティ製オープンソースソフトウェアのライセンスおよび著作権表示を確認できます。',
+      thirdPartyHeader: 'サードパーティ製コンポーネント一覧と許諾表示',
+    },
     generalTitle: '全体設定',
     generalDesc: 'システムの既定実行ルール、並列度制限、自動 PR キューなどの基本動作を設定します。',
     languageSectionTitle: '表示言語',

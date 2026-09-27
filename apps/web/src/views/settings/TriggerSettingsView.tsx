@@ -1,11 +1,9 @@
-import React, { useState } from 'react';
+import type React from 'react';
+import { useState } from 'react';
 import {
   Zap,
-  Plus,
   Trash2,
   Edit2,
-  Save,
-  ArrowLeft,
   FolderGit2,
   FileCode,
   Shield,
@@ -13,11 +11,10 @@ import {
   Ban,
   CheckSquare,
   Square,
-  Sparkles,
   Power,
   Copy,
 } from 'lucide-react';
-import { AppSettings, ReviewTrigger, ReviewRule, resolveRuleEngineProfile } from '../../types.ts';
+import { type AppSettings, type ReviewTrigger, type ReviewRule, resolveRuleEngineProfile } from '../../types.ts';
 import { Checkbox } from '../../components/Checkbox.tsx';
 import {
   SettingCard,

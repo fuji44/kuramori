@@ -29,7 +29,15 @@ export class WorktreeManager {
     return new TextDecoder().decode(output.stdout).trim();
   }
 
+  private validateRepository(repository: string): void {
+    const REPO_REGEX = /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/;
+    if (!REPO_REGEX.test(repository)) {
+      throw new Error(`Invalid repository format: ${repository}`);
+    }
+  }
+
   protected async ensureBareRepo(repository: string): Promise<string> {
+    this.validateRepository(repository);
     const repoDirName = repository.replace('/', '__');
     const repoPath = join(this.baseCacheDir, repoDirName);
 
@@ -51,6 +59,12 @@ export class WorktreeManager {
   }
 
   async prepareWorktree(repository: string, prNumber: number, headSha: string): Promise<WorktreeSession> {
+    if (!Number.isInteger(prNumber) || prNumber <= 0) {
+      throw new Error(`Invalid PR number: ${prNumber}`);
+    }
+    if (headSha && !/^[a-zA-Z0-9_.-]+$/.test(headSha)) {
+      throw new Error(`Invalid headSha: ${headSha}`);
+    }
     const repoPath = await this.ensureBareRepo(repository);
     const branchName = `pr-${prNumber}`;
 

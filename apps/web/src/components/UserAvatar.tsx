@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { User as UserIcon } from 'lucide-react';
 import type { CurrentUser } from '../types.ts';
 

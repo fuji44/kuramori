@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   FileText,
   Search,
@@ -12,7 +12,7 @@ import {
   Filter,
   X,
 } from 'lucide-react';
-import { ReviewItem } from '../types.ts';
+import type { ReviewItem } from '../types.ts';
 import { getPrAnchorId } from '../utils/anchor.ts';
 import { useI18n } from '../i18n/context.tsx';
 
@@ -315,7 +315,8 @@ export function ReportListView({
       ) : (
         <div className="space-y-3">
           {filteredReports.map((item) => {
-            const reportId = item.report!.id;
+            if (item.report === undefined) return null;
+            const reportId = item.report.id;
             const fullTitle = `${item.repository}#${item.number}: ${item.title}`;
             const anchorId = getPrAnchorId(item.repository, item.number);
 

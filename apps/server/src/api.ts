@@ -5,10 +5,16 @@ import { resolve } from '@std/path';
 import type { AppDatabase } from './db/index.ts';
 import { pullFiltersTable, reviewJobsTable, reviewReportsTable, reviewRequestsTable, reviewRulesTable, reviewRuleResultsTable, reviewTriggersTable } from './db/schema.ts';
 
-import type { EngineEnvironment, ReportStorage, VCSProvider } from '@kuramori/core';
+import type {
+  EngineEnvironment,
+  EngineEnvironmentVariable,
+  EngineOverrideConfig,
+  ReportStorage,
+  VCSProvider,
+} from '@kuramori/core';
 import type { GitHubPoller } from './poller.ts';
 import type { ReviewQueue } from './queue.ts';
-import type { SettingsService } from './settings.ts';
+import type { AppSettings, SettingsService } from './settings.ts';
 import { compileD2ToSvg, generateStandaloneReviewHtml, resolveEngineEnvironment } from '@kuramori/runner';
 import { openapiSpec } from './openapi.ts';
 import { Scalar } from '@scalar/hono-api-reference';
@@ -23,53 +29,87 @@ export interface ApiDependencies {
   logsDir?: string;
 }
 
-function mapEngineEnvironments(settings: any, transform: (entry: any, previous?: any) => any, previous?: any) {
-  const mapConfig = (config: any, oldConfig?: any) => {
-    if (!config) return config;
-    const customEnv = { ...(config.customEnv ?? {}) };
-    for (const [name, entry] of Object.entries(customEnv) as Array<[string, any]>) {
-      customEnv[name] = transform(entry, oldConfig?.customEnv?.[name]);
-    }
-    return { ...config, customEnv };
-  };
+function mapCustomEnv(
+  env: EngineEnvironment | undefined,
+  oldEnv: EngineEnvironment | undefined,
+  transform: (entry: string | EngineEnvironmentVariable, old?: string | EngineEnvironmentVariable) => string | EngineEnvironmentVariable,
+): EngineEnvironment | undefined {
+  if (env === undefined) return undefined;
+  const result: EngineEnvironment = {};
+  for (const [key, value] of Object.entries(env)) {
+    result[key] = transform(value, oldEnv?.[key]);
+  }
+  return result;
+}
+
+function mapEngineEnvironments<T extends Partial<AppSettings>>(
+  settings: T,
+  transform: (entry: string | EngineEnvironmentVariable, old?: string | EngineEnvironmentVariable) => string | EngineEnvironmentVariable,
+  previous?: Partial<AppSettings>,
+): T {
   const result = { ...settings };
   if (settings.engineSettings) {
+    const es = settings.engineSettings;
+    const prevEs = previous?.engineSettings;
     result.engineSettings = {
-      ...Object.fromEntries(
-        Object.entries(settings.engineSettings).map(([engine, config]: [string, any]) => [
-          engine,
-          mapConfig(config, previous?.engineSettings?.[engine]),
-        ]),
-      ),
+      ...es,
+      antigravity: {
+        ...es.antigravity,
+        customEnv: mapCustomEnv(es.antigravity.customEnv, prevEs?.antigravity.customEnv, transform),
+      },
+      claudeCode: {
+        ...es.claudeCode,
+        customEnv: mapCustomEnv(es.claudeCode.customEnv, prevEs?.claudeCode.customEnv, transform),
+      },
+      codex: {
+        ...es.codex,
+        customEnv: mapCustomEnv(es.codex.customEnv, prevEs?.codex.customEnv, transform),
+      },
     };
   }
-  if (Array.isArray(settings.engineProfiles)) {
-    result.engineProfiles = settings.engineProfiles.map((profile: any) => {
-      const oldProfile = previous?.engineProfiles?.find((candidate: any) => candidate.id === profile.id);
-      return {
-        ...profile,
-        config: mapConfig(profile.config, oldProfile?.config),
-      };
+  if (settings.engineProfiles) {
+    result.engineProfiles = settings.engineProfiles.map((p) => {
+      const oldP = previous?.engineProfiles?.find((cand) => cand.id === p.id);
+      if ('customEnv' in p.config) {
+        const oldCustomEnv = oldP && 'customEnv' in oldP.config ? oldP.config.customEnv : undefined;
+        return {
+          ...p,
+          config: {
+            ...p.config,
+            customEnv: mapCustomEnv(p.config.customEnv, oldCustomEnv, transform),
+          },
+        } as typeof p;
+      }
+      return p;
     });
   }
   return result;
 }
 
-function maskSecretEnvironmentValues(settings: any) {
+function maskSecretEnvironmentValues<T extends Partial<AppSettings>>(settings: T): T {
   return mapEngineEnvironments(settings, (entry) => {
-    if (typeof entry === 'string' || !entry.secret) return entry;
-    return { ...entry, value: '', configured: Boolean(entry.value || entry.configured) };
+    if (typeof entry === 'string') return entry;
+    if (!entry.secret) return entry;
+    return {
+      value: '',
+      secret: true,
+      configured: Boolean(entry.value || entry.configured),
+    };
   });
 }
 
-function restoreSecretEnvironmentValues(settings: any, previous: any) {
+function restoreSecretEnvironmentValues<T extends Partial<AppSettings>>(
+  settings: T,
+  previous?: Partial<AppSettings>,
+): T {
   return mapEngineEnvironments(settings, (entry, oldEntry) => {
     if (typeof entry === 'string') return entry;
-    const value = entry.secret && entry.value === '' && entry.configured && oldEntry?.secret
-      ? oldEntry.value
+    const oldObj = typeof oldEntry === 'object' && oldEntry !== null ? oldEntry : undefined;
+    const value = entry.secret && entry.value === '' && entry.configured && oldObj?.secret
+      ? oldObj.value
       : entry.value;
-    const { configured: _configured, ...persistedEntry } = entry;
-    return { ...persistedEntry, value };
+    const { configured: _configured, ...persisted } = entry;
+    return { ...persisted, value };
   }, previous);
 }
 
@@ -131,14 +171,18 @@ export function createApi(deps: ApiDependencies) {
       if (req.labels) {
         try {
           parsedLabels = JSON.parse(req.labels);
-        } catch {}
+        } catch {
+          // Ignore invalid or corrupted stored JSON labels
+        }
       }
 
       let parsedAssignees: Array<{ login: string; avatarUrl?: string }> = [];
       if (req.assignees) {
         try {
           parsedAssignees = JSON.parse(req.assignees);
-        } catch {}
+        } catch {
+          // Ignore invalid or corrupted stored JSON assignees
+        }
       }
 
       return {
@@ -725,7 +769,16 @@ export function createApi(deps: ApiDependencies) {
   // Engine connection and execution test endpoint
   app.post('/api/engines/:engine/test', async (c) => {
     const engine = c.req.param('engine');
-    let body: any = {};
+    let body: {
+      mode?: string;
+      profileId?: string;
+      binPath?: string;
+      model?: string;
+      effort?: string;
+      sandboxMode?: string;
+      ephemeral?: boolean;
+      customEnv?: EngineEnvironment;
+    } = {};
     try {
       body = await c.req.json();
     } catch {
@@ -738,10 +791,10 @@ export function createApi(deps: ApiDependencies) {
     const matchedProfile = settings.engineProfiles?.find((p) => p.id === (body?.profileId ?? engine));
 
     let effectiveEngine = engine;
-    let profileConfig: any = null;
+    let profileConfig: EngineOverrideConfig | null = null;
     if (matchedProfile) {
       effectiveEngine = matchedProfile.engineType;
-      profileConfig = matchedProfile.config;
+      profileConfig = (matchedProfile.config ?? null) as EngineOverrideConfig | null;
     }
 
     if (effectiveEngine === 'mock') {
@@ -849,8 +902,9 @@ export function createApi(deps: ApiDependencies) {
           error: stderr || stdout || `CLI command exited with status ${output.code}`,
         });
       }
-    } catch (err: any) {
-      if (err.name === 'TimeoutError') {
+    } catch (err: unknown) {
+      const errorObj = err instanceof Error ? err : null;
+      if (errorObj?.name === 'TimeoutError') {
         return c.json({
           success: false,
           mode,
@@ -867,7 +921,7 @@ export function createApi(deps: ApiDependencies) {
       return c.json({
         success: false,
         mode,
-        error: `実行エラー: ${err.message || String(err)}`,
+        error: `実行エラー: ${errorObj?.message || String(err)}`,
       });
     }
   });
@@ -884,8 +938,9 @@ export function createApi(deps: ApiDependencies) {
       const layout = ['tala', 'elk', 'dagre'].includes(body.layout) ? body.layout : 'tala';
       const svg = await compileD2ToSvg(d2Source, { layout });
       return c.json({ svg, layout });
-    } catch (err: any) {
-      return c.json({ error: `Compilation failed: ${err.message || err}` }, 500);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      return c.json({ error: `Compilation failed: ${message}` }, 500);
     }
   });
 

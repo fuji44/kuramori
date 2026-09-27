@@ -37,11 +37,16 @@ function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
   return current;
 }
 
-export function createTranslator(locale: Locale) {
+export type TranslatorFn = (
+  key: TranslationKey | (string & { _?: never }),
+  params?: InterpolationParams
+) => string;
+
+export function createTranslator(locale: Locale): TranslatorFn {
   const currentDict = dictionaries[locale];
   const fallbackDict = dictionaries.en;
 
-  return (key: TranslationKey | (string & {}), params?: InterpolationParams): string => {
+  return (key: TranslationKey | (string & { _?: never }), params?: InterpolationParams): string => {
     let rawText = getNestedValue(currentDict as unknown as Record<string, unknown>, key);
 
     if (typeof rawText !== 'string') {

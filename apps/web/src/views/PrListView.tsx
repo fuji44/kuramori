@@ -1,10 +1,11 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import type React from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { RefreshCw, CheckCircle2, Link2, Inbox, Plus, Bookmark, Trash2 } from 'lucide-react';
-import { EngineProfile, ReviewItem, ReviewRule } from '../types.ts';
+import type { EngineProfile, ReviewItem, ReviewRule } from '../types.ts';
 import { SearchQueryBar } from '../components/SearchQueryBar.tsx';
 import { PrCard } from '../components/PrCard.tsx';
 import { filterByGitHubQuery } from '../utils/query-parser.ts';
-import { FilterUrlParams } from '../utils/url-params.ts';
+import type { FilterUrlParams } from '../utils/url-params.ts';
 import { findMatchingPrElement, getPrAnchorId } from '../utils/anchor.ts';
 import { useI18n } from '../i18n/context.tsx';
 
@@ -77,7 +78,7 @@ export function PrListView({
   const [highlightedAnchor, setHighlightedAnchor] = useState<string | null>(null);
   const highlightTimeoutRef = useRef<number | null>(null);
 
-  const setParam = (key: keyof FilterUrlParams, val: any) => {
+  const setParam = <K extends keyof FilterUrlParams>(key: K, val: FilterUrlParams[K]) => {
     onParamsChange({
       ...params,
       [key]: val,
@@ -89,7 +90,7 @@ export function PrListView({
     if (loading || items.length === 0) return;
 
     const scrollToAnchor = () => {
-      const hash = window.location.hash;
+      const hash = globalThis.location.hash;
       if (!hash) return;
 
       const el = findMatchingPrElement(hash);
@@ -100,7 +101,7 @@ export function PrListView({
         if (highlightTimeoutRef.current) {
           clearTimeout(highlightTimeoutRef.current);
         }
-        highlightTimeoutRef.current = window.setTimeout(() => {
+        highlightTimeoutRef.current = globalThis.setTimeout(() => {
           setHighlightedAnchor(null);
         }, 2500);
       }
@@ -108,11 +109,11 @@ export function PrListView({
 
     // Small timeout to allow DOM to settle
     const timer = setTimeout(scrollToAnchor, 100);
-    window.addEventListener('hashchange', scrollToAnchor);
+    globalThis.addEventListener('hashchange', scrollToAnchor);
 
     return () => {
       clearTimeout(timer);
-      window.removeEventListener('hashchange', scrollToAnchor);
+      globalThis.removeEventListener('hashchange', scrollToAnchor);
       if (highlightTimeoutRef.current) {
         clearTimeout(highlightTimeoutRef.current);
       }
@@ -120,7 +121,7 @@ export function PrListView({
   }, [loading, items.length]);
 
   const handleSelectCard = (anchorId: string) => {
-    window.history.replaceState(null, '', `#${anchorId}`);
+    globalThis.history.replaceState(null, '', `#${anchorId}`);
     setHighlightedAnchor(anchorId);
   };
 
@@ -206,7 +207,7 @@ export function PrListView({
 
   const handleCopyFilterUrl = async () => {
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      await navigator.clipboard.writeText(globalThis.location.href);
       onShowSuccess(t('toast.urlCopiedSuccess'));
     } catch {
       onShowError(t('toast.urlCopiedError'));

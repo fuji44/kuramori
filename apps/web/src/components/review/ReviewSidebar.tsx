@@ -7,23 +7,13 @@ import {
   Settings,
   User,
   Search,
-  Filter,
-  Layers,
-  FileCode,
-  Tag,
-  AlertTriangle,
   RotateCcw,
   PanelLeftClose,
   PanelLeftOpen,
   Sparkles,
-  ShieldAlert,
-  Flame,
-  CheckCircle2,
-  HelpCircle,
-  Bookmark,
   Trash2,
 } from 'lucide-react';
-import type { ReviewReportData, ReviewComment, Severity, LensVerdict } from '@kuramori/core';
+import type { ReviewReportData, Severity, LensVerdict } from '@kuramori/core';
 import { useI18n } from '../../i18n/context.tsx';
 
 export type MarkType = 'post' | 'hold' | 'skip';
@@ -61,15 +51,11 @@ const TAG_ORDER = ['MUST', 'Q', 'IMO', 'NIT', 'NR', 'FYI', 'PRAISE', 'THOUGHT'];
 export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
   data,
   marks,
-  memos,
   filters,
   onFilterChange,
   onResetFilters,
   onClearMarks,
-  onSelectComment,
-  activeCommentId,
   onOpenExport,
-  onOpenJson,
   isCollapsed,
   onToggleCollapse,
 }) => {
@@ -190,7 +176,9 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
       await navigator.clipboard.writeText(`#${pr.number}`);
       setCopiedNumber(true);
       setTimeout(() => setCopiedNumber(false), 2000);
-    } catch {}
+    } catch {
+      // クリップボード書き込み失敗時は無視
+    }
   };
 
   // タグ選択トグル
@@ -897,7 +885,7 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
               <button
                 key={m.id}
                 type="button"
-                onClick={() => onFilterChange({ mark: m.id as any })}
+                onClick={() => onFilterChange({ mark: m.id as 'post' | 'hold' | 'skip' | 'unset' })}
                 className={`px-2.5 py-1.5 rounded-lg text-xs text-center transition-all border flex items-center justify-center ${
                   active
                     ? `${m.activeBg} shadow-sm`
@@ -924,7 +912,7 @@ export const ReviewSidebar: React.FC<ReviewSidebarProps> = ({
           <button
             type="button"
             onClick={() => {
-              if (window.confirm(t('review.sidebar.confirmClearAll'))) {
+              if (globalThis.confirm(t('review.sidebar.confirmClearAll'))) {
                 onClearMarks();
               }
             }}

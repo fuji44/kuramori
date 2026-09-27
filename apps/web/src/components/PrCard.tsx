@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import type React from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 import {
   GitPullRequest,
@@ -19,7 +20,7 @@ import {
   CheckSquare,
   Square,
 } from 'lucide-react';
-import { EngineProfile, ReviewItem, ReviewRule } from '../types.ts';
+import type { EngineProfile, ReviewItem, ReviewRule } from '../types.ts';
 import { getPrAnchorId } from '../utils/anchor.ts';
 import { AnchoredPopover } from './AnchoredPopover.tsx';
 import { useI18n } from '../i18n/context.tsx';
@@ -343,7 +344,7 @@ export function PrCard({
             </span>
           )}
 
-          {item.additions != null && item.deletions != null && (
+          {item.additions !== undefined && item.deletions !== undefined && (
             <span className="flex items-center gap-1.5 shrink-0 font-mono" title={t('pulls.diffLinesTitle')}>
               <span className="text-emerald-400">+{item.additions}</span>
               <span className="text-rose-400">−{item.deletions}</span>

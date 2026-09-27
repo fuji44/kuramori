@@ -2,14 +2,16 @@
 /// <reference lib="dom.iterable" />
 
 import { useEffect, useState, useCallback } from 'react';
-import { parseUrlParams, buildUrlSearch, FilterUrlParams } from './url-params.ts';
+import { parseUrlParams, buildUrlSearch, type FilterUrlParams } from './url-params.ts';
+
+export type SettingsSubview = 'general' | 'engines' | 'rules' | 'triggers' | 'licenses';
 
 export type AppRoute =
   | { view: 'dashboard' }
   | { view: 'reviews'; params: FilterUrlParams; filterId?: string }
   | { view: 'reports' }
   | { view: 'report'; reportId: string }
-  | { view: 'settings'; subview: 'general' | 'engines' | 'rules' | 'triggers' };
+  | { view: 'settings'; subview: SettingsSubview };
 
 export function parseRoute(pathname: string, search: string): AppRoute {
   // Normalize pathname
@@ -29,6 +31,10 @@ export function parseRoute(pathname: string, search: string): AppRoute {
 
   if (cleanPath === '/settings/triggers') {
     return { view: 'settings', subview: 'triggers' };
+  }
+
+  if (cleanPath === '/settings/licenses') {
+    return { view: 'settings', subview: 'licenses' };
   }
 
   if (cleanPath === '/reports') {
@@ -93,33 +99,33 @@ export function buildRouteUrl(route: AppRoute): string {
 const ROUTE_CHANGE_EVENT = 'app:routechange';
 
 export function navigateTo(url: string, replace = false): void {
-  const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  const current = `${globalThis.location.pathname}${globalThis.location.search}${globalThis.location.hash}`;
   if (current !== url) {
     if (replace) {
-      window.history.replaceState(null, '', url);
+      globalThis.history.replaceState(null, '', url);
     } else {
-      window.history.pushState(null, '', url);
+      globalThis.history.pushState(null, '', url);
     }
-    window.dispatchEvent(new Event(ROUTE_CHANGE_EVENT));
+    globalThis.dispatchEvent(new Event(ROUTE_CHANGE_EVENT));
   }
 }
 
 export function useAppRoute(): [AppRoute, (route: AppRoute, replace?: boolean) => void] {
   const [currentRoute, setCurrentRoute] = useState<AppRoute>(() =>
-    parseRoute(window.location.pathname, window.location.search)
+    parseRoute(globalThis.location.pathname, globalThis.location.search)
   );
 
   useEffect(() => {
     const handleLocationChange = () => {
-      setCurrentRoute(parseRoute(window.location.pathname, window.location.search));
+      setCurrentRoute(parseRoute(globalThis.location.pathname, globalThis.location.search));
     };
 
-    window.addEventListener('popstate', handleLocationChange);
-    window.addEventListener(ROUTE_CHANGE_EVENT, handleLocationChange);
+    globalThis.addEventListener('popstate', handleLocationChange);
+    globalThis.addEventListener(ROUTE_CHANGE_EVENT, handleLocationChange);
 
     return () => {
-      window.removeEventListener('popstate', handleLocationChange);
-      window.removeEventListener(ROUTE_CHANGE_EVENT, handleLocationChange);
+      globalThis.removeEventListener('popstate', handleLocationChange);
+      globalThis.removeEventListener(ROUTE_CHANGE_EVENT, handleLocationChange);
     };
   }, []);
 

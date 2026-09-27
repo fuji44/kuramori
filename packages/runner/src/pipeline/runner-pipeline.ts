@@ -2,7 +2,6 @@ import { dirname, fromFileUrl, join, resolve } from '@std/path';
 import {
   type ReviewExecutionContext,
   type ReviewExecutionResult,
-  type ReviewReportData,
   type RuleResult,
   type RuleResultFinding,
   type RuleResultVerdict,

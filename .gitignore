@@ -15,6 +15,7 @@ data/
 tmp/
 temp/
 docs/.temp/
+scratch/
 *.log
 *.tmp
 

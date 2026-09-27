@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import type React from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Loader2, AlertCircle, ExternalLink } from 'lucide-react';
-import type { ReviewReportData, ReviewComment, MarkType } from '@kuramori/core';
+import type { ReviewReportData, MarkType } from '@kuramori/core';
 import { ReviewSidebar, type FilterState } from './ReviewSidebar.tsx';
 import { ReviewMainContent } from './ReviewMainContent.tsx';
 import { ReviewExportModal } from './ReviewExportModal.tsx';
@@ -12,7 +13,7 @@ interface ReviewReportViewProps {
 }
 
 export const ReviewReportView: React.FC<ReviewReportViewProps> = ({ reportId }) => {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const [data, setData] = useState<ReviewReportData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +58,7 @@ export const ReviewReportView: React.FC<ReviewReportViewProps> = ({ reportId }) 
           const convertedMarks: Record<string, MarkType> = {};
           const convertedMemos: Record<string, string> = {};
           for (const [k, v] of Object.entries(parsed)) {
-            const val = v as any;
+            const val = v as { status?: string; memo?: string };
             if (val?.status) {
               const s = val.status === 'ignore' ? 'skip' : val.status;
               convertedMarks[k] = s as MarkType;
@@ -70,7 +71,9 @@ export const ReviewReportView: React.FC<ReviewReportViewProps> = ({ reportId }) 
           setMemos(convertedMemos);
         }
       }
-    } catch {}
+    } catch {
+      // Ignore corrupted localStorage entries
+    }
   }, [reportId]);
 
   // localStorage 保存
@@ -80,7 +83,9 @@ export const ReviewReportView: React.FC<ReviewReportViewProps> = ({ reportId }) 
         `review-decisions-${reportId}`,
         JSON.stringify({ marks: newMarks, memos: newMemos })
       );
-    } catch {}
+    } catch {
+      // Ignore storage write failures
+    }
   };
 
   // レポートデータ取得
@@ -110,7 +115,7 @@ export const ReviewReportView: React.FC<ReviewReportViewProps> = ({ reportId }) 
           setData(json);
           setLoading(false);
         }
-      } catch (err: any) {
+      } catch (_err: unknown) {
         if (!isCancelled) {
           setUseIframeFallback(true);
           setLoading(false);

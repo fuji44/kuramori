@@ -1,22 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import type React from 'react';
+import { useState, useEffect } from 'react';
 import {
   GitPullRequest,
-  AlertCircle,
-  CheckCircle2,
-  X,
   LayoutDashboard,
   FileText,
 } from 'lucide-react';
 
-import { ReviewItem, AppSettings, ReviewRule, ReviewTrigger, CurrentUser } from './types.ts';
-import { useAppRoute, AppRoute, navigateTo } from './utils/route.ts';
+import type { ReviewItem, AppSettings, ReviewRule, ReviewTrigger, CurrentUser } from './types.ts';
+import { useAppRoute, navigateTo } from './utils/route.ts';
 import { DashboardView } from './views/DashboardView.tsx';
 import { PrListView } from './views/PrListView.tsx';
 import { ReportDetailView } from './views/ReportDetailView.tsx';
 import { ReportListView } from './views/ReportListView.tsx';
 import { SettingsView } from './views/SettingsView.tsx';
 import { JobLogModal } from './components/JobLogModal.tsx';
-import { ToastContainer, ToastItem, ToastType } from './components/Toast.tsx';
+import { ToastContainer, type ToastItem, type ToastType } from './components/Toast.tsx';
 import { useI18n } from './i18n/context.tsx';
 import { UserMenuPopover } from './components/UserMenuPopover.tsx';
 
@@ -209,8 +207,8 @@ export default function App() {
         }
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    globalThis.addEventListener('keydown', handleKeyDown);
+    return () => globalThis.removeEventListener('keydown', handleKeyDown);
   }, [route.view, logModalJobId, navigate]);
 
   const handleRefresh = async () => {
@@ -561,7 +559,7 @@ export default function App() {
         {route.view === 'reports' && (
           <ReportListView
             items={items}
-            onSelectReport={(reportId, prTitle) => navigate({ view: 'report', reportId })}
+            onSelectReport={(reportId, _prTitle) => navigate({ view: 'report', reportId })}
             onNavigateToReviews={(anchorId) => {
               if (typeof anchorId === 'string' && anchorId.trim() !== '') {
                 navigateTo(`/pulls#${anchorId}`);
@@ -578,8 +576,8 @@ export default function App() {
             items={items}
             onBack={() => {
               // If previous history exists, we can go back, else fallback to reviews
-              if (window.history.length > 1) {
-                window.history.back();
+              if (globalThis.history.length > 1) {
+                globalThis.history.back();
               } else {
                 navigate({ view: 'reviews', params: {} });
               }

@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { Copy, Check, FileCode, Columns, AlignJustify } from 'lucide-react';
+import type React from 'react';
+import { useState, useMemo } from 'react';
+import { Copy, Check, FileCode } from 'lucide-react';
 import { useI18n } from '../../i18n/context.tsx';
 
 interface ReviewDiffViewerProps {
@@ -122,7 +123,9 @@ export const ReviewDiffViewer: React.FC<ReviewDiffViewerProps> = ({
       await navigator.clipboard.writeText(replacement || snippet);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {}
+    } catch {
+      // Clipboard write permission denied or unavailable
+    }
   };
 
   const addedCount = diffLines.filter((l) => l.type === 'add').length;

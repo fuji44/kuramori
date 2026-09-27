@@ -1,6 +1,5 @@
 import { assertEquals } from '@std/assert';
 import { createDb, initDatabase } from './db/index.ts';
-import { reviewRequestsTable, reviewReportsTable, reviewJobsTable } from './db/schema.ts';
 import { createApi } from './api.ts';
 import { LocalFileReportStorage } from '@kuramori/core';
 import type { VCSProvider, ReviewRequest } from '@kuramori/core';
@@ -229,7 +228,7 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
       updatedAt: '2026-09-18T03:00:00Z',
     };
 
-    let queuedIds: string[] = [];
+    const queuedIds: string[] = [];
     const testQueue = {
       enqueue: (requestId: string) => {
         queuedIds.push(requestId);
@@ -240,7 +239,7 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
     const testVcs: VCSProvider = {
       name: 'mock',
       listReviewRequests: () => Promise.resolve([ownPr, reviewRequestedPr]),
-      getReviewRequest: (r, n) => Promise.resolve(n === 2 ? ownPr : reviewRequestedPr),
+      getReviewRequest: (_r, n) => Promise.resolve(n === 2 ? ownPr : reviewRequestedPr),
       getDiff: () => Promise.resolve('diff'),
       getCloneUrl: () => Promise.resolve(''),
     };
@@ -266,7 +265,7 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
     assertEquals(resRules.status, 200);
     const rulesData = await resRules.json();
     assertEquals(rulesData.rules.length >= 3, true);
-    const presetCorrectness = rulesData.rules.find((r: any) => r.id === 'preset-correctness');
+    const presetCorrectness = rulesData.rules.find((r: { id: string; engine?: string; category?: string }) => r.id === 'preset-correctness');
     assertEquals(Boolean(presetCorrectness), true);
     assertEquals(presetCorrectness.engine, 'default');
     assertEquals(presetCorrectness.category, 'correctness');
@@ -527,7 +526,7 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
     });
     assertEquals(resUpdateProfiles.status, 200);
     const updatedProfilesData = await resUpdateProfiles.json();
-    const foundProfile = updatedProfilesData.engineProfiles.find((p: any) => p.id === 'prof-local-ollama');
+    const foundProfile = updatedProfilesData.engineProfiles.find((p: { id: string }) => p.id === 'prof-local-ollama');
     assertEquals(foundProfile !== undefined, true);
     assertEquals(foundProfile.config.customEnv.ANTHROPIC_BASE_URL.value, 'http://localhost:11434');
     assertEquals(foundProfile.config.customEnv.ANTHROPIC_AUTH_TOKEN.value, '');
@@ -580,7 +579,7 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
     assertEquals(resGenericEnvironment.status, 200);
     const genericEnvironmentSettings = await resGenericEnvironment.json();
     const genericAgyProfile = genericEnvironmentSettings.engineProfiles.find(
-      (profile: any) => profile.id === 'prof-agy-env',
+      (profile: { id: string }) => profile.id === 'prof-agy-env',
     );
     assertEquals(genericEnvironmentSettings.engineSettings.antigravity.customEnv.GLOBAL_AGY_SECRET.value, '');
     assertEquals(genericEnvironmentSettings.engineSettings.antigravity.customEnv.GLOBAL_AGY_SECRET.configured, true);
@@ -588,7 +587,7 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
     assertEquals(genericAgyProfile.config.customEnv.AGY_SECRET.configured, true);
     assertEquals(genericAgyProfile.config.customEnv.AGY_VISIBLE.value, 'visible-value');
     const genericCodexProfile = genericEnvironmentSettings.engineProfiles.find(
-      (profile: any) => profile.id === 'prof-codex-env',
+      (profile: { id: string }) => profile.id === 'prof-codex-env',
     );
     assertEquals(genericEnvironmentSettings.engineSettings.codex.customEnv.GLOBAL_CODEX_SECRET.value, '');
     assertEquals(genericEnvironmentSettings.engineSettings.codex.customEnv.GLOBAL_CODEX_SECRET.configured, true);
@@ -601,13 +600,13 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
       body: JSON.stringify(genericEnvironmentSettings),
     });
     assertEquals(resGenericEnvironmentRoundTrip.status, 200);
-    const storedGenericEnvironment: any = await settingsService.getAllSettings();
+    const storedGenericEnvironment = await settingsService.getAllSettings();
     assertEquals(storedGenericEnvironment.engineSettings.antigravity.customEnv?.GLOBAL_AGY_SECRET, {
       value: 'global-secret-value',
       secret: true,
     });
     const storedAgyProfile = storedGenericEnvironment.engineProfiles.find(
-      (profile: any) => profile.id === 'prof-agy-env',
+      (profile: { id: string }) => profile.id === 'prof-agy-env',
     );
     assertEquals(storedAgyProfile?.engineType === 'antigravity' ? storedAgyProfile.config.customEnv?.AGY_SECRET : undefined, {
       value: 'agy-secret-value',
@@ -617,7 +616,7 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
       value: 'global-codex-secret', secret: true,
     });
     const storedCodexProfile = storedGenericEnvironment.engineProfiles.find(
-      (profile: any) => profile.id === 'prof-codex-env',
+      (profile: { id: string }) => profile.id === 'prof-codex-env',
     );
     assertEquals(storedCodexProfile?.engineType === 'codex' ? storedCodexProfile.config.customEnv?.CODEX_SECRET : undefined, {
       value: 'codex-secret-value', secret: true,

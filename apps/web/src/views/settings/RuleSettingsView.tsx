@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import type React from 'react';
+import { useState } from 'react';
 import {
   Shield,
   Trash2,
@@ -15,7 +16,7 @@ import {
   Power,
   Copy,
 } from 'lucide-react';
-import { ReviewRule, AppSettings, resolveRuleEngineProfile } from '../../types.ts';
+import { type ReviewRule, type AppSettings, resolveRuleEngineProfile } from '../../types.ts';
 import { Checkbox } from '../../components/Checkbox.tsx';
 import {
   SettingCard,

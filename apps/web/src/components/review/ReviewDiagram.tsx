@@ -1,4 +1,5 @@
-import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
+import type React from 'react';
+import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import {
   Network,
   ZoomIn,
@@ -72,8 +73,8 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
         setIsFullscreen(false);
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    globalThis.addEventListener('keydown', handleKeyDown);
+    return () => globalThis.removeEventListener('keydown', handleKeyDown);
   }, [isFullscreen]);
 
   // 全画面表示時のスクロール抑制
@@ -279,7 +280,7 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
       } else {
         setShowWheelHint(true);
         if (hintTimeoutRef.current) clearTimeout(hintTimeoutRef.current);
-        hintTimeoutRef.current = window.setTimeout(() => {
+        hintTimeoutRef.current = globalThis.setTimeout(() => {
           setShowWheelHint(false);
         }, 1200);
       }
@@ -419,7 +420,9 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
     if (nodeEl) {
       const nodeId = nodeEl.getAttribute('data-node-id');
       if (nodeId) {
-        const baseId = nodeId.includes('.') ? nodeId.split('.').pop()! : nodeId;
+        const parts = nodeId.split('.');
+        const lastPart = parts[parts.length - 1];
+        const baseId = lastPart !== undefined && lastPart !== '' ? lastPart : nodeId;
         const matched = diagramComments.find((dc) =>
           dc.nodes.some((n) => n.id === baseId || n.id === nodeId)
         );
@@ -625,6 +628,7 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
 
           {/* レイアウト切り替え（横並び / 縦並び） */}
           <button
+            type="button"
             onClick={() => setLayoutMode((m) => (m === 'split' ? 'stacked' : 'split'))}
             className={`p-1.5 rounded-lg text-xs transition-colors flex items-center gap-1 border ${
               layoutMode === 'stacked'
@@ -641,6 +645,7 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
 
           {/* 指摘パネル表示・非表示トグル */}
           <button
+            type="button"
             onClick={() => setShowCommentsPanel((v) => !v)}
             className={`p-1.5 rounded-lg text-xs transition-colors flex items-center gap-1 border ${
               showCommentsPanel
@@ -660,6 +665,7 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
           {/* 定義ソースコード表示 */}
           {diagram.d2Source && (
             <button
+              type="button"
               onClick={() => setShowSource(!showSource)}
               className={`px-2 py-1 rounded-lg text-xs transition-colors flex items-center gap-1 font-mono border ${
                 showSource
@@ -675,6 +681,7 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
 
           {/* 拡大 / 縮小 / リセット */}
           <button
+            type="button"
             onClick={handleZoomIn}
             className="p-1.5 bg-[#21262d] hover:bg-[#30363d] text-gray-300 rounded-lg border border-[#30363d]"
             title={t('review.diagram.zoomIn')}
@@ -682,6 +689,7 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
             <ZoomIn className="w-3.5 h-3.5" />
           </button>
           <button
+            type="button"
             onClick={handleZoomOut}
             className="p-1.5 bg-[#21262d] hover:bg-[#30363d] text-gray-300 rounded-lg border border-[#30363d]"
             title={t('review.diagram.zoomOut')}
@@ -689,6 +697,7 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
             <ZoomOut className="w-3.5 h-3.5" />
           </button>
           <button
+            type="button"
             onClick={handleReset}
             className="p-1.5 bg-[#21262d] hover:bg-[#30363d] text-gray-300 rounded-lg border border-[#30363d]"
             title={t('review.diagram.resetView')}
@@ -700,6 +709,7 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
 
           {/* 全画面（最大化）トグルボタン */}
           <button
+            type="button"
             onClick={() => setIsFullscreen((v) => !v)}
             className={`p-1.5 rounded-lg text-xs transition-colors flex items-center gap-1 border ${
               isFullscreen
@@ -760,6 +770,7 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
                   transition: isDragging ? 'none' : 'transform 0.08s ease-out',
                 }}
                 className="w-full h-full flex items-center justify-center p-4 [&>svg]:w-auto [&>svg]:h-auto [&>svg]:max-w-full [&>svg]:max-h-full [&>svg]:block pointer-events-auto"
+                // deno-lint-ignore react-no-danger
                 dangerouslySetInnerHTML={{ __html: cleanSvg }}
               />
             ) : (
@@ -831,6 +842,7 @@ export const ReviewDiagram: React.FC<ReviewDiagramProps> = ({
                   transition: isDragging ? 'none' : 'transform 0.08s ease-out',
                 }}
                 className="w-full h-full flex items-center justify-center p-4 [&>svg]:w-auto [&>svg]:h-auto [&>svg]:max-w-full [&>svg]:max-h-full [&>svg]:block pointer-events-auto"
+                // deno-lint-ignore react-no-danger
                 dangerouslySetInnerHTML={{ __html: cleanSvg }}
               />
             ) : (

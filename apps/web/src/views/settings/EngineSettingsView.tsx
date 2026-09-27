@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import type React from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Cpu,
   Terminal,
@@ -10,15 +11,12 @@ import {
   RefreshCw,
   AlertCircle,
   FlaskConical,
-  Plus,
   Trash2,
   Edit2,
-  ArrowLeft,
   CheckCircle2,
   Power,
-  Save,
 } from 'lucide-react';
-import {
+import type {
   AppSettings,
   EngineProfile,
   EngineType,
@@ -416,7 +414,7 @@ export function EngineSettingsView({
           ? {
               defaultEngineProfileId: savedProfile.id,
               defaultBackendId: savedProfile.engineType,
-              reviewEngine: savedProfile.engineType as any,
+              reviewEngine: savedProfile.engineType as AppSettings['reviewEngine'],
             }
           : {}),
       };
@@ -512,7 +510,7 @@ export function EngineSettingsView({
       engineProfiles: nextProfiles,
       defaultEngineProfileId: profileId,
       defaultBackendId: target.engineType,
-      reviewEngine: target.engineType as any,
+      reviewEngine: target.engineType as AppSettings['reviewEngine'],
     };
 
     setFormSettings(updatedSettings);
@@ -565,7 +563,7 @@ export function EngineSettingsView({
   const handleTest = async (
     targetId: string,
     engineType: EngineType,
-    config: any,
+    config: Record<string, unknown>,
     mode: 'version' | 'execution' = 'version'
   ) => {
     setTestingProfileId(targetId);
@@ -594,8 +592,8 @@ export function EngineSettingsView({
       } else {
         onShowError(data.error || t('settings.engines.testFailedMsg'));
       }
-    } catch (err: any) {
-      const errorMsg = err.message || t('settings.engines.testError');
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : t('settings.engines.testError');
       setTestResults((prev) => ({
         ...prev,
         [targetId]: { success: false, mode, error: errorMsg },
@@ -918,7 +916,8 @@ export function EngineSettingsView({
           profiles.map((p) => {
           const isDef = Boolean(p.isDefault);
           const isEnabled = p.enabled !== false;
-          const model = p.engineType === 'mock' ? 'N/A' : (p.config as any).model;
+          const configRecord = p.config as Record<string, unknown>;
+          const model = p.engineType === 'mock' ? 'N/A' : (typeof configRecord.model === 'string' ? configRecord.model : undefined);
           const isThisTesting = testingProfileId === p.id;
           const result = testResults[p.id];
 
@@ -964,8 +963,8 @@ export function EngineSettingsView({
                     {t('settings.engines.timeoutLabelShort')}{' '}
                     <span className="text-[#c9d1d9]">
                       {p.engineType === 'mock'
-                        ? `${(p.config as any).delayMs}ms`
-                        : `${(p.config as any).timeoutSeconds ?? 900}s`}
+                        ? `${String(configRecord.delayMs ?? 0)}ms`
+                        : `${String(configRecord.timeoutSeconds ?? 900)}s`}
                     </span>
                   </div>
                 </>
@@ -975,7 +974,7 @@ export function EngineSettingsView({
                   {/* テスト実行ボタン */}
                   <EngineTestButton
                     isTesting={isThisTesting}
-                    onTest={(mode) => handleTest(p.id, p.engineType, p.config, mode)}
+                    onTest={(mode) => handleTest(p.id, p.engineType, p.config as Record<string, unknown>, mode)}
                   />
 
                   {/* 状態・トグル系グループ */}

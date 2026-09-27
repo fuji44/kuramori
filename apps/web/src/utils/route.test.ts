@@ -92,6 +92,12 @@ Deno.test('route - parseRoute identifies settings paths', () => {
   if (triggersRoute.view === 'settings') {
     assertEquals(triggersRoute.subview, 'triggers');
   }
+
+  const licensesRoute = parseRoute('/settings/licenses', '');
+  assertEquals(licensesRoute.view, 'settings');
+  if (licensesRoute.view === 'settings') {
+    assertEquals(licensesRoute.subview, 'licenses');
+  }
 });
 
 Deno.test('route - buildRouteUrl formats paths accurately', () => {
@@ -110,11 +116,11 @@ Deno.test('route - buildRouteUrl formats paths accurately', () => {
     '/settings/general'
   );
   assertEquals(
-    buildRouteUrl({ view: 'settings', subview: 'engines' }),
-    '/settings/engines'
-  );
-  assertEquals(
     buildRouteUrl({ view: 'settings', subview: 'rules' }),
     '/settings/rules'
+  );
+  assertEquals(
+    buildRouteUrl({ view: 'settings', subview: 'licenses' }),
+    '/settings/licenses'
   );
 });

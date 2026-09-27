@@ -1,4 +1,4 @@
-import React from 'react';
+import type React from 'react';
 import { ArrowDown, AlertCircle, Sparkles, RefreshCw, CircleDot } from 'lucide-react';
 import type { CallFlow, CallFlowStep } from '@kuramori/core';
 import { useI18n } from '../../i18n/context.tsx';
@@ -91,10 +91,10 @@ export const ReviewStepFlow: React.FC<ReviewStepFlowProps> = ({
                       {style.badge}
                     </span>
 
-                    {step.commentId && (
+                    {step.commentId !== undefined && (
                       <button
                         type="button"
-                        onClick={() => onSelectComment?.(step.commentId!)}
+                        onClick={() => onSelectComment?.(step.commentId)}
                         className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-indigo-400 bg-indigo-500/10 border border-indigo-500/30 px-2 py-0.5 rounded hover:bg-indigo-500/20 transition-colors"
                       >
                         {t('review.stepFlow.showFinding', { id: step.commentId })}

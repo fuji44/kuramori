@@ -131,7 +131,6 @@ export function getSearchSuggestions(
   // 1. Author
   if (token.startsWith('author:') || token.startsWith('-author:')) {
     const isNeg = token.startsWith('-author:');
-    const prefix = token.slice(isNeg ? 8 : 7);
     const prefixKey = isNeg ? '-author:' : 'author:';
     const userList: SuggestionItem[] = [
       {

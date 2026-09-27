@@ -1,4 +1,4 @@
-import { assertEquals, assertStringIncludes } from '@std/assert';
+import { assertStringIncludes } from '@std/assert';
 import { compileD2ToSvg, generateD2FromDiagram } from './d2-compiler.ts';
 import type { Diagram } from '@kuramori/core';
 

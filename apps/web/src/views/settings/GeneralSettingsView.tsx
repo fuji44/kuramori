@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import type React from 'react';
+import { useState, useEffect } from 'react';
 import {
   Globe,
   Save,
   Sliders,
   Zap,
 } from 'lucide-react';
-import { AppSettings } from '../../types.ts';
+import type { AppSettings } from '../../types.ts';
 import { Checkbox } from '../../components/Checkbox.tsx';
 import { SettingViewHeader } from '../../components/settings/SettingViewLayout.tsx';
 import { useI18n } from '../../i18n/context.tsx';

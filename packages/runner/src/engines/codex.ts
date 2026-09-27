@@ -1,4 +1,4 @@
-import { join, resolve } from '@std/path';
+import { resolve } from '@std/path';
 import type {
   CodexSandboxMode,
   EngineEnvironment,

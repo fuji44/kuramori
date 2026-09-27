@@ -572,8 +572,14 @@ export const en = {
     enginesNav: 'AI Engines',
     rulesNav: 'Review Rules',
     triggersNav: 'Automatic Triggers',
+    licensesNav: 'Licenses',
   },
   settings: {
+    licenses: {
+      title: 'Open Source Licenses',
+      description: 'Review licenses and copyright notices for third-party open source components included in kuramori.',
+      thirdPartyHeader: 'Third-Party Components & Notices',
+    },
     generalTitle: 'General',
     generalDesc: 'Manage system behavior including default execution rules, concurrency limits, and automatic PR queuing.',
     languageSectionTitle: 'Display Language',

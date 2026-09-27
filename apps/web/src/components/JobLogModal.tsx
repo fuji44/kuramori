@@ -1,4 +1,4 @@
-import React from 'react';
+import type React from 'react';
 import { X, AlertCircle, RefreshCw } from 'lucide-react';
 import { useI18n } from '../i18n/context.tsx';
 

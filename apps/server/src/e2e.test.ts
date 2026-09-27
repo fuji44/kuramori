@@ -54,7 +54,9 @@ Deno.test('Server E2E - start HTTP server and verify endpoints via fetch', async
             const ext = normalizedPath.split('.').pop()?.toLowerCase() ?? '';
             return c.body(content, 200, { 'Content-Type': MIME_TYPES[ext] ?? 'application/octet-stream' });
           }
-        } catch {}
+        } catch {
+          // File not found in static dist; fallback to index.html SPA routing
+        }
         try {
           const html = await Deno.readTextFile(join(webDistPath, 'index.html'));
           return c.html(html);
@@ -117,7 +119,7 @@ Deno.test('Server E2E - start HTTP server and verify endpoints via fetch', async
     assertEquals(rulesRes.status, 200);
     const rulesData = await rulesRes.json();
     assertEquals(Array.isArray(rulesData.rules), true);
-    assertEquals(rulesData.rules.some((r: any) => r.id === 'rule-e2e-security'), true);
+    assertEquals(rulesData.rules.some((r: { id?: string }) => r.id === 'rule-e2e-security'), true);
 
     // 5. Test Triggers List
     const triggersRes = await fetch(`${baseUrl}/api/triggers`);

@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import type React from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, X, Tag, User, GitPullRequest, Check, CornerDownLeft, GitBranch, Calendar } from 'lucide-react';
 import { AnchoredPopover } from './AnchoredPopover.tsx';
-import { getSearchSuggestions, SuggestionItem } from '../utils/search-suggestions.ts';
+import { getSearchSuggestions, type SuggestionItem } from '../utils/search-suggestions.ts';
 import { useI18n } from '../i18n/context.tsx';
 
 export type { SuggestionItem };
@@ -121,6 +122,7 @@ export function SearchQueryBar({ query, onSubmit, authors, repositories, branche
         />
         {draftQuery && (
           <button
+            type="button"
             onClick={() => {
               setDraftQuery('');
               onSubmit(undefined);

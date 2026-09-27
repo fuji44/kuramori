@@ -195,6 +195,7 @@ function evaluateQualifier(item: QueryMatchablePR, qualifier: string, value: str
         default:
           return false;
       }
+      break;
     }
 
     case 'type': {
@@ -230,6 +231,7 @@ function evaluateQualifier(item: QueryMatchablePR, qualifier: string, value: str
         default:
           return false;
       }
+      break;
     }
 
     case 'review-requested':

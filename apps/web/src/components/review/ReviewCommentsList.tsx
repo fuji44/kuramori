@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import type React from 'react';
+import { useState, useEffect } from 'react';
 import {
   AlertCircle,
-  AlertTriangle,
-  Info,
   CheckCircle2,
   Clock,
   Ban,
@@ -53,7 +52,7 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
   const openBracket = isJa ? '【' : '[';
   const closeBracket = isJa ? '】' : ']';
   const [selectedSeverity, setSelectedSeverity] = useState<Severity | 'ALL'>('ALL');
-  const [selectedCategory, setSelectedCategory] = useState<FindingCategory | 'ALL'>('ALL');
+  const [selectedCategory, _setSelectedCategory] = useState<FindingCategory | 'ALL'>('ALL');
   const [selectedDecision, setSelectedDecision] = useState<DecisionType | 'ALL' | 'UNSET'>('ALL');
 
   // localStorage による判断とメモの永続化
@@ -307,6 +306,7 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
           {/* 3択 判断トグルボタン */}
           <div className="flex items-center gap-1 bg-[#0d1117] p-1 rounded-lg border border-[#30363d]">
             <button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 handleSetDecision(comment.id, 'post');
@@ -323,6 +323,7 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
             </button>
 
             <button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 handleSetDecision(comment.id, 'hold');
@@ -339,6 +340,7 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
             </button>
 
             <button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 handleSetDecision(comment.id, 'ignore');
@@ -488,12 +490,14 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
 
           <div className="flex items-center gap-2 flex-wrap">
             <button
+              type="button"
               onClick={() => handleBulkMark('post')}
               className="px-2 py-1 bg-[#21262d] hover:bg-[#30363d] text-gray-300 rounded text-xs transition-colors"
             >
               {t('review.commentsList.markAllPost')}
             </button>
             <button
+              type="button"
               onClick={() => handleBulkMark('post', 'MUST')}
               className="px-2 py-1 bg-[#21262d] hover:bg-[#30363d] text-rose-300 rounded text-xs transition-colors"
               title={t('review.commentsList.markMustPostTitle')}
@@ -501,12 +505,14 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
               {t('review.commentsList.markMustPost')}
             </button>
             <button
+              type="button"
               onClick={handleClearDecisions}
               className="px-2 py-1 bg-[#21262d] hover:bg-[#30363d] text-gray-400 hover:text-rose-300 rounded text-xs transition-colors"
             >
               {t('review.commentsList.clearDecisions')}
             </button>
             <button
+              type="button"
               onClick={handleCopyExportText}
               className={`flex items-center gap-1.5 px-3 py-1 rounded text-xs font-medium transition-colors ${
                 copied
@@ -528,6 +534,7 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
             {(['ALL', 'P1', 'P2', 'P3'] as const).map((s) => (
               <button
                 key={s}
+                type="button"
                 onClick={() => setSelectedSeverity(s)}
                 className={`px-2 py-0.5 rounded ${
                   selectedSeverity === s
@@ -545,6 +552,7 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
             {(['ALL', 'post', 'hold', 'ignore', 'UNSET'] as const).map((d) => (
               <button
                 key={d}
+                type="button"
                 onClick={() => setSelectedDecision(d)}
                 className={`px-2 py-0.5 rounded ${
                   selectedDecision === d
@@ -599,6 +607,7 @@ export const ReviewCommentsList: React.FC<ReviewCommentsListProps> = ({
           {groupedComments.drop.length > 0 && (
             <div className="bg-[#12161c] border border-gray-800 rounded-xl p-3">
               <button
+                type="button"
                 onClick={() =>
                   setCollapsedLens((prev) => ({ ...prev, drop: !prev.drop }))
                 }

@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { ArrowLeft, Plus, Save } from 'lucide-react';
 import { useI18n } from '../../i18n/context.tsx';
 

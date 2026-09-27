@@ -1,4 +1,4 @@
-import React, {
+import {
   createContext,
   useContext,
   useState,
@@ -22,7 +22,7 @@ interface I18nContextValue {
   locale: Locale;
   preference: LocalePreference;
   setPreference: (preference: LocalePreference) => void;
-  t: (key: TranslationKey | (string & {}), params?: InterpolationParams) => string;
+  t: (key: TranslationKey | (string & { _?: never }), params?: InterpolationParams) => string;
   formatDate: (date: Date | string | number, options?: Intl.DateTimeFormatOptions) => string;
   formatRelativeTime: {
     (date: Date | string | number, options?: Intl.RelativeTimeFormatOptions): string;

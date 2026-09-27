@@ -1,7 +1,7 @@
 import type { ReviewReportData } from '../schema/review-report.ts';
 
 /**
- * fuji44-pr-review-contract に完全準拠した自己完結型 HTML レポートを生成する
+ * kuramori-pr-review-contract に完全準拠した自己完結型 HTML レポートを生成する
  */
 export function generateStandaloneReviewHtml(
   reportData: ReviewReportData,

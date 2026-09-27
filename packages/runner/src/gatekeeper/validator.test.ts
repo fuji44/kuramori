@@ -1,7 +1,6 @@
 import { assertEquals } from "@std/assert";
 import {
   validateReviewReportData,
-  auditCommentIds,
   auditFileAnchors,
   formatViolationsForPrompt,
 } from "./validator.ts";

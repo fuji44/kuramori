@@ -10,7 +10,7 @@ export const SeveritySchema = z.enum(["P1", "P2", "P3"]);
 export type Severity = z.infer<typeof SeveritySchema>;
 
 /**
- * 指摘のタグ語彙 (fuji44-pr-review-contract 準拠)
+ * 指摘のタグ語彙 (kuramori-pr-review-contract 準拠)
  */
 export const FindingTagSchema = z.enum([
   "MUST",

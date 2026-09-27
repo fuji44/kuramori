@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import type React from 'react';
+import { useMemo } from 'react';
 import {
   GitPullRequest,
   CheckCircle2,
@@ -14,7 +15,7 @@ import {
   AlertCircle,
   FileCode,
 } from 'lucide-react';
-import { ReviewItem, AppSettings, ReviewRule, ReviewTrigger, resolveRuleEngineProfile } from '../types.ts';
+import { type ReviewItem, type AppSettings, type ReviewRule, type ReviewTrigger, resolveRuleEngineProfile } from '../types.ts';
 import { getPrAnchorId } from '../utils/anchor.ts';
 import { useI18n } from '../i18n/context.tsx';
 
