@@ -1,6 +1,6 @@
 # kuramori
 
-[![CI](https://github.com/fuji44/kuramori/actions/workflows/ci.yml/badge.svg)](https://github.com/fuji44/kuramori/actions/workflows/ci.yml)
+[![CI](https://github.com/fuji44/kuramori/actions/workflows/ci.yaml/badge.svg)](https://github.com/fuji44/kuramori/actions/workflows/ci.yaml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Deno 2](https://img.shields.io/badge/deno-v2.0+-green.svg)](https://deno.com)
 
