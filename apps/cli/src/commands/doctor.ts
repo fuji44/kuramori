@@ -1,4 +1,5 @@
 import { Command } from '@cliffy/command';
+import { resolveKuramoriPaths } from '@kuramori/core';
 
 async function checkCommand(
   cmd: string,
@@ -88,6 +89,15 @@ export function createDoctorCommand() {
         console.log(`  - ${name}: Not set (${desc})`);
       }
     }
+
+    console.log('\n[Storage & Cache Paths (XDG)]');
+    const paths = await resolveKuramoriPaths();
+    console.log(`  • Data Dir:      ${paths.dataDir}`);
+    console.log(`  • Database:      ${paths.databaseFile}`);
+    console.log(`  • Reports Dir:   ${paths.reportsDir}`);
+    console.log(`  • Logs Dir:      ${paths.logsDir}`);
+    console.log(`  • Cache Dir:     ${paths.cacheDir}`);
+    console.log(`  • Worktree Dir:  ${paths.worktreeDir}`);
 
     console.log('\nDiagnostic completed.');
   });

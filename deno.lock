@@ -3,8 +3,17 @@
   "specifiers": {
     "jsr:@cliffy/command@^1.3.1": "1.3.1",
     "jsr:@cliffy/flags@^1.3.1": "1.3.1",
+    "jsr:@cliffy/internal@*": "1.3.1",
     "jsr:@cliffy/internal@^1.3.1": "1.3.1",
     "jsr:@cliffy/table@^1.3.1": "1.3.1",
+    "jsr:@cross/deepmerge@1": "1.0.1",
+    "jsr:@cross/dir@*": "1.3.2",
+    "jsr:@cross/dir@^1.1.0": "1.3.2",
+    "jsr:@cross/dir@^1.3.2": "1.3.2",
+    "jsr:@cross/env@1": "1.0.5",
+    "jsr:@cross/fs@~0.1.11": "0.1.14",
+    "jsr:@cross/runtime@1": "1.2.1",
+    "jsr:@cross/utils@0.16": "0.16.0",
     "jsr:@std/assert@*": "1.0.19",
     "jsr:@std/assert@^1.0.11": "1.0.19",
     "jsr:@std/cli@^1.0.14": "1.0.32",
@@ -53,7 +62,7 @@
       "integrity": "366ab6d5f68abe3ded22c09f65c151cfba600fa26690a4763f390c2f1e07ca4d",
       "dependencies": [
         "jsr:@cliffy/flags",
-        "jsr:@cliffy/internal",
+        "jsr:@cliffy/internal@^1.3.1",
         "jsr:@cliffy/table",
         "jsr:@std/fmt",
         "jsr:@std/text"
@@ -62,7 +71,7 @@
     "@cliffy/flags@1.3.1": {
       "integrity": "12f38efa0c8c2531c09f1b9a70bae4c4dcfbe01793bac11ac8ac92dddedaa294",
       "dependencies": [
-        "jsr:@cliffy/internal",
+        "jsr:@cliffy/internal@^1.3.1",
         "jsr:@std/text"
       ]
     },
@@ -73,6 +82,42 @@
       "integrity": "483c43936b9be148cbedd8bd39e5c0d098c9c87c4667fe2ad9b8acff77f79b8b",
       "dependencies": [
         "jsr:@std/fmt"
+      ]
+    },
+    "@cross/deepmerge@1.0.1": {
+      "integrity": "7a224229f1a463087d62cef8729d26263ed4f5e3c2f2bfec64fc0a16a9dbc754"
+    },
+    "@cross/dir@1.3.2": {
+      "integrity": "e724d0d77e0c027a3ce3532372612a8bdf8c9466c466532a64ede17c415071ef",
+      "dependencies": [
+        "jsr:@cross/env",
+        "jsr:@cross/runtime",
+        "jsr:@cross/utils"
+      ]
+    },
+    "@cross/env@1.0.5": {
+      "integrity": "7690e408079ac0a50b0d5f603d3b0684b4e8bb4cf1c924d9183030218c7c396e",
+      "dependencies": [
+        "jsr:@cross/deepmerge",
+        "jsr:@cross/runtime"
+      ]
+    },
+    "@cross/fs@0.1.14": {
+      "integrity": "d59c53ef26e02d1d0369b0bcf1d01dbac89ef2fbc938c00ae9d8e7ed281ae96b",
+      "dependencies": [
+        "jsr:@cross/env",
+        "jsr:@cross/runtime",
+        "jsr:@std/path@^1.0.8"
+      ]
+    },
+    "@cross/runtime@1.2.1": {
+      "integrity": "f462fcf2fd678f9073291b4e55209b90f58c8d508764a84205d178abdcf22fc9"
+    },
+    "@cross/utils@0.16.0": {
+      "integrity": "c6333cafd9be41a04c449655120989b8f3601322f7344db30f9d00eef7bc942f",
+      "dependencies": [
+        "jsr:@cross/fs",
+        "jsr:@cross/runtime"
       ]
     },
     "@std/assert@1.0.19": {
@@ -2250,6 +2295,7 @@
   "workspace": {
     "dependencies": [
       "jsr:@cliffy/command@^1.3.1",
+      "jsr:@cross/dir@^1.3.2",
       "jsr:@std/assert@^1.0.11",
       "jsr:@std/cli@^1.0.14",
       "jsr:@std/path@^1.0.8",

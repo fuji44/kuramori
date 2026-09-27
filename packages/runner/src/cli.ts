@@ -5,7 +5,11 @@ import { ClaudeCodeEngine } from './engines/claude-code.ts';
 import { AntigravityEngine } from './engines/antigravity.ts';
 import { MockReviewEngine } from './engines/mock.ts';
 import { CodexEngine } from './engines/codex.ts';
-import type { ReviewEngine } from '@kuramori/core';
+import {
+  resolveKuramoriPaths,
+  ensureKuramoriDirectories,
+  type ReviewEngine,
+} from '@kuramori/core';
 
 export async function runCli(rawArgs: string[] = Deno.args) {
   const args = parseArgs(rawArgs, {
@@ -56,9 +60,15 @@ Options:
     Deno.exit(1);
   }
 
-  const cacheDir = resolve(args['cache-dir'] ?? './data/cache');
-  const worktreeBaseDir = resolve(args['worktree-dir'] ?? './.worktrees');
-  const outputDir = resolve(args['output-dir'] ?? join('./data/reports', `${repository.replace('/', '__')}_${prNumber}`));
+  const defaultPaths = await resolveKuramoriPaths();
+  await ensureKuramoriDirectories(defaultPaths);
+
+  const cacheDir = resolve(args['cache-dir'] ?? defaultPaths.gitCacheDir);
+  const worktreeBaseDir = resolve(args['worktree-dir'] ?? defaultPaths.worktreeDir);
+  const outputDir = resolve(
+    args['output-dir'] ??
+      join(defaultPaths.reportsDir, `${repository.replace('/', '__')}_${prNumber}`),
+  );
 
   await Deno.mkdir(outputDir, { recursive: true });
 

@@ -7,3 +7,4 @@ export * from './vcs/github.ts';
 export * from './schema/review-report.ts';
 export * from './report/html-generator.ts';
 export * from './utils/assert.ts';
+export * from './paths.ts';
