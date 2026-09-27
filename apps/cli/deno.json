@@ -1,0 +1,14 @@
+{
+  "name": "@kuramori/cli",
+  "version": "0.1.0",
+  "exports": "./src/index.ts",
+  "imports": {
+    "@kuramori/core": "../../packages/core/src/index.ts",
+    "@kuramori/runner": "../../packages/runner/src/index.ts",
+    "@kuramori/server": "../server/src/index.ts"
+  },
+  "tasks": {
+    "dev": "deno run --allow-all src/index.ts",
+    "compile": "deno compile --allow-all --include ../web/dist --output ../../bin/kuramori src/index.ts"
+  }
+}
