@@ -26,33 +26,13 @@ Always use the deterministic `deno task` commands to verify changes rather than 
 
 ---
 
-## 3. Architecture Boundaries and Absolute Constraints
+## 3. Architecture Boundaries and Constraints
 
-This project uses a Deno 2 monorepo structure. Follow these dependency rules **strictly** (see [docs/architecture.md](docs/architecture.md) for full details).
+For full architectural principles, monorepo layout, and 4-tier layer responsibilities, refer to [docs/architecture.md](docs/architecture.md).
 
-```mermaid
-flowchart TD
-    subgraph AppsArea["apps (Executable Targets)"]
-        ServerApp["apps/server<br>(Hono / Drizzle / Queue)"]
-        WebApp["apps/web<br>(Vite / React)"]
-    end
-
-    subgraph PackagesArea["packages (Reusable Modules)"]
-        RunnerPkg["packages/runner<br>(Worktree / Engines / Gatekeeper)"]
-        CorePkg["packages/core<br>(Domain / Contracts / Storage)"]
-        I18nPkg["packages/i18n<br>(UI Dictionaries / Translator)"]
-    end
-
-    ServerApp --> RunnerPkg
-    ServerApp --> CorePkg
-    ServerApp --> I18nPkg
-    WebApp -.->|Type-only share| CorePkg
-    WebApp --> I18nPkg
-    RunnerPkg --> CorePkg
-```
-
-- **`packages` ➔ `apps` imports are strictly forbidden**: Reusable packages (`core`, `runner`) must never depend on concrete applications (`server`, `web`).
-- **Adhere to boundary contracts**: All interactions with external services (VCSProvider, ReviewEngine, ReportStorage) must go through abstract interfaces defined in `@kuramori/core`.
+AI agents must strictly respect the following core constraints:
+- **`packages` ➔ `apps` imports are strictly forbidden**: Reusable packages (`packages/*`) must never import from concrete application targets (`apps/*`).
+- **Adhere to boundary contracts**: All interactions with external services (VCS, AI engines, report storage) must go through abstract interfaces defined in `@kuramori/core`.
 - **Worktree isolation**: Never run reviews in the main workspace tree. Always use temporary worktrees managed by `WorktreeManager`, ensuring clean removal after completion.
 
 ---
