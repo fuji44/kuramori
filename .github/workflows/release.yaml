@@ -7,10 +7,15 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: release-pipeline
+  cancel-in-progress: false
+
 jobs:
   check-version:
     name: Check Version Bump
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: read
     outputs:
@@ -19,9 +24,7 @@ jobs:
       tag_name: ${{ steps.check.outputs.tag_name }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Check if tag exists for current version
         id: check
@@ -31,11 +34,13 @@ jobs:
           echo "Current package version: ${VERSION}"
           echo "Target release tag: ${TAG_NAME}"
 
-          if git rev-parse "${TAG_NAME}" >/dev/null 2>&1; then
-            echo "Tag ${TAG_NAME} already exists. Skipping release."
+          # Query remote tags directly to guarantee accuracy without full history clone
+          REMOTE_TAG=$(git ls-remote --tags origin "refs/tags/${TAG_NAME}")
+          if [ -n "$REMOTE_TAG" ]; then
+            echo "Tag ${TAG_NAME} already exists on remote. Skipping release."
             echo "should_release=false" >> "$GITHUB_OUTPUT"
           else
-            echo "Tag ${TAG_NAME} does not exist. Triggering release!"
+            echo "Tag ${TAG_NAME} does not exist on remote. Triggering release!"
             echo "should_release=true" >> "$GITHUB_OUTPUT"
             echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
             echo "tag_name=${TAG_NAME}" >> "$GITHUB_OUTPUT"
@@ -46,16 +51,17 @@ jobs:
     needs: check-version
     if: needs.check-version.outputs.should_release == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: write
       id-token: write
       attestations: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Setup Deno
-        uses: denoland/setup-deno@v2
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.2
         with:
           deno-version: v2.x
 
@@ -99,7 +105,7 @@ jobs:
           cd ..
 
       - name: Attest Build Provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.2.3
         with:
           subject-path: 'dist-release/*'
 
