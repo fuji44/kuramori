@@ -1,6 +1,6 @@
 # AI Engine Specifications
 
-This document defines the AI review engines, execution harnesses, environment layering, and local LLM integration supported by `kuramori`.
+This document defines the AI review engines, execution harnesses, environment layering, and profile management supported by `kuramori`.
 
 ---
 
@@ -78,36 +78,13 @@ Environment variables and credentials are dynamically layered across 4 tiers ([p
 
 ---
 
-## 5. Local LLM Integration (Ollama)
-
-Run open-weights models (`ornith-1.5:9b`, `qwen2.5-coder:14b`) on local GPUs (e.g., RTX 5080 with 16GB VRAM).
-
-### Architecture
-- **Inference Server**: Ollama (`http://localhost:11434`)
-- **Protocol**: Direct Anthropic Messages API (`/v1/messages`) compatibility natively supported by Ollama. No intermediate proxy needed.
-
-### Verification Command
-```bash
-deno task verify:local-llm --url http://localhost:11434 --model ornith-1.5:9b
-```
-
-### Review Execution Command
-```bash
-ANTHROPIC_BASE_URL=http://localhost:11434 deno task runner \
-  --repo owner/repo \
-  --pr 123 \
-  --engine claude-code \
-  --model ornith-1.5:9b
-```
-
----
-
-## 6. Engine Profiles
+## 5. Engine Profiles
 
 Engine Profiles decouple user-facing execution configurations from low-level CLI binaries.
 
-- **Profile ID**: Configured presets (e.g., `default-claude`, `default-agy`, `ollama-ornith`).
+- **Profile ID**: Configured presets (e.g., `default-claude`, `default-agy`, `default-codex`).
 - **Engine Type**: Underlying CLI runtime (`claude-code`, `antigravity`, `codex`, `mock`).
 - **Rule Association & Resolution**: Review rules assign either an explicit `engineProfileId` or reference a profile by ID in `engine`. The system requires at least one active profile registered in settings; if no valid engine profile exists, or if a rule references a non-existent profile, review execution fails immediately with an explicit error rather than silently falling back to unverified defaults.
+- **Diagnostics & Testing**: The system provides connection and inference verification via the Web UI (**Settings ➔ Engines**) and the API (`POST /api/engines/:engine/test`).
 
 

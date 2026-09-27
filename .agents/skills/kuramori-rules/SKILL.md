@@ -29,7 +29,7 @@ This skill equips AI coding agents to manage the **entire lifecycle of review ru
 - **Rules & Triggers Concept**: [docs/rules-and-triggers.md](../../../docs/rules-and-triggers.md)
 - **Domain Smells & Categories**: [references/categories.md](references/categories.md)
 - **Output Schema**: [references/output-schema.json](references/output-schema.json)
-- **REST API Contracts**: [docs/api.md](../../../docs/api.md) or live `${KURAMORI_URL:-http://localhost:3456}/api/openapi.json`
+- **REST API Contracts**: [docs/api.md](../../../docs/api.md) or live `${KURAMORI_URL:-http://127.0.0.1:3456}/api/openapi.json`
 
 ---
 
@@ -37,7 +37,7 @@ This skill equips AI coding agents to manage the **entire lifecycle of review ru
 
 Resolve target server base URL:
 ```bash
-BASE_URL="${KURAMORI_URL:-${REVIEW_BASE_URL:-http://localhost:3456}}"
+BASE_URL="${KURAMORI_URL:-${REVIEW_BASE_URL:-http://127.0.0.1:3456}}"
 ```
 
 ---

@@ -8,7 +8,7 @@ This document catalogs the REST API provided by `kuramori`, interactive document
 
 `kuramori` provides a live OpenAPI 3.1 specification and an embedded Scalar API Reference UI:
 
-- **Interactive Scalar UI**: [http://localhost:3456/api/doc](http://localhost:3456/api/doc)
+- **Interactive Scalar UI**: [http://127.0.0.1:3456/api/doc](http://127.0.0.1:3456/api/doc)
   - Interactive browser console to test endpoints directly.
 - **Machine-Readable OpenAPI Spec**: `GET /api/openapi.json`
   - Used by AI agents (`kuramori-review`, `kuramori-rules`) for runtime Dynamic API Discovery.
@@ -65,22 +65,22 @@ This document catalogs the REST API provided by `kuramori`, interactive document
 ### Trigger Review for a Specific PR
 ```bash
 # Auto-resolve rules based on triggers
-curl -s -X POST "http://localhost:3456/api/pulls/github:owner%2Frepo%23123/run"
+curl -s -X POST "http://127.0.0.1:3456/api/pulls/github:owner%2Frepo%23123/run"
 
 # Trigger with specific rule ID
-curl -s -X POST "http://localhost:3456/api/pulls/github:owner%2Frepo%23123/run" \
+curl -s -X POST "http://127.0.0.1:3456/api/pulls/github:owner%2Frepo%23123/run" \
   -H "Content-Type: application/json" \
   -d '{"ruleId": "rule-security"}'
 ```
 
 ### Inspect Job Logs (Troubleshooting)
 ```bash
-curl -s "http://localhost:3456/api/jobs/job-uuid-1234/log"
+curl -s "http://127.0.0.1:3456/api/jobs/job-uuid-1234/log"
 ```
 
 ### Verify Engine Connectivity
 ```bash
-curl -s -X POST "http://localhost:3456/api/engines/claude-code/test" \
+curl -s -X POST "http://127.0.0.1:3456/api/engines/claude-code/test" \
   -H "Content-Type: application/json" \
   -d '{"mode": "execution"}'
 ```

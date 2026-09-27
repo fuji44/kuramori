@@ -203,7 +203,7 @@ flowchart LR
 ```
 
 ### Profile Attributes
-- **`id`**: Unique preset identifier (e.g., `default-claude`, `default-agy`, `ollama-local`).
+- **`id`**: Unique preset identifier (e.g., `default-claude`, `default-agy`, `default-codex`).
 - **`engineType`**: The underlying AI runner implementation (`antigravity` | `claude-code` | `codex` | `mock`).
 - **`config`**: Engine-specific configurations (binary path, model, effort, timeout, sandbox mode, custom environment variables).
 - **`isDefault`**: Flag indicating the system-wide fallback profile when rules specify `engine = 'default'`.

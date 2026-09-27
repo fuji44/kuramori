@@ -6,7 +6,7 @@ This document defines common rules, behavioral guidelines, and operational stand
 
 ## 1. Project Overview
 
-`kuramori` (蔵守) is an automated review management platform that detects Pull Requests on GitHub, performs pre-emptive deep reviews inside isolated Git worktrees, orchestrates multiple AI engines (Claude Code, Antigravity, Codex, Local LLMs), and generates structured reports with D2 vector diagrams (dependency graphs and StepFlow).
+`kuramori` (蔵守) is an automated review management platform that detects Pull Requests on GitHub, performs pre-emptive deep reviews inside isolated Git worktrees, orchestrates multiple AI engines (Claude Code, Antigravity, Codex), and generates structured reports with D2 vector diagrams (dependency graphs and StepFlow).
 
 ---
 
@@ -17,9 +17,10 @@ Always use the deterministic `deno task` commands to verify changes rather than 
 | Command | Purpose |
 | :--- | :--- |
 | `deno task check` | TypeScript type-check across all packages and apps |
-| `deno task test` | Execute the entire test suite (70+ tests) |
+| `deno task lint` | Static analysis and code quality verification |
+| `deno task test` | Execute the entire test suite |
 | `deno task build` | Production build of the web frontend (Vite + React) |
-| `deno task dev:server` | Start backend server with file watch mode (`http://localhost:3456`) |
+| `deno task dev:server` | Start backend server with file watch mode (`http://127.0.0.1:3456`) |
 | `deno task dev:web` | Start frontend Vite HMR development server |
 | `deno task runner --repo <owner/repo> --pr <num>` | Run standalone review runner script |
 
@@ -39,11 +40,14 @@ flowchart TD
     subgraph PackagesArea["packages (Reusable Modules)"]
         RunnerPkg["packages/runner<br>(Worktree / Engines / Gatekeeper)"]
         CorePkg["packages/core<br>(Domain / Contracts / Storage)"]
+        I18nPkg["packages/i18n<br>(UI Dictionaries / Translator)"]
     end
 
     ServerApp --> RunnerPkg
     ServerApp --> CorePkg
+    ServerApp --> I18nPkg
     WebApp -.->|Type-only share| CorePkg
+    WebApp --> I18nPkg
     RunnerPkg --> CorePkg
 ```
 

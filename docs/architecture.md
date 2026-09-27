@@ -26,11 +26,14 @@ flowchart TD
     subgraph PackagesArea["packages (Reusable Modules)"]
         RunnerPkg["packages/runner<br>(Worktree / Engine Harnesses / Pipeline)"]
         CorePkg["packages/core<br>(Domain Entities / Boundary Contracts)"]
+        I18nPkg["packages/i18n<br>(UI Dictionaries / Translator)"]
     end
 
     ServerApp --> RunnerPkg
     ServerApp --> CorePkg
+    ServerApp --> I18nPkg
     WebApp -.->|Type-only share| CorePkg
+    WebApp --> I18nPkg
     RunnerPkg --> CorePkg
 ```
 
@@ -41,16 +44,17 @@ flowchart TD
   - Never imported as libraries by other packages.
 
 ### 2.2 `packages` (Shared Modules / Reusable Units)
-- **Definition**: Reusable business logic, contracts, and execution units independent of application hosting frameworks.
+- **Definition**: Reusable business logic, contracts, execution units, and localization dictionaries independent of application hosting frameworks.
 - **Responsibilities**:
   - Define domain entities and abstract interfaces (`core`).
   - Provide pure execution logic without long-running daemons (`runner`).
+  - Provide multilingual localization dictionaries and translation utilities (`i18n`).
   - Act as libraries for `apps`.
 
 ### 2.3 Dependency Rules
 - **`apps` ➔ `packages`**: Allowed. Applications assemble packages to build systems.
 - **`packages` ➔ `apps`**: **Strictly forbidden**. Reusable packages must never depend on application layers.
-- **`packages` ➔ `packages`**: Unidirectional only (`runner` ➔ `core`).
+- **`packages` ➔ `packages`**: Unidirectional only (`runner` ➔ `core`). Shared libraries like `core` and `i18n` have no dependencies on sibling packages.
 
 ---
 

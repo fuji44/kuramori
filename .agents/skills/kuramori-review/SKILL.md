@@ -17,7 +17,7 @@ allowed-tools:
 
 ## Overview
 
-`kuramori` (蔵守) is an automated review management platform that detects GitHub Pull Requests, runs pre-emptive deep reviews using AI engines (Claude Code, Antigravity, Codex, Local LLMs) inside isolated Git worktrees, and produces structured reports with D2 vector diagrams.
+`kuramori` (蔵守) is an automated review management platform that detects GitHub Pull Requests, runs pre-emptive deep reviews using AI engines (Claude Code, Antigravity, Codex) inside isolated Git worktrees, and produces structured reports with D2 vector diagrams.
 
 This skill equips agents to handle the **complete operational review cycle**:
 1. **PR Triage & Status Inspection**: Monitor tracked PRs, active review runs, and verdict distributions.
@@ -27,7 +27,7 @@ This skill equips agents to handle the **complete operational review cycle**:
 5. **Troubleshooting & Self-Healing**: Diagnose failed review jobs from raw logs, resolve worktree conflicts, and verify engine connectivity.
 
 ### Reference Specifications (SSOT)
-- **API Reference & OpenAPI**: [docs/api.md](../../../docs/api.md) or live `${KURAMORI_URL:-http://localhost:3456}/api/openapi.json`
+- **API Reference & OpenAPI**: [docs/api.md](../../../docs/api.md) or live `${KURAMORI_URL:-http://127.0.0.1:3456}/api/openapi.json`
 - **Operations & Troubleshooting**: [docs/operations.md](../../../docs/operations.md)
 - **AI Engines**: [docs/engines.md](../../../docs/engines.md)
 - **Data Model & States**: [docs/data-model.md](../../../docs/data-model.md)
@@ -38,7 +38,7 @@ This skill equips agents to handle the **complete operational review cycle**:
 
 Resolve target server base URL:
 ```bash
-BASE_URL="${KURAMORI_URL:-${REVIEW_BASE_URL:-http://localhost:3456}}"
+BASE_URL="${KURAMORI_URL:-${REVIEW_BASE_URL:-http://127.0.0.1:3456}}"
 ```
 
 If the server is unreachable, fall back to standalone CLI runner commands (`deno task runner`) or guide the user to start the server (`deno task start`).

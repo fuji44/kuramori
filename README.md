@@ -6,7 +6,7 @@
 
 > **Pre-emptive, deep AI code reviews before humans read the PR. Visualized with architectural D2 vector diagrams and structured actionable reports.**
 
-`kuramori` is an automated code review platform that monitors GitHub Pull Requests, launches autonomous AI agents (Claude Code, Google Antigravity, OpenAI Codex, Local LLMs) inside isolated Git worktrees, and serves structured review reports with interactive dependency diagrams and StepFlows.
+`kuramori` is an automated code review platform that monitors GitHub Pull Requests, launches autonomous AI agents (Claude Code, Google Antigravity, OpenAI Codex) inside isolated Git worktrees, and serves structured review reports with interactive dependency diagrams and StepFlows.
 
 ---
 
@@ -19,7 +19,6 @@
   - **Claude Code** (`claude -p`)
   - **Google Antigravity** (`agy`)
   - **OpenAI Codex** (`codex exec`)
-  - **Local LLMs** (Direct Ollama connection: `ornith-1.5:9b`, etc.)
   - **Mock Engine** (Instant simulation for testing and verification)
 - 📊 **Visualized Architectural Reports (D2)**: Goes beyond superficial diffs. Automatically renders module relationships, blast radius, and StepFlows using high-fidelity D2 vector diagrams.
 - 🖥️ **Interactive Web Dashboard**: GitHub-style search queries, contextual autocompletion, real-time job execution logs, and inline HTML report viewing.
@@ -35,6 +34,7 @@ kuramori/
 ├── AGENTS.md              # Operational constitution for AI coding agents
 ├── packages/
 │   ├── core/              # Domain entities, schemas, and boundary interfaces
+│   ├── i18n/              # UI localization dictionaries and translator helpers
 │   └── runner/            # Review execution CLI & engine harnesses
 ├── apps/
 │   ├── server/            # Hono server, Drizzle ORM (SQLite), Poller & Queue
@@ -109,7 +109,7 @@ All architectural guidelines and domain specifications are cataloged in [docs/RE
 - **[Core Concepts & Background](docs/concept.md)**: Product philosophy, problems solved, and pre-emptive review model.
 - **[Architecture Design](docs/architecture.md)**: Monorepo boundaries, 4-tier layer responsibilities, and boundary contracts.
 - **[Data Model](docs/data-model.md)**: SQLite database schema, entity relationships, and job lifecycle.
-- **[AI Engine Specifications](docs/engines.md)**: Harness execution for Claude Code, Antigravity, Codex, and local LLMs.
+- **[AI Engine Specifications](docs/engines.md)**: Harness execution for Claude Code, Antigravity, and Codex.
 - **[Rules & Triggers Guide](docs/rules-and-triggers.md)**: Glob path matching, 4-block instructions, and noise filtering.
 - **[REST API Reference](docs/api.md)**: Endpoint catalog, OpenAPI 3.1 specification, and Scalar docs.
 - **[Operations & Troubleshooting](docs/operations.md)**: Service management, log inspection, and worktree cleanup.

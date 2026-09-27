@@ -11,6 +11,9 @@ This document defines operational commands, directory layouts, and diagnostic pr
 # TypeScript type check across monorepo
 deno task check
 
+# Static analysis and linting
+deno task lint
+
 # Execute full test suite
 deno task test
 
@@ -38,6 +41,7 @@ deno task runner --repo <owner/repo> --pr <number>
 ### Configuration Environment Variables
 | Variable | Default | Description |
 | :--- | :--- | :--- |
+| `HOST` | `127.0.0.1` | HTTP listening host for server (loopback by default) |
 | `PORT` | `3456` | HTTP listening port for server |
 | `DATABASE_URL` | `file:data/kuramori.db` | SQLite database file location |
 | `REPORTS_DIR` | `./data/reports` | Directory where HTML and JSON review reports are stored |
@@ -46,6 +50,7 @@ deno task runner --repo <owner/repo> --pr <number>
 | `REVIEW_ENGINE` | `antigravity` | Default fallback engine type if not configured in settings |
 | `AGY_BIN` | `agy` | Custom binary path for Google Antigravity CLI |
 | `CLAUDE_BIN` | `claude` | Custom binary path for Anthropic Claude Code CLI |
+| `CODEX_BIN` | `codex` | Custom binary path for OpenAI Codex CLI |
 
 ### Background Daemon Execution
 ```bash
@@ -78,7 +83,7 @@ kuramori/
      ```bash
      cat data/logs/<jobId>.log
      # Or via REST API
-     curl -s "http://localhost:3456/api/jobs/<jobId>/log"
+     curl -s "http://127.0.0.1:3456/api/jobs/<jobId>/log"
      ```
 2. **Common Failure Modes**:
    - **CLI Auth Expiration**: `gh auth status` or AI engine tokens expired. Re-authenticate.
@@ -105,7 +110,7 @@ git worktree prune
    ```
 2. **Trigger manual immediate polling**:
    ```bash
-   curl -s -X POST "http://localhost:3456/api/pulls/refresh"
+   curl -s -X POST "http://127.0.0.1:3456/api/pulls/refresh"
    ```
 3. **Verify matching criteria**:
    - Check `gh search prs --review-requested=@me` and `gh search prs --author=@me`. Only matching open PRs across accessible repositories are tracked.
