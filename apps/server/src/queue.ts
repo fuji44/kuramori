@@ -16,8 +16,7 @@ import {
   MockReviewEngine,
   extractChangedFilesFromDiff,
   matchRuleTrigger,
-  matchReviewTrigger,
-  filterRulesByTriggers,
+  evaluateTriggersForRules,
   resolveEngineEnvironment,
 } from '@kuramori/runner';
 import {
@@ -361,15 +360,9 @@ export class ReviewQueue {
         (t) => t.repository === '*' || t.repository === pr.repository,
       );
       if (applicableTriggers.length > 0) {
-        const matchedTriggers = applicableTriggers.filter((t) => matchReviewTrigger(t, event));
-        matchedTriggerIds = matchedTriggers.map((t) => t.id);
-        const matchedRuleIds = new Set<string>();
-        for (const t of matchedTriggers) {
-          for (const ruleId of t.ruleIds) {
-            matchedRuleIds.add(ruleId);
-          }
-        }
-        targetRules = rules.filter((r) => r.enabled && matchedRuleIds.has(r.id));
+        const result = evaluateTriggersForRules(applicableTriggers, rules, event);
+        matchedTriggerIds = result.matchedTriggerIds;
+        targetRules = result.matchedRules;
       } else {
         // 該当リポジトリに ReviewTrigger が未登録の場合のみ、各ルールの trigger 条件で判定
         targetRules = rules.filter((r) => r.enabled && matchRuleTrigger(r, event));

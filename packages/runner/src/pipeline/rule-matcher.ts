@@ -121,6 +121,31 @@ export function matchReviewTrigger(trigger: ReviewTrigger, event: PrEvaluationEv
   return true;
 }
 
+export interface TriggerMatchResult {
+  matchedTriggerIds: string[];
+  matchedRules: ReviewRule[];
+}
+
+/**
+ * 登録されているトリガー一覧から、適合したトリガーIDとルール一覧を抽出する
+ */
+export function evaluateTriggersForRules(
+  triggers: ReviewTrigger[],
+  rules: ReviewRule[],
+  event: PrEvaluationEvent
+): TriggerMatchResult {
+  const matchedTriggers = triggers.filter((t) => matchReviewTrigger(t, event));
+  const matchedTriggerIds = matchedTriggers.map((t) => t.id);
+  const matchedRuleIds = new Set<string>();
+  for (const t of matchedTriggers) {
+    for (const ruleId of t.ruleIds) {
+      matchedRuleIds.add(ruleId);
+    }
+  }
+  const matchedRules = rules.filter((r) => r.enabled && matchedRuleIds.has(r.id));
+  return { matchedTriggerIds, matchedRules };
+}
+
 /**
  * 登録されているトリガー一覧から、PR イベントに適合するルール一覧を抽出する
  */
@@ -129,12 +154,5 @@ export function filterRulesByTriggers(
   rules: ReviewRule[],
   event: PrEvaluationEvent
 ): ReviewRule[] {
-  const matchedTriggers = triggers.filter((t) => matchReviewTrigger(t, event));
-  const matchedRuleIds = new Set<string>();
-  for (const t of matchedTriggers) {
-    for (const ruleId of t.ruleIds) {
-      matchedRuleIds.add(ruleId);
-    }
-  }
-  return rules.filter((r) => r.enabled && matchedRuleIds.has(r.id));
+  return evaluateTriggersForRules(triggers, rules, event).matchedRules;
 }
