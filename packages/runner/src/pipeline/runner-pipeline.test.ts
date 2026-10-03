@@ -100,6 +100,7 @@ Deno.test('executePostFlight - returns FAIL ruleResult with extracted findings o
           title: '潜在的バグの指摘',
           body: 'エラーハンドリングが不足しています。',
           category: 'bug',
+          severity: 'P1',
         },
       ],
     });
@@ -126,6 +127,7 @@ Deno.test('executePostFlight - returns FAIL ruleResult with extracted findings o
     assertEquals(result.ruleResult?.findings.length, 1);
     assertEquals(result.ruleResult?.findings[0].title, '潜在的バグの指摘');
     assertEquals(result.ruleResult?.findings[0].path, 'src/app.ts');
+    assertEquals(result.ruleResult?.findings[0].severity, 'CRITICAL');
   } finally {
     await Deno.remove(tempDir, { recursive: true });
   }

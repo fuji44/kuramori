@@ -197,6 +197,13 @@ export async function executePostFlight(
     };
   }
 
+  if (parsed && typeof parsed === 'object') {
+    const record = parsed as Record<string, unknown>;
+    if (!record.createdAt || typeof record.createdAt !== 'string' || Number.isNaN(Date.parse(record.createdAt))) {
+      record.createdAt = new Date().toISOString();
+    }
+  }
+
   const validationResult = validateReviewReportData(parsed);
   if (!validationResult.success || !validationResult.data) {
     const promptFeedback = formatViolationsForPrompt(validationResult.violations || []);
@@ -220,9 +227,15 @@ export async function executePostFlight(
                 title: typeof commentObj.title === 'string' ? commentObj.title : 'Unverified finding (Gatekeeper failed)',
                 body: typeof commentObj.body === 'string' ? commentObj.body : '',
                 category: typeof commentObj.category === 'string' ? commentObj.category : 'bug',
-                severity: (typeof commentObj.severity === 'string' &&
-                  ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'].includes(commentObj.severity.toUpperCase()))
-                  ? (commentObj.severity.toUpperCase() as 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'INFO')
+                severity: commentObj.severity === 'P1'
+                  ? 'CRITICAL'
+                  : commentObj.severity === 'P2'
+                  ? 'HIGH'
+                  : commentObj.severity === 'P3'
+                  ? 'LOW'
+                  : (typeof commentObj.severity === 'string' &&
+                    ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'].includes(commentObj.severity.toUpperCase()))
+                  ? (commentObj.severity.toUpperCase() as FindingSeverity)
                   : 'MEDIUM',
                 status: 'NEW',
               });
