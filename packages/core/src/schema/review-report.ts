@@ -129,7 +129,7 @@ export const ReviewPrMetaSchema = z.object({
   title: z.string().optional(),
   url: z.string().optional(),
   headSha: z.string().optional(),
-  baseRef: z.string().optional(),
+  baseRef: z.string().nullable().optional(),
   author: z.string().optional(),
   milestone: z.string().nullable().optional(),
   storyUrl: z.string().nullable().optional(),

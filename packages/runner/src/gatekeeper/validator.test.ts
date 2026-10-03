@@ -113,3 +113,42 @@ Deno.test("formatViolationsForPrompt - formats human and AI readable error text"
     true
   );
 });
+
+Deno.test("validateReviewReportData - accepts null or string baseRef in pr metadata", () => {
+  const withStringBaseRef = {
+    pr: {
+      owner: "owner",
+      repo: "repo",
+      number: 1,
+      baseRef: "main",
+    },
+    verdict: "APPROVE",
+    summary: {
+      brief: "要約",
+      changedCode: "変更コード",
+    },
+    comments: [],
+  };
+  const stringResult = validateReviewReportData(withStringBaseRef);
+  assertEquals(stringResult.success, true);
+  assertEquals(stringResult.data?.pr?.baseRef, "main");
+
+  const withNullBaseRef = {
+    pr: {
+      owner: "owner",
+      repo: "repo",
+      number: 1,
+      baseRef: null,
+    },
+    verdict: "APPROVE",
+    summary: {
+      brief: "要約",
+      changedCode: "変更コード",
+    },
+    comments: [],
+  };
+  const nullResult = validateReviewReportData(withNullBaseRef);
+  assertEquals(nullResult.success, true);
+  assertEquals(nullResult.data?.pr?.baseRef, null);
+});
+
