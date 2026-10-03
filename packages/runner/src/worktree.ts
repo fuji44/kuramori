@@ -9,10 +9,15 @@ export class WorktreeManager {
   private readonly baseCacheDir: string;
   private readonly baseWorktreeDir: string;
   private readonly cloneLocks = new Map<string, Promise<string>>();
+  private readonly fetchLocks = new Map<string, Promise<void>>();
 
   constructor(baseCacheDir: string, baseWorktreeDir: string) {
     this.baseCacheDir = resolve(baseCacheDir);
     this.baseWorktreeDir = resolve(baseWorktreeDir);
+  }
+
+  protected getCloneUrl(repository: string): string {
+    return `https://github.com/${repository}.git`;
   }
 
   private async runGit(args: string[], cwd?: string): Promise<string> {
@@ -65,7 +70,7 @@ export class WorktreeManager {
       }
 
       await Deno.mkdir(this.baseCacheDir, { recursive: true });
-      const cloneUrl = `https://github.com/${repository}.git`;
+      const cloneUrl = this.getCloneUrl(repository);
       const tempClonePath = `${repoPath}.tmp-${crypto.randomUUID()}`;
       try {
         await this.runGit(['clone', '--bare', cloneUrl, tempClonePath]);
@@ -102,9 +107,25 @@ export class WorktreeManager {
       throw new Error(`Invalid headSha: ${headSha}`);
     }
     const repoPath = await this.ensureBareRepo(repository);
-    const branchName = `pr-${prNumber}`;
 
-    await this.runGit(['fetch', 'origin', `pull/${prNumber}/head:${branchName}`, '--force'], repoPath);
+    // 同一 PR への並行 fetch 競合を防止
+    const fetchKey = `${repository}#${prNumber}`;
+    const existingFetch = this.fetchLocks.get(fetchKey);
+    if (existingFetch) {
+      await existingFetch;
+    } else {
+      const fetchPromise = (async () => {
+        // refspec にローカルブランチを指定せず直接 fetch することで、
+        // refs/heads/pr-<N>.lock のファイル衝突を根本から防止
+        await this.runGit(['fetch', 'origin', `pull/${prNumber}/head`], repoPath);
+      })();
+      this.fetchLocks.set(fetchKey, fetchPromise);
+      try {
+        await fetchPromise;
+      } finally {
+        this.fetchLocks.delete(fetchKey);
+      }
+    }
 
     const safeRepoName = repository.replace('/', '__');
     const timestamp = Date.now();
@@ -114,7 +135,7 @@ export class WorktreeManager {
     await Deno.mkdir(join(this.baseWorktreeDir, safeRepoName), { recursive: true });
 
     try {
-      await this.runGit(['worktree', 'add', '--detach', worktreePath, headSha || branchName], repoPath);
+      await this.runGit(['worktree', 'add', '--detach', worktreePath, headSha || 'FETCH_HEAD'], repoPath);
     } catch (err) {
       try {
         await this.runGit(['worktree', 'remove', '--force', worktreePath], repoPath);
