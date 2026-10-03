@@ -99,6 +99,7 @@ export class ReviewQueue {
   private readonly settingsService?: SettingsService;
   private readonly jobQueue: string[] = []; // reviewJob IDs
   private readonly runningJobIds = new Set<string>();
+  private readonly runningEngineTypes = new Map<string, string>();
   private isProcessing = false;
 
   constructor(
@@ -458,7 +459,7 @@ export class ReviewQueue {
       };
 
       while (this.jobQueue.length > 0 && this.runningJobIds.size < globalLimit) {
-        // 現在走っている各エンジンの数を集約
+        // 現在走っている各エンジンの数を集約（メモリ管理中 + DB状態）
         const runningJobs = await this.db
           .select()
           .from(reviewJobsTable)
@@ -480,13 +481,21 @@ export class ReviewQueue {
           codex: 0,
           mock: 0,
         };
-        for (const j of runningJobs) {
-          const engType = toEngineType(j.engine);
+
+        for (const engType of this.runningEngineTypes.values()) {
           runningEngineCount[engType] = (runningEngineCount[engType] ?? 0) + 1;
+        }
+
+        for (const j of runningJobs) {
+          if (!this.runningEngineTypes.has(j.id)) {
+            const engType = toEngineType(j.engine);
+            runningEngineCount[engType] = (runningEngineCount[engType] ?? 0) + 1;
+          }
         }
 
         // キューの中で、エンジン枠が空いているジョブを探索
         let candidateIndex = -1;
+        let candidateEngineType = 'antigravity';
         for (let i = 0; i < this.jobQueue.length; i++) {
           const jId = this.jobQueue[i];
           const jobRecord = (
@@ -507,6 +516,7 @@ export class ReviewQueue {
           const currentRunning = runningEngineCount[engineType] ?? 0;
           if (currentRunning < limit) {
             candidateIndex = i;
+            candidateEngineType = engineType;
             break;
           }
         }
@@ -518,6 +528,7 @@ export class ReviewQueue {
 
         const [jobId] = this.jobQueue.splice(candidateIndex, 1);
         this.runningJobIds.add(jobId);
+        this.runningEngineTypes.set(jobId, candidateEngineType);
 
         this.runJob(jobId)
           .catch((err) => {
@@ -525,6 +536,7 @@ export class ReviewQueue {
           })
           .finally(() => {
             this.runningJobIds.delete(jobId);
+            this.runningEngineTypes.delete(jobId);
             this.processQueue();
           });
       }

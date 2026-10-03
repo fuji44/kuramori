@@ -61,6 +61,13 @@ Deno.test('WorktreeManager - prepareWorktree and cleanup with local bare repo', 
       existsAfterCleanup = false;
     }
     assertEquals(existsAfterCleanup, false);
+
+    // 3. Verify concurrent prepareWorktree produces unique paths and handles cleanup
+    const session1 = await manager.prepareWorktree('test/repo', 42, '');
+    const session2 = await manager.prepareWorktree('test/repo', 42, '');
+    assertEquals(session1.worktreePath !== session2.worktreePath, true);
+    await session1.cleanup();
+    await session2.cleanup();
   } finally {
     await Deno.remove(tempBase, { recursive: true });
   }
