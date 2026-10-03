@@ -301,7 +301,7 @@ export class ReviewQueue {
             number: pr.number,
             error: String(err),
           });
-          throw new Error(`PRの変更差分取得に失敗したため、レビュールールの自動選定を中止しました: ${err}`);
+          throw new Error('PRの変更差分取得に失敗したため、レビュールールの自動選定を中止しました。詳細はサーバーログを確認してください。');
         }
       }
 
@@ -357,7 +357,7 @@ export class ReviewQueue {
       let matchedTriggerIds: string[] = [];
       // 対象リポジトリ（またはワイルドカード '*'）に合致する ReviewTrigger を優先選定
       const applicableTriggers = triggers.filter(
-        (t) => t.repository === '*' || t.repository === pr.repository,
+        (t) => t.repository === '*' || t.repository.toLowerCase() === pr.repository.toLowerCase(),
       );
       if (applicableTriggers.length > 0) {
         const result = evaluateTriggersForRules(applicableTriggers, rules, event);
