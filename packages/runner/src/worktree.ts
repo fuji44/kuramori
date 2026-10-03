@@ -107,17 +107,17 @@ export class WorktreeManager {
       throw new Error(`Invalid headSha: ${headSha}`);
     }
     const repoPath = await this.ensureBareRepo(repository);
+    const branchName = `pr-${prNumber}`;
 
-    // 同一 PR への並行 fetch 競合を防止
+    // 同一 PR への並行 fetch 競合を防止（同一PRはfetchLocksで直列化しref lock衝突を防ぐ）
     const fetchKey = `${repository}#${prNumber}`;
     const existingFetch = this.fetchLocks.get(fetchKey);
     if (existingFetch) {
       await existingFetch;
     } else {
       const fetchPromise = (async () => {
-        // refspec にローカルブランチを指定せず直接 fetch することで、
-        // refs/heads/pr-<N>.lock のファイル衝突を根本から防止
-        await this.runGit(['fetch', 'origin', `pull/${prNumber}/head`], repoPath);
+        // 各 PR 固有のブランチ参照へ fetch することで別 PR 間での FETCH_HEAD 競合を防止
+        await this.runGit(['fetch', 'origin', `pull/${prNumber}/head:${branchName}`, '--force'], repoPath);
       })();
       this.fetchLocks.set(fetchKey, fetchPromise);
       try {
@@ -135,7 +135,7 @@ export class WorktreeManager {
     await Deno.mkdir(join(this.baseWorktreeDir, safeRepoName), { recursive: true });
 
     try {
-      await this.runGit(['worktree', 'add', '--detach', worktreePath, headSha || 'FETCH_HEAD'], repoPath);
+      await this.runGit(['worktree', 'add', '--detach', worktreePath, headSha || branchName], repoPath);
     } catch (err) {
       try {
         await this.runGit(['worktree', 'remove', '--force', worktreePath], repoPath);
