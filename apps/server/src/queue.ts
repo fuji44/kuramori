@@ -99,7 +99,6 @@ export class ReviewQueue {
   private readonly settingsService?: SettingsService;
   private readonly jobQueue: string[] = []; // reviewJob IDs
   private readonly runningJobIds = new Set<string>();
-  private readonly runningEngineTypes = new Map<string, string>();
   private isProcessing = false;
 
   constructor(
@@ -441,29 +440,28 @@ export class ReviewQueue {
   }
 
   private processQueue(): void {
+    if (this.isProcessing) {
+      return;
+    }
+    this.isProcessing = true;
+
     Promise.resolve().then(async () => {
-      if (this.jobQueue.length === 0) {
-        return;
-      }
+      try {
+        if (this.jobQueue.length === 0) {
+          return;
+        }
 
-      const settings = this.settingsService
-        ? await this.settingsService.getAllSettings()
-        : DEFAULT_APP_SETTINGS;
+        const settings = this.settingsService
+          ? await this.settingsService.getAllSettings()
+          : DEFAULT_APP_SETTINGS;
 
-      const globalLimit = settings.globalMaxConcurrency ?? 2;
-      const backendLimits = settings.backendMaxConcurrency ?? {
-        antigravity: 2,
-        claudeCode: 1,
-        codex: 1,
-        mock: 5,
-      };
-
-      while (this.jobQueue.length > 0 && this.runningJobIds.size < globalLimit) {
-        // 現在走っている各エンジンの数を集約（メモリ管理中 + DB状態）
-        const runningJobs = await this.db
-          .select()
-          .from(reviewJobsTable)
-          .where(eq(reviewJobsTable.status, 'running'));
+        const globalLimit = settings.globalMaxConcurrency ?? 2;
+        const backendLimits = settings.backendMaxConcurrency ?? {
+          antigravity: 2,
+          claudeCode: 1,
+          codex: 1,
+          mock: 5,
+        };
 
         const toEngineType = (engineOrProfileId?: string | null): string => {
           if (!engineOrProfileId) return 'antigravity';
@@ -475,70 +473,80 @@ export class ReviewQueue {
           return prof?.engineType ?? engineOrProfileId;
         };
 
-        const runningEngineCount: Record<string, number> = {
-          antigravity: 0,
-          'claude-code': 0,
-          codex: 0,
-          mock: 0,
-        };
+        while (this.jobQueue.length > 0 && this.runningJobIds.size < globalLimit) {
+          // 現在走っている各エンジンの数を集約
+          const runningJobs = await this.db
+            .select()
+            .from(reviewJobsTable)
+            .where(eq(reviewJobsTable.status, 'running'));
 
-        for (const engType of this.runningEngineTypes.values()) {
-          runningEngineCount[engType] = (runningEngineCount[engType] ?? 0) + 1;
-        }
+          const runningEngineCount: Record<string, number> = {
+            antigravity: 0,
+            'claude-code': 0,
+            codex: 0,
+            mock: 0,
+          };
 
-        for (const j of runningJobs) {
-          if (!this.runningEngineTypes.has(j.id)) {
+          for (const j of runningJobs) {
             const engType = toEngineType(j.engine);
             runningEngineCount[engType] = (runningEngineCount[engType] ?? 0) + 1;
           }
-        }
 
-        // キューの中で、エンジン枠が空いているジョブを探索
-        let candidateIndex = -1;
-        let candidateEngineType = 'antigravity';
-        for (let i = 0; i < this.jobQueue.length; i++) {
-          const jId = this.jobQueue[i];
-          const jobRecord = (
-            await this.db.select().from(reviewJobsTable).where(eq(reviewJobsTable.id, jId))
-          )[0];
+          // キューの中で、エンジン枠が空いているジョブを探索
+          let candidateIndex = -1;
+          for (let i = 0; i < this.jobQueue.length; i++) {
+            const jId = this.jobQueue[i];
+            const jobRecord = (
+              await this.db.select().from(reviewJobsTable).where(eq(reviewJobsTable.id, jId))
+            )[0];
 
-          if (!jobRecord) {
-            continue;
+            if (!jobRecord) {
+              continue;
+            }
+
+            const engineType = toEngineType(jobRecord.engine);
+            let limit = 2;
+            if (engineType === 'antigravity') limit = backendLimits.antigravity;
+            else if (engineType === 'claude-code') limit = backendLimits.claudeCode;
+            else if (engineType === 'codex') limit = backendLimits.codex;
+            else if (engineType === 'mock') limit = backendLimits.mock;
+
+            const currentRunning = runningEngineCount[engineType] ?? 0;
+            if (currentRunning < limit) {
+              candidateIndex = i;
+              break;
+            }
           }
 
-          const engineType = toEngineType(jobRecord.engine);
-          let limit = 2;
-          if (engineType === 'antigravity') limit = backendLimits.antigravity;
-          else if (engineType === 'claude-code') limit = backendLimits.claudeCode;
-          else if (engineType === 'codex') limit = backendLimits.codex;
-          else if (engineType === 'mock') limit = backendLimits.mock;
-
-          const currentRunning = runningEngineCount[engineType] ?? 0;
-          if (currentRunning < limit) {
-            candidateIndex = i;
-            candidateEngineType = engineType;
+          if (candidateIndex === -1) {
+            // 実行可能枠がないため待機
             break;
           }
+
+          const [jobId] = this.jobQueue.splice(candidateIndex, 1);
+          this.runningJobIds.add(jobId);
+
+          // 次の反復で DB 側の runningJobs から自然にカウントされるよう即座に更新
+          const now = new Date().toISOString();
+          await this.db
+            .update(reviewJobsTable)
+            .set({
+              status: 'running',
+              startedAt: now,
+            })
+            .where(eq(reviewJobsTable.id, jobId));
+
+          this.runJob(jobId)
+            .catch((err) => {
+              console.error('Job execution error', { jobId, error: String(err) });
+            })
+            .finally(() => {
+              this.runningJobIds.delete(jobId);
+              this.processQueue();
+            });
         }
-
-        if (candidateIndex === -1) {
-          // 実行可能枠がないため待機
-          break;
-        }
-
-        const [jobId] = this.jobQueue.splice(candidateIndex, 1);
-        this.runningJobIds.add(jobId);
-        this.runningEngineTypes.set(jobId, candidateEngineType);
-
-        this.runJob(jobId)
-          .catch((err) => {
-            console.error('Job execution error', { jobId, error: String(err) });
-          })
-          .finally(() => {
-            this.runningJobIds.delete(jobId);
-            this.runningEngineTypes.delete(jobId);
-            this.processQueue();
-          });
+      } finally {
+        this.isProcessing = false;
       }
     });
   }
