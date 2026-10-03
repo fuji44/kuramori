@@ -80,3 +80,65 @@ Deno.test('executePostFlight - extracts structured JSON directly from stdout and
     await Deno.remove(tempDir, { recursive: true });
   }
 });
+
+Deno.test('buildReviewPrompt - instructs copying pr metadata from context', async () => {
+  const prompt = await buildReviewPrompt({
+    jobId: 'job-1',
+    requestId: 'org/repo#123',
+    repository: 'org/repo',
+    number: 123,
+    headSha: 'abc',
+    worktreePath: '/tmp/worktree',
+    outputDir: '/tmp/output',
+    logPath: '/tmp/log.txt',
+  });
+
+  assertEquals(prompt.includes('baseRef'), true);
+  assertEquals(prompt.includes('context.json'), true);
+});
+
+Deno.test('executePostFlight - populates missing baseRef from execution context', async () => {
+  const tempDir = await Deno.makeTempDir({ prefix: 'review-pipeline-test-' });
+  const logPath = `${tempDir}/log.txt`;
+
+  try {
+    const jsonOutput = JSON.stringify({
+      pr: {
+        owner: 'test',
+        repo: 'repo',
+        number: 1,
+        baseRef: null,
+      },
+      verdict: 'APPROVE',
+      summary: {
+        brief: '問題なし',
+        changedCode: '変更なし',
+      },
+      comments: [],
+    });
+
+    const stdout = `Review complete.\n\`\`\`json\n${jsonOutput}\n\`\`\``;
+
+    const result = await executePostFlight(
+      {
+        jobId: 'job-test',
+        requestId: 'test/repo#1',
+        repository: 'test/repo',
+        number: 1,
+        baseRef: 'main',
+        headSha: 'sha123',
+        worktreePath: tempDir,
+        outputDir: tempDir,
+        logPath,
+      },
+      async () => {},
+      stdout
+    );
+
+    assertEquals(result.success, true);
+    assertEquals(result.reportData?.pr?.baseRef, 'main');
+  } finally {
+    await Deno.remove(tempDir, { recursive: true });
+  }
+});
+

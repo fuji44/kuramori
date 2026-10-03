@@ -29,7 +29,9 @@ export async function executePreFlight(
   log: (msg: string) => Promise<void>
 ): Promise<void> {
   await log(`[Pre-flight] Collecting context for ${context.repository}#${context.number}...`);
-  const preFlightData = await collectPreFlightContext(context.repository, context.number);
+  const preFlightData = await collectPreFlightContext(context.repository, context.number, {
+    baseRef: context.baseRef,
+  });
 
   const fullPreFlight = {
     ...preFlightData,
@@ -97,6 +99,7 @@ ${jsonSchema}
 
 === EXECUTION TARGETS & CONSTRAINTS ===
 - Pre-flight context is available at: context.json (in current working directory)
+- Metadata: When populating the "pr" object in your review output, copy values (including "baseRef", "headSha", "number", "title", "url") directly from context.json's "pr" object. Do NOT guess baseRef from the PR description or set it to null.
 - Mode: Output ONLY valid JSON adhering strictly to the JSON Schema. Do NOT generate HTML. Do NOT push to git or GitHub.
 - CRITICAL: Do NOT spawn background tasks or exit with messages like "Waiting...". You must inspect files, perform your review synchronously, and return valid JSON output BEFORE finishing your response.
 
@@ -183,6 +186,23 @@ export async function executePostFlight(
   }
 
   const reportData = validationResult.data;
+
+  if (reportData.pr && !reportData.pr.baseRef) {
+    if (context.baseRef) {
+      reportData.pr.baseRef = context.baseRef;
+    } else {
+      try {
+        const contextJsonPath = resolve(context.outputDir, 'context.json');
+        const contextContent = await Deno.readTextFile(contextJsonPath);
+        const preFlight = JSON.parse(contextContent);
+        if (preFlight.pr?.baseRef) {
+          reportData.pr.baseRef = preFlight.pr.baseRef;
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }
 
   // 差分ファイルのアンカー検証
   try {
