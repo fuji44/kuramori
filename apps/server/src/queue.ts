@@ -662,6 +662,7 @@ export class ReviewQueue {
         requestId: pr.id,
         repository: pr.repository,
         number: pr.number,
+        baseRef: pr.targetBranch,
         headSha: job.headSha || pr.headSha,
         worktreePath: worktreeSession.worktreePath,
         outputDir,

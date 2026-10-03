@@ -43,7 +43,7 @@ allowed-tools:
 ## ステップ 1: コンテキスト読み込み (`context.json`)
 
 作業ディレクトリ直下の `context.json` を読み込む。このファイルには以下が含まれる：
-- `pr`: タイトル、説明文、作成者、ブランチ名、ベース/ヘッド SHA
+- `pr`: リポジトリ名、PR番号、タイトル、説明文、作成者、ブランチ名（`sourceBranch`, `targetBranch`）、ベースブランチ（`baseRef`）、ヘッドSHA（`headSha`）
 - `diff`: unified diff 文字列
 - `story`: 関連 Issue / Story の本文および受け入れ条件（存在する場合）
 - `existingComments`: 既に PR 上に投稿されているレビューコメント・スレッド一覧
@@ -112,6 +112,16 @@ worktree 内の実際のファイル群を自律的に検索・閲覧して裏�
 ### 出力スキーマ仕様 (Zod 4 準拠)
 ```json
 {
+  "pr": {
+    "owner": "リポジトリ所有者",
+    "repo": "リポジトリ名",
+    "number": 123,
+    "title": "PRタイトル",
+    "url": "https://github.com/...",
+    "headSha": "コミットSHA",
+    "baseRef": "ベースブランチ名（context.json の pr.baseRef をそのまま転記）",
+    "author": "作成者"
+  },
   "verdict": "REQUEST_CHANGES | COMMENT | APPROVE",
   "summary": {
     "brief": {
@@ -176,4 +186,5 @@ worktree 内の実際のファイル群を自律的に検索・閲覧して裏�
 
 > **注意**:
 > - スキーマ準拠の JSON 以外の余計な文章や HTML ファイルは出力しない。
+> - レポートに `pr` メタデータを付与する場合、`context.json` の `pr`（特に `baseRef` や `headSha` 等）の値をそのまま忠実に転記すること（独自に推測したり `null` を出力しないこと）。
 > - `comments` 内の `path` と `line` は、必ず PR の diff 上に実在する行を指定すること。

@@ -79,6 +79,9 @@ printf '%s\\n' '{"type":"thread.started"}' '{"type":"turn.completed"}'
     assertStringIncludes(args, 'approval_policy="never"');
     assertEquals(await Deno.readTextFile(environmentPath), 'profile-value');
     assertStringIncludes(await Deno.readTextFile(promptPath), 'owner/repo#1');
+    const writtenContext = JSON.parse(await Deno.readTextFile(join(worktreePath, 'context.json')));
+    assertEquals(writtenContext.pr.baseRef, 'main');
+    assertEquals(writtenContext.pr.targetBranch, 'main');
   } finally {
     Deno.env.set('PATH', previousPath);
     await Deno.remove(tempDir, { recursive: true });

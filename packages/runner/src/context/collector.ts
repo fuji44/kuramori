@@ -24,6 +24,7 @@ export interface ReviewPreFlightContext {
     url: string;
     sourceBranch: string;
     targetBranch: string;
+    baseRef: string;
     headSha: string;
   };
   diff: string;
@@ -116,12 +117,17 @@ export function extractIssueReferences(
   return refs;
 }
 
+export interface CollectPreFlightOptions {
+  baseRef?: string;
+}
+
 /**
  * GitHub CLI を通じて Pre-flight コンテキストを収集する
  */
 export async function collectPreFlightContext(
   repository: string,
-  prNumber: number
+  prNumber: number,
+  options?: CollectPreFlightOptions
 ): Promise<ReviewPreFlightContext> {
   // 1. PR 詳細情報と本文の取得
   const prViewCmd = new Deno.Command("gh", {
@@ -223,6 +229,8 @@ export async function collectPreFlightContext(
     // 取得失敗時は空配列で継続
   }
 
+  const baseRef = prData.baseRefName || options?.baseRef || "";
+
   return {
     pr: {
       repository,
@@ -232,7 +240,8 @@ export async function collectPreFlightContext(
       author: prData.author.login,
       url: prData.url,
       sourceBranch: prData.headRefName,
-      targetBranch: prData.baseRefName,
+      targetBranch: baseRef,
+      baseRef,
       headSha: prData.headRefOid,
     },
     diff: diffText,
