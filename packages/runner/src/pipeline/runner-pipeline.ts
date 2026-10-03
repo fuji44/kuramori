@@ -187,31 +187,29 @@ export async function executePostFlight(
 
   const reportData = validationResult.data;
 
-  if (reportData.pr && !reportData.pr.baseRef) {
-    if (context.baseRef) {
-      reportData.pr.baseRef = context.baseRef;
-    } else {
-      try {
-        const contextJsonPath = resolve(context.outputDir, 'context.json');
-        const contextContent = await Deno.readTextFile(contextJsonPath);
-        const preFlight = JSON.parse(contextContent);
-        if (preFlight.pr?.baseRef) {
-          reportData.pr.baseRef = preFlight.pr.baseRef;
-        }
-      } catch {
-        // ignore
-      }
-    }
-  }
-
-  // 差分ファイルのアンカー検証
+  let preFlightDiff: string | undefined;
+  let preFlightBaseRef: string | undefined;
   try {
     const contextJsonPath = resolve(context.outputDir, 'context.json');
     const contextContent = await Deno.readTextFile(contextJsonPath);
     const preFlight = JSON.parse(contextContent);
-    const diffText = preFlight.diff as string;
+    if (typeof preFlight?.diff === 'string') {
+      preFlightDiff = preFlight.diff;
+    }
+    if (typeof preFlight?.pr?.baseRef === 'string') {
+      preFlightBaseRef = preFlight.pr.baseRef;
+    }
+  } catch {
+    // context.json が存在しないか不正な場合はスキップ
+  }
 
-    const changedFiles = extractChangedFilesFromDiff(diffText);
+  if (reportData.pr && !reportData.pr.baseRef) {
+    reportData.pr.baseRef = context.baseRef || preFlightBaseRef || null;
+  }
+
+  // 差分ファイルのアンカー検証
+  if (preFlightDiff !== undefined) {
+    const changedFiles = extractChangedFilesFromDiff(preFlightDiff);
     const anchorViolations = auditFileAnchors(reportData.comments, changedFiles);
 
     if (anchorViolations.length > 0) {
@@ -219,8 +217,6 @@ export async function executePostFlight(
       await log(`[Post-flight WARN] ${warnMsg}`);
       // ここでは警告ログに留め、レポート自体は承認（または必要に応じてフィルタ）
     }
-  } catch {
-    // 差分取得不可時はスキップ
   }
 
   // D2 ダイアグラムの SVG コンパイル
