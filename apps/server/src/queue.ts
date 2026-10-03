@@ -16,6 +16,7 @@ import {
   MockReviewEngine,
   extractChangedFilesFromDiff,
   matchRuleTrigger,
+  matchReviewTrigger,
   filterRulesByTriggers,
   resolveEngineEnvironment,
 } from '@kuramori/runner';
@@ -354,12 +355,21 @@ export class ReviewQueue {
         labels: parsedLabels,
       };
 
+      let matchedTriggerIds: string[] = [];
       // 対象リポジトリ（またはワイルドカード '*'）に合致する ReviewTrigger を優先選定
       const applicableTriggers = triggers.filter(
         (t) => t.repository === '*' || t.repository === pr.repository,
       );
       if (applicableTriggers.length > 0) {
-        targetRules = filterRulesByTriggers(applicableTriggers, rules, event);
+        const matchedTriggers = applicableTriggers.filter((t) => matchReviewTrigger(t, event));
+        matchedTriggerIds = matchedTriggers.map((t) => t.id);
+        const matchedRuleIds = new Set<string>();
+        for (const t of matchedTriggers) {
+          for (const ruleId of t.ruleIds) {
+            matchedRuleIds.add(ruleId);
+          }
+        }
+        targetRules = rules.filter((r) => r.enabled && matchedRuleIds.has(r.id));
       } else {
         // 該当リポジトリに ReviewTrigger が未登録の場合のみ、各ルールの trigger 条件で判定
         targetRules = rules.filter((r) => r.enabled && matchRuleTrigger(r, event));
@@ -373,6 +383,7 @@ export class ReviewQueue {
         repository: pr.repository,
         prNumber: pr.number,
         changedFilesCount: changedFiles.length,
+        matchedTriggerIds,
         selectedRuleIds: targetRules.map((r) => r.id),
       });
     }
