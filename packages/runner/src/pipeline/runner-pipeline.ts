@@ -29,7 +29,9 @@ export async function executePreFlight(
   log: (msg: string) => Promise<void>
 ): Promise<void> {
   await log(`[Pre-flight] Collecting context for ${context.repository}#${context.number}...`);
-  const preFlightData = await collectPreFlightContext(context.repository, context.number);
+  const preFlightData = await collectPreFlightContext(context.repository, context.number, {
+    baseRef: context.baseRef,
+  });
 
   const fullPreFlight = {
     ...preFlightData,
@@ -97,6 +99,7 @@ ${jsonSchema}
 
 === EXECUTION TARGETS & CONSTRAINTS ===
 - Pre-flight context is available at: context.json (in current working directory)
+- Metadata: When populating the "pr" object in your review output, copy values (including "baseRef", "headSha", "number", "title", "url") directly from context.json's "pr" object. Do NOT guess baseRef from the PR description or set it to null.
 - Mode: Output ONLY valid JSON adhering strictly to the JSON Schema. Do NOT generate HTML. Do NOT push to git or GitHub.
 - CRITICAL: Do NOT spawn background tasks or exit with messages like "Waiting...". You must inspect files, perform your review synchronously, and return valid JSON output BEFORE finishing your response.
 
@@ -156,6 +159,19 @@ export async function executePostFlight(
     return {
       success: false,
       error: errorMsg,
+      ruleResult: {
+        id: crypto.randomUUID(),
+        jobId: context.jobId,
+        requestId: context.requestId,
+        ruleId: context.rule?.id ?? 'default',
+        ruleName: context.rule?.name ?? 'General Review',
+        category: context.rule?.category ?? 'general',
+        headSha: context.headSha,
+        verdict: 'FAIL',
+        summary: errorMsg,
+        findings: [],
+        createdAt: new Date().toISOString(),
+      },
     };
   }
 
@@ -168,7 +184,27 @@ export async function executePostFlight(
     return {
       success: false,
       error: errorMsg,
+      ruleResult: {
+        id: crypto.randomUUID(),
+        jobId: context.jobId,
+        requestId: context.requestId,
+        ruleId: context.rule?.id ?? 'default',
+        ruleName: context.rule?.name ?? 'General Review',
+        category: context.rule?.category ?? 'general',
+        headSha: context.headSha,
+        verdict: 'FAIL',
+        summary: errorMsg,
+        findings: [],
+        createdAt: new Date().toISOString(),
+      },
     };
+  }
+
+  if (parsed && typeof parsed === 'object') {
+    const record = parsed as Record<string, unknown>;
+    if (!record.createdAt || typeof record.createdAt !== 'string' || Number.isNaN(Date.parse(record.createdAt))) {
+      record.createdAt = new Date().toISOString();
+    }
   }
 
   const validationResult = validateReviewReportData(parsed);
@@ -176,22 +212,89 @@ export async function executePostFlight(
     const promptFeedback = formatViolationsForPrompt(validationResult.violations || []);
     const errorMsg = `Gatekeeper validation failed:\n${promptFeedback}`;
     await log(`[Post-flight ERROR] ${errorMsg}`);
+
+    const extractedFindings: RuleResultFinding[] = [];
+    if (parsed && typeof parsed === 'object' && 'comments' in parsed) {
+      const parsedRecord = parsed as { comments?: unknown };
+      if (Array.isArray(parsedRecord.comments)) {
+        try {
+          const rawComments: unknown[] = parsedRecord.comments;
+          for (const c of rawComments) {
+            if (c && typeof c === 'object') {
+              const commentObj = c as Record<string, unknown>;
+              extractedFindings.push({
+                id: typeof commentObj.id === 'string' ? commentObj.id : crypto.randomUUID(),
+                ruleId: context.rule?.id ?? 'default',
+                path: typeof commentObj.path === 'string' ? commentObj.path : 'unknown',
+                line: typeof commentObj.line === 'number' ? commentObj.line : undefined,
+                title: typeof commentObj.title === 'string' ? commentObj.title : 'Unverified finding (Gatekeeper failed)',
+                body: typeof commentObj.body === 'string' ? commentObj.body : '',
+                category: typeof commentObj.category === 'string' ? commentObj.category : 'bug',
+                severity: commentObj.severity === 'P1'
+                  ? 'CRITICAL'
+                  : commentObj.severity === 'P2'
+                  ? 'HIGH'
+                  : commentObj.severity === 'P3'
+                  ? 'LOW'
+                  : (typeof commentObj.severity === 'string' &&
+                    ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'].includes(commentObj.severity.toUpperCase()))
+                  ? (commentObj.severity.toUpperCase() as FindingSeverity)
+                  : 'MEDIUM',
+                status: 'NEW',
+              });
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+
     return {
       success: false,
       error: errorMsg,
+      ruleResult: {
+        id: crypto.randomUUID(),
+        jobId: context.jobId,
+        requestId: context.requestId,
+        ruleId: context.rule?.id ?? 'default',
+        ruleName: context.rule?.name ?? 'General Review',
+        category: context.rule?.category ?? 'general',
+        headSha: context.headSha,
+        verdict: 'FAIL',
+        summary: `Gatekeeper 検証に失敗しました: ${validationResult.violations?.[0]?.message ?? errorMsg}`,
+        findings: extractedFindings,
+        metadata: { gatekeeperError: errorMsg },
+        createdAt: new Date().toISOString(),
+      },
     };
   }
 
   const reportData = validationResult.data;
 
-  // 差分ファイルのアンカー検証
+  let preFlightDiff: string | undefined;
+  let preFlightBaseRef: string | undefined;
   try {
     const contextJsonPath = resolve(context.outputDir, 'context.json');
     const contextContent = await Deno.readTextFile(contextJsonPath);
     const preFlight = JSON.parse(contextContent);
-    const diffText = preFlight.diff as string;
+    if (typeof preFlight?.diff === 'string') {
+      preFlightDiff = preFlight.diff;
+    }
+    if (typeof preFlight?.pr?.baseRef === 'string') {
+      preFlightBaseRef = preFlight.pr.baseRef;
+    }
+  } catch {
+    // context.json が存在しないか不正な場合はスキップ
+  }
 
-    const changedFiles = extractChangedFilesFromDiff(diffText);
+  if (reportData.pr && !reportData.pr.baseRef) {
+    reportData.pr.baseRef = context.baseRef || preFlightBaseRef || null;
+  }
+
+  // 差分ファイルのアンカー検証
+  if (preFlightDiff !== undefined) {
+    const changedFiles = extractChangedFilesFromDiff(preFlightDiff);
     const anchorViolations = auditFileAnchors(reportData.comments, changedFiles);
 
     if (anchorViolations.length > 0) {
@@ -199,8 +302,6 @@ export async function executePostFlight(
       await log(`[Post-flight WARN] ${warnMsg}`);
       // ここでは警告ログに留め、レポート自体は承認（または必要に応じてフィルタ）
     }
-  } catch {
-    // 差分取得不可時はスキップ
   }
 
   // D2 ダイアグラムの SVG コンパイル

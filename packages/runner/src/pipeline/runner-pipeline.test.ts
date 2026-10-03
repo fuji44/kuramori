@@ -80,3 +80,116 @@ Deno.test('executePostFlight - extracts structured JSON directly from stdout and
     await Deno.remove(tempDir, { recursive: true });
   }
 });
+
+Deno.test('executePostFlight - returns FAIL ruleResult with extracted findings on validation failure', async () => {
+  const tempDir = await Deno.makeTempDir({ prefix: 'review-pipeline-fail-test-' });
+  const logPath = `${tempDir}/log.txt`;
+
+  try {
+    const invalidSchemaJson = JSON.stringify({
+      verdict: 'INVALID_VERDICT', // スキーマ違反
+      summary: {
+        brief: '問題検出',
+        changedCode: '変更点',
+      },
+      comments: [
+        {
+          id: 'C1',
+          path: 'src/app.ts',
+          line: 15,
+          title: '潜在的バグの指摘',
+          body: 'エラーハンドリングが不足しています。',
+          category: 'bug',
+          severity: 'P1',
+        },
+      ],
+    });
+
+    const stdout = `Review output:\n\`\`\`json\n${invalidSchemaJson}\n\`\`\``;
+
+    const result = await executePostFlight(
+      {
+        jobId: 'job-fail-test',
+        requestId: 'test/repo#2',
+        repository: 'test/repo',
+        number: 2,
+        headSha: 'sha456',
+        worktreePath: tempDir,
+        outputDir: tempDir,
+        logPath,
+      },
+      async () => {},
+      stdout
+    );
+
+    assertEquals(result.success, false);
+    assertEquals(result.ruleResult?.verdict, 'FAIL');
+    assertEquals(result.ruleResult?.findings.length, 1);
+    assertEquals(result.ruleResult?.findings[0].title, '潜在的バグの指摘');
+    assertEquals(result.ruleResult?.findings[0].path, 'src/app.ts');
+    assertEquals(result.ruleResult?.findings[0].severity, 'CRITICAL');
+  } finally {
+    await Deno.remove(tempDir, { recursive: true });
+  }
+});
+
+Deno.test('buildReviewPrompt - instructs copying pr metadata from context', async () => {
+  const prompt = await buildReviewPrompt({
+    jobId: 'job-1',
+    requestId: 'org/repo#123',
+    repository: 'org/repo',
+    number: 123,
+    headSha: 'abc',
+    worktreePath: '/tmp/worktree',
+    outputDir: '/tmp/output',
+    logPath: '/tmp/log.txt',
+  });
+
+  assertEquals(prompt.includes('baseRef'), true);
+  assertEquals(prompt.includes('context.json'), true);
+});
+
+Deno.test('executePostFlight - populates missing baseRef from execution context', async () => {
+  const tempDir = await Deno.makeTempDir({ prefix: 'review-pipeline-test-' });
+  const logPath = `${tempDir}/log.txt`;
+
+  try {
+    const jsonOutput = JSON.stringify({
+      pr: {
+        owner: 'test',
+        repo: 'repo',
+        number: 1,
+        baseRef: null,
+      },
+      verdict: 'APPROVE',
+      summary: {
+        brief: '問題なし',
+        changedCode: '変更なし',
+      },
+      comments: [],
+    });
+
+    const stdout = `Review complete.\n\`\`\`json\n${jsonOutput}\n\`\`\``;
+
+    const result = await executePostFlight(
+      {
+        jobId: 'job-test',
+        requestId: 'test/repo#1',
+        repository: 'test/repo',
+        number: 1,
+        baseRef: 'main',
+        headSha: 'sha123',
+        worktreePath: tempDir,
+        outputDir: tempDir,
+        logPath,
+      },
+      async () => {},
+      stdout
+    );
+
+    assertEquals(result.success, true);
+    assertEquals(result.reportData?.pr?.baseRef, 'main');
+  } finally {
+    await Deno.remove(tempDir, { recursive: true });
+  }
+});

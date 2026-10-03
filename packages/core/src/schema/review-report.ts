@@ -129,7 +129,7 @@ export const ReviewPrMetaSchema = z.object({
   title: z.string().optional(),
   url: z.string().optional(),
   headSha: z.string().optional(),
-  baseRef: z.string().optional(),
+  baseRef: z.string().nullable().optional(),
   author: z.string().optional(),
   milestone: z.string().nullable().optional(),
   storyUrl: z.string().nullable().optional(),
@@ -253,6 +253,15 @@ export type ReviewMetrics = z.infer<typeof ReviewMetricsSchema>;
 export const ReviewTransparencySchema = z.object({
   rawFindingCount: z.number().int().nonnegative().optional(),
   aggregatedCount: z.number().int().nonnegative().optional(),
+  failedRules: z
+    .array(
+      z.object({
+        ruleId: z.string(),
+        ruleName: z.string(),
+        summary: z.string(),
+      })
+    )
+    .default([]),
   referencedSpecs: z
     .array(
       z.object({
