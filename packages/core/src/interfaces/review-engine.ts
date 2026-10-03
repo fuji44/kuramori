@@ -6,6 +6,7 @@ export interface ReviewExecutionContext {
   requestId: string;
   repository: string;
   number: number;
+  baseRef?: string;
   headSha: string;
   worktreePath: string;
   outputDir: string;
