@@ -526,24 +526,29 @@ export class ReviewQueue {
           const [jobId] = this.jobQueue.splice(candidateIndex, 1);
           this.runningJobIds.add(jobId);
 
-          // 次の反復で DB 側の runningJobs から自然にカウントされるよう即座に更新
-          const now = new Date().toISOString();
-          await this.db
-            .update(reviewJobsTable)
-            .set({
-              status: 'running',
-              startedAt: now,
-            })
-            .where(eq(reviewJobsTable.id, jobId));
+          try {
+            // 次の反復で DB 側の runningJobs から自然にカウントされるよう即座に更新
+            const now = new Date().toISOString();
+            await this.db
+              .update(reviewJobsTable)
+              .set({
+                status: 'running',
+                startedAt: now,
+              })
+              .where(eq(reviewJobsTable.id, jobId));
 
-          this.runJob(jobId)
-            .catch((err) => {
-              console.error('Job execution error', { jobId, error: String(err) });
-            })
-            .finally(() => {
-              this.runningJobIds.delete(jobId);
-              this.processQueue();
-            });
+            this.runJob(jobId)
+              .catch((err) => {
+                console.error('Job execution error', { jobId, error: String(err) });
+              })
+              .finally(() => {
+                this.runningJobIds.delete(jobId);
+                this.processQueue();
+              });
+          } catch (err) {
+            console.error('Failed to dispatch job', { jobId, error: String(err) });
+            this.runningJobIds.delete(jobId);
+          }
         }
       } finally {
         this.isProcessing = false;
@@ -571,14 +576,6 @@ export class ReviewQueue {
       return;
     }
 
-    const now = new Date().toISOString();
-    await this.db
-      .update(reviewJobsTable)
-      .set({
-        status: 'running',
-        startedAt: now,
-      })
-      .where(eq(reviewJobsTable.id, jobId));
 
     const settings = this.settingsService
       ? await this.settingsService.getAllSettings()
