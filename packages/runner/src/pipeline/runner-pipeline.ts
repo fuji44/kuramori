@@ -220,7 +220,10 @@ export async function executePostFlight(
                 title: typeof commentObj.title === 'string' ? commentObj.title : 'Unverified finding (Gatekeeper failed)',
                 body: typeof commentObj.body === 'string' ? commentObj.body : '',
                 category: typeof commentObj.category === 'string' ? commentObj.category : 'bug',
-                severity: 'MEDIUM',
+                severity: (typeof commentObj.severity === 'string' &&
+                  ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'].includes(commentObj.severity.toUpperCase()))
+                  ? (commentObj.severity.toUpperCase() as 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'INFO')
+                  : 'MEDIUM',
                 status: 'NEW',
               });
             }
