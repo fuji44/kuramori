@@ -548,6 +548,8 @@ export class ReviewQueue {
           } catch (err) {
             console.error('Failed to dispatch job', { jobId, error: String(err) });
             this.runningJobIds.delete(jobId);
+            this.jobQueue.unshift(jobId);
+            break;
           }
         }
       } finally {
@@ -573,6 +575,14 @@ export class ReviewQueue {
     const pr = requests[0];
     if (!pr) {
       console.error('PR not found for job', { jobId, requestId: job.requestId });
+      await this.db
+        .update(reviewJobsTable)
+        .set({
+          status: 'failed',
+          completedAt: new Date().toISOString(),
+          error: 'PR not found for job',
+        })
+        .where(eq(reviewJobsTable.id, jobId));
       return;
     }
 
