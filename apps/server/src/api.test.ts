@@ -388,6 +388,22 @@ Deno.test('API Endpoints - comprehensive integration test', async () => {
     // Wait for the mock job to finish
     await new Promise((resolve) => setTimeout(resolve, 1200));
 
+    // Test automated rule selection fails explicitly when getDiff fails (no silent fallback)
+    const failingVcs: VCSProvider = {
+      ...mockVcs,
+      getDiff: () => Promise.reject(new Error('VCS network error')),
+    };
+    const failingQueue = new ReviewQueue(db, storage, { reportsDir, settingsService, vcsProvider: failingVcs });
+    const failingApi = createApi({ db, storage, poller, queue: failingQueue, settingsService, vcsProvider: failingVcs });
+    const resRunDiffFail = await failingApi.request('/api/pulls/github%3Atest%2Frepo%231/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    assertEquals(resRunDiffFail.status, 400);
+    const diffFailData = await resRunDiffFail.json();
+    assertEquals(diffFailData.error.includes('差分取得に失敗'), true);
+
     // 12. Test rule results API
     const resRuleResults = await api.request('/api/pulls/github%3Atest%2Frepo%231/rule-results');
     assertEquals(resRuleResults.status, 200);
