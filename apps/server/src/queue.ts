@@ -16,7 +16,7 @@ import {
   MockReviewEngine,
   extractChangedFilesFromDiff,
   matchRuleTrigger,
-  filterRulesByTriggers,
+  evaluateTriggersForRules,
   resolveEngineEnvironment,
 } from '@kuramori/runner';
 import {
@@ -295,9 +295,18 @@ export class ReviewQueue {
         try {
           const diffText = await this.vcsProvider.getDiff(pr.repository, pr.number);
           changedFiles = Array.from(extractChangedFilesFromDiff(diffText));
-        } catch {
-          // ignore
+        } catch (err) {
+          console.warn('Failed to get diff for PR during rule auto-selection', {
+            repository: pr.repository,
+            number: pr.number,
+            error: String(err),
+          });
+          throw new Error('PRの変更差分取得に失敗したため、レビュールールの自動選定を中止しました。詳細はサーバーログを確認してください。');
         }
+      }
+
+      if (changedFiles.length === 0) {
+        throw new Error('PRの変更差分が存在しないか取得できなかったため、レビュールールを自動選定できませんでした。');
       }
 
       let parsedLabels: string[] = [];
@@ -345,19 +354,31 @@ export class ReviewQueue {
         labels: parsedLabels,
       };
 
-      // ReviewTrigger (リポジトリ×パス条件) に合致するルールを優先選定
-      if (triggers.length > 0) {
-        targetRules = filterRulesByTriggers(triggers, rules, event);
-      }
-
-      // トリガー未設定または非該当の場合、旧来の rule.trigger でもマッチ試行
-      if (targetRules.length === 0) {
+      let matchedTriggerIds: string[] = [];
+      // 対象リポジトリ（またはワイルドカード '*'）に合致する ReviewTrigger を優先選定
+      const applicableTriggers = triggers.filter(
+        (t) => t.repository === '*' || t.repository.toLowerCase() === pr.repository.toLowerCase(),
+      );
+      if (applicableTriggers.length > 0) {
+        const result = evaluateTriggersForRules(applicableTriggers, rules, event);
+        matchedTriggerIds = result.matchedTriggerIds;
+        targetRules = result.matchedRules;
+      } else {
+        // 該当リポジトリに ReviewTrigger が未登録の場合のみ、各ルールの trigger 条件で判定
         targetRules = rules.filter((r) => r.enabled && matchRuleTrigger(r, event));
       }
 
       if (targetRules.length === 0) {
         throw new Error('実行対象のレビュールールがありません。有効なルールまたはパス条件（トリガー）を設定してください。');
       }
+
+      console.log('Automated rule selection completed', {
+        repository: pr.repository,
+        prNumber: pr.number,
+        changedFilesCount: changedFiles.length,
+        matchedTriggerIds,
+        selectedRuleIds: targetRules.map((r) => r.id),
+      });
     }
 
     const availableProfiles = settings.engineProfiles?.filter((profile) => profile.enabled !== false) ?? [];
