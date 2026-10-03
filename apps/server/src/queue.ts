@@ -354,11 +354,14 @@ export class ReviewQueue {
         labels: parsedLabels,
       };
 
-      // ReviewTrigger (リポジトリ×パス条件) に合致するルールを優先選定
-      if (triggers.length > 0) {
-        targetRules = filterRulesByTriggers(triggers, rules, event);
+      // 対象リポジトリ（またはワイルドカード '*'）に合致する ReviewTrigger を優先選定
+      const applicableTriggers = triggers.filter(
+        (t) => t.repository === '*' || t.repository === pr.repository,
+      );
+      if (applicableTriggers.length > 0) {
+        targetRules = filterRulesByTriggers(applicableTriggers, rules, event);
       } else {
-        // ReviewTrigger が未登録の場合のみ、各ルールの trigger 条件で判定
+        // 該当リポジトリに ReviewTrigger が未登録の場合のみ、各ルールの trigger 条件で判定
         targetRules = rules.filter((r) => r.enabled && matchRuleTrigger(r, event));
       }
 
