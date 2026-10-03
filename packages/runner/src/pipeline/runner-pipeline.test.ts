@@ -80,3 +80,53 @@ Deno.test('executePostFlight - extracts structured JSON directly from stdout and
     await Deno.remove(tempDir, { recursive: true });
   }
 });
+
+Deno.test('executePostFlight - returns FAIL ruleResult with extracted findings on validation failure', async () => {
+  const tempDir = await Deno.makeTempDir({ prefix: 'review-pipeline-fail-test-' });
+  const logPath = `${tempDir}/log.txt`;
+
+  try {
+    const invalidSchemaJson = JSON.stringify({
+      verdict: 'INVALID_VERDICT', // スキーマ違反
+      summary: {
+        brief: '問題検出',
+        changedCode: '変更点',
+      },
+      comments: [
+        {
+          id: 'C1',
+          path: 'src/app.ts',
+          line: 15,
+          title: '潜在的バグの指摘',
+          body: 'エラーハンドリングが不足しています。',
+          category: 'bug',
+        },
+      ],
+    });
+
+    const stdout = `Review output:\n\`\`\`json\n${invalidSchemaJson}\n\`\`\``;
+
+    const result = await executePostFlight(
+      {
+        jobId: 'job-fail-test',
+        requestId: 'test/repo#2',
+        repository: 'test/repo',
+        number: 2,
+        headSha: 'sha456',
+        worktreePath: tempDir,
+        outputDir: tempDir,
+        logPath,
+      },
+      async () => {},
+      stdout
+    );
+
+    assertEquals(result.success, false);
+    assertEquals(result.ruleResult?.verdict, 'FAIL');
+    assertEquals(result.ruleResult?.findings.length, 1);
+    assertEquals(result.ruleResult?.findings[0].title, '潜在的バグの指摘');
+    assertEquals(result.ruleResult?.findings[0].path, 'src/app.ts');
+  } finally {
+    await Deno.remove(tempDir, { recursive: true });
+  }
+});

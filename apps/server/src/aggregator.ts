@@ -251,6 +251,21 @@ export async function aggregateRuleResults(
   const rawBrief = representativeReport?.summary?.brief;
   const briefObj = typeof rawBrief === 'object' && rawBrief !== null ? rawBrief : undefined;
 
+  const failedRules = ruleResults
+    .filter((r) => r.verdict === 'FAIL')
+    .map((r) => ({
+      ruleId: r.ruleId,
+      ruleName: r.ruleName,
+      summary: r.summary,
+    }));
+
+  const transparency = {
+    ...representativeReport?.transparency,
+    failedRules,
+    referencedSpecs: representativeReport?.transparency?.referencedSpecs ?? [],
+    unreferencedSpecs: representativeReport?.transparency?.unreferencedSpecs ?? [],
+  };
+
   const reportData: ReviewReportData = {
     ...representativeReport,
     verdict: overallVerdict,
@@ -272,6 +287,7 @@ export async function aggregateRuleResults(
     diagram,
     callFlow,
     metrics,
+    transparency,
   };
 
   // DB の review_reports に保存
