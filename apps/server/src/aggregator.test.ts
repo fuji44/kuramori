@@ -125,6 +125,11 @@ Deno.test('Aggregator - merges rule results and derives correct verdict', async 
     assertEquals(report?.comments[0].severity, 'P1');
     assertEquals(report?.comments[0].category, 'security');
     assertEquals(report?.comments[0].title.includes('Security Audit'), true);
+    assertEquals(report?.appliedRules?.length, 2);
+    const failedRule = report?.appliedRules?.find((r) => r.ruleId === 'preset-security');
+    assertEquals(failedRule?.verdict, 'FAIL');
+    assertEquals(report?.transparency?.failedRules?.length, 1);
+    assertEquals(report?.transparency?.failedRules?.[0]?.ruleId, 'preset-security');
 
     client.close();
   } finally {

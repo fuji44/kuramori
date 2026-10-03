@@ -159,6 +159,19 @@ export async function executePostFlight(
     return {
       success: false,
       error: errorMsg,
+      ruleResult: {
+        id: crypto.randomUUID(),
+        jobId: context.jobId,
+        requestId: context.requestId,
+        ruleId: context.rule?.id ?? 'default',
+        ruleName: context.rule?.name ?? 'General Review',
+        category: context.rule?.category ?? 'general',
+        headSha: context.headSha,
+        verdict: 'FAIL',
+        summary: errorMsg,
+        findings: [],
+        createdAt: new Date().toISOString(),
+      },
     };
   }
 
@@ -171,7 +184,27 @@ export async function executePostFlight(
     return {
       success: false,
       error: errorMsg,
+      ruleResult: {
+        id: crypto.randomUUID(),
+        jobId: context.jobId,
+        requestId: context.requestId,
+        ruleId: context.rule?.id ?? 'default',
+        ruleName: context.rule?.name ?? 'General Review',
+        category: context.rule?.category ?? 'general',
+        headSha: context.headSha,
+        verdict: 'FAIL',
+        summary: errorMsg,
+        findings: [],
+        createdAt: new Date().toISOString(),
+      },
     };
+  }
+
+  if (parsed && typeof parsed === 'object') {
+    const record = parsed as Record<string, unknown>;
+    if (!record.createdAt || typeof record.createdAt !== 'string' || Number.isNaN(Date.parse(record.createdAt))) {
+      record.createdAt = new Date().toISOString();
+    }
   }
 
   const validationResult = validateReviewReportData(parsed);
@@ -179,9 +212,61 @@ export async function executePostFlight(
     const promptFeedback = formatViolationsForPrompt(validationResult.violations || []);
     const errorMsg = `Gatekeeper validation failed:\n${promptFeedback}`;
     await log(`[Post-flight ERROR] ${errorMsg}`);
+
+    const extractedFindings: RuleResultFinding[] = [];
+    if (parsed && typeof parsed === 'object' && 'comments' in parsed) {
+      const parsedRecord = parsed as { comments?: unknown };
+      if (Array.isArray(parsedRecord.comments)) {
+        try {
+          const rawComments: unknown[] = parsedRecord.comments;
+          for (const c of rawComments) {
+            if (c && typeof c === 'object') {
+              const commentObj = c as Record<string, unknown>;
+              extractedFindings.push({
+                id: typeof commentObj.id === 'string' ? commentObj.id : crypto.randomUUID(),
+                ruleId: context.rule?.id ?? 'default',
+                path: typeof commentObj.path === 'string' ? commentObj.path : 'unknown',
+                line: typeof commentObj.line === 'number' ? commentObj.line : undefined,
+                title: typeof commentObj.title === 'string' ? commentObj.title : 'Unverified finding (Gatekeeper failed)',
+                body: typeof commentObj.body === 'string' ? commentObj.body : '',
+                category: typeof commentObj.category === 'string' ? commentObj.category : 'bug',
+                severity: commentObj.severity === 'P1'
+                  ? 'CRITICAL'
+                  : commentObj.severity === 'P2'
+                  ? 'HIGH'
+                  : commentObj.severity === 'P3'
+                  ? 'LOW'
+                  : (typeof commentObj.severity === 'string' &&
+                    ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'].includes(commentObj.severity.toUpperCase()))
+                  ? (commentObj.severity.toUpperCase() as FindingSeverity)
+                  : 'MEDIUM',
+                status: 'NEW',
+              });
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+
     return {
       success: false,
       error: errorMsg,
+      ruleResult: {
+        id: crypto.randomUUID(),
+        jobId: context.jobId,
+        requestId: context.requestId,
+        ruleId: context.rule?.id ?? 'default',
+        ruleName: context.rule?.name ?? 'General Review',
+        category: context.rule?.category ?? 'general',
+        headSha: context.headSha,
+        verdict: 'FAIL',
+        summary: `Gatekeeper 検証に失敗しました: ${validationResult.violations?.[0]?.message ?? errorMsg}`,
+        findings: extractedFindings,
+        metadata: { gatekeeperError: errorMsg },
+        createdAt: new Date().toISOString(),
+      },
     };
   }
 
