@@ -253,6 +253,15 @@ export type ReviewMetrics = z.infer<typeof ReviewMetricsSchema>;
 export const ReviewTransparencySchema = z.object({
   rawFindingCount: z.number().int().nonnegative().optional(),
   aggregatedCount: z.number().int().nonnegative().optional(),
+  failedRules: z
+    .array(
+      z.object({
+        ruleId: z.string(),
+        ruleName: z.string(),
+        summary: z.string(),
+      })
+    )
+    .default([]),
   referencedSpecs: z
     .array(
       z.object({

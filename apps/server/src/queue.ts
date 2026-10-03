@@ -683,6 +683,30 @@ export class ReviewQueue {
           })
           .where(eq(reviewJobsTable.id, jobId));
       } else {
+        if (job.ruleId) {
+          const fallbackFindings = result.ruleResult?.findings ?? [];
+          const fallbackVerdict = result.ruleResult?.verdict ?? 'FAIL';
+          const fallbackSummary = result.ruleResult?.summary ?? `レビュー実行に失敗しました: ${result.error ?? 'Unknown error'}`;
+          const metadata = {
+            ...(result.ruleResult?.metadata ?? {}),
+            error: result.error,
+          };
+          await this.db.insert(reviewRuleResultsTable).values({
+            id: crypto.randomUUID(),
+            jobId,
+            requestId: pr.id,
+            ruleId: job.ruleId,
+            ruleName: job.ruleName || rule?.name || 'General Review',
+            category: job.ruleCategory || rule?.category || 'general',
+            headSha: job.headSha || pr.headSha,
+            verdict: fallbackVerdict,
+            summary: fallbackSummary,
+            findings: JSON.stringify(fallbackFindings),
+            metadata: JSON.stringify(metadata),
+            createdAt: completedAt,
+          });
+        }
+
         await this.db
           .update(reviewJobsTable)
           .set({
@@ -694,11 +718,32 @@ export class ReviewQueue {
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
+      const completedAt = new Date().toISOString();
+      if (job.ruleId) {
+        try {
+          await this.db.insert(reviewRuleResultsTable).values({
+            id: crypto.randomUUID(),
+            jobId,
+            requestId: pr.id,
+            ruleId: job.ruleId,
+            ruleName: job.ruleName || 'General Review',
+            category: job.ruleCategory || 'general',
+            headSha: job.headSha || pr.headSha,
+            verdict: 'FAIL',
+            summary: `レビュー処理中にエラーが発生しました: ${errorMessage}`,
+            findings: JSON.stringify([]),
+            metadata: JSON.stringify({ error: errorMessage }),
+            createdAt: completedAt,
+          });
+        } catch {
+          // ignore
+        }
+      }
       await this.db
         .update(reviewJobsTable)
         .set({
           status: 'failed',
-          completedAt: new Date().toISOString(),
+          completedAt,
           error: errorMessage,
         })
         .where(eq(reviewJobsTable.id, jobId));
