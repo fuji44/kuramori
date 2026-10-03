@@ -1,4 +1,4 @@
-import { eq, or, and } from 'drizzle-orm';
+import { eq, or, and, inArray } from 'drizzle-orm';
 import { join, resolve } from '@std/path';
 import type { AppDatabase } from './db/index.ts';
 import {
@@ -492,13 +492,17 @@ export class ReviewQueue {
             runningEngineCount[engType] = (runningEngineCount[engType] ?? 0) + 1;
           }
 
-          // キューの中で、エンジン枠が空いているジョブを探索
+          // キューの中で、エンジン枠が空いているジョブを一括探索
+          const queuedRecords = await this.db
+            .select()
+            .from(reviewJobsTable)
+            .where(inArray(reviewJobsTable.id, this.jobQueue));
+          const jobMap = new Map(queuedRecords.map((r) => [r.id, r]));
+
           let candidateIndex = -1;
           for (let i = 0; i < this.jobQueue.length; i++) {
             const jId = this.jobQueue[i];
-            const jobRecord = (
-              await this.db.select().from(reviewJobsTable).where(eq(reviewJobsTable.id, jId))
-            )[0];
+            const jobRecord = jobMap.get(jId);
 
             if (!jobRecord) {
               continue;
@@ -538,8 +542,20 @@ export class ReviewQueue {
               .where(eq(reviewJobsTable.id, jobId));
 
             this.runJob(jobId)
-              .catch((err) => {
+              .catch(async (err) => {
                 console.error('Job execution error', { jobId, error: String(err) });
+                try {
+                  await this.db
+                    .update(reviewJobsTable)
+                    .set({
+                      status: 'failed',
+                      completedAt: new Date().toISOString(),
+                      error: String(err),
+                    })
+                    .where(eq(reviewJobsTable.id, jobId));
+                } catch (updateErr) {
+                  console.error('Failed to mark job as failed', { jobId, error: String(updateErr) });
+                }
               })
               .finally(() => {
                 this.runningJobIds.delete(jobId);
@@ -549,6 +565,7 @@ export class ReviewQueue {
             console.error('Failed to dispatch job', { jobId, error: String(err) });
             this.runningJobIds.delete(jobId);
             this.jobQueue.unshift(jobId);
+            setTimeout(() => this.processQueue(), 1000);
             break;
           }
         }

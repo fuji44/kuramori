@@ -171,13 +171,6 @@ export async function executePostFlight(
     };
   }
 
-  if (parsed && typeof parsed === 'object') {
-    const record = parsed as Record<string, unknown>;
-    if (!record.createdAt || typeof record.createdAt !== 'string' || Number.isNaN(Date.parse(record.createdAt))) {
-      record.createdAt = new Date().toISOString();
-    }
-  }
-
   const validationResult = validateReviewReportData(parsed);
   if (!validationResult.success || !validationResult.data) {
     const promptFeedback = formatViolationsForPrompt(validationResult.violations || []);
